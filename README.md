@@ -17,16 +17,41 @@ As a result of the fact that we are using the new todo entities that were introd
 
 ## Installation
 
-To install and use the Google Keep Sync integration in Home Assistant, follow these steps:
+Google Keep Sync can be installed either manually or via HACS, although using
+HACS is strongly recommended.
 
-1. **Copy Integration Files**: Download the `google_keep_sync` folder and place it into the `custom_components` directory of your Home Assistant installation. If `custom_components` doesn't exist, create it in the same directory as your `configuration.yaml`.
+### Installation via HACS
 
-2. **Add Integration in Home Assistant**:
+1. **Add Custom Repository**:
+   - Open HACS in Home Assistant.
+   - Go to `Integrations`.
+   - Click on the `...` in the top right corner and select `Custom repositories`.
+   - Add the URL `https://github.com/watkins-matt/home-assistant-google-keep-sync`
+   - Set the category to `Integration` and click `Add`.
+
+2. **Install the Integration**:
+   - Search for `Google Keep Sync` in the HACS Integrations.
+   - Click `Download`.
+   - Restart Home Assistant.
+
+3. **Configuration**:
     - Go to `Settings` -> `Devices & Services`.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
+    - Enter your Google account username.
+    - Generate and use an **App Password** for your Google account (see https://myaccount.google.com/apppasswords).
+    - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
+
+### Manual Installation
+
+1. **Copy Integration Files**: Download the `google_keep_sync` folder and place it into the `custom_components` directory of your Home Assistant installation. If `custom_components` doesn't exist, create it in the same directory as your `configuration.yaml`.
+
+2. **Restart Home Assistant**: Restart your Home Assistant to load the new integration.
 
 3. **Configuration**:
+    - Go to `Settings` -> `Devices & Services`.
+    - Click `Add Integration`.
+    - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
     - Generate and use an **App Password** for your Google account (see https://myaccount.google.com/apppasswords).
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
