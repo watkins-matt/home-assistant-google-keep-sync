@@ -11,6 +11,10 @@ Bidirectional synchronization of lists between Google Keep and Home Assistant. Y
 you wish to sync, and they are created as todo
 entities in your Home Assistant instance.
 
+## Requirements
+
+As a result of the fact that we are using the new todo entities that were introduced in Home Assistant 2023.11, you must be running that version or later.
+
 ## Installation
 
 To install and use the Google Keep Sync integration in Home Assistant, follow these steps:
