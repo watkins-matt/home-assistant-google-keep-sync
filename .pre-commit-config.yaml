@@ -1,0 +1,52 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.1
+    hooks:
+      - id: ruff
+        args:
+          - --fix
+
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        args:
+          - --quiet
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.2
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=gkeep,gkeepapi,psoauth,reauth,ssdp,pyupgrade,pydocstyle,isort,mypy,pycodestyle,Pyflakes,Pylint,mccabe,hass
+          - --skip="./.*,*.csv,*.json"
+          - --quiet-level=2
+        exclude_types: [csv, json]
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.3.0
+    hooks:
+      - id: pyupgrade
+        args: [--py37-plus]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-executables-have-shebangs
+        stages: [manual]
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.0
+    hooks:
+      - id: mypy
+        args:
+          - --pretty
+          - --show-error-codes
+          - --show-error-context
+          - --ignore-missing-imports

@@ -1,0 +1,21 @@
+{
+  "domain": "google_keep_sync",
+  "name": "Google Keep Sync",
+  "codeowners": [
+    "@watkins-matt"
+  ],
+  "config_flow": true,
+  "dependencies": [ ],
+  "documentation": "https://github.com/watkins-matt/home-assistant-google-keep-sync",
+  "homekit": { },
+  "iot_class": "cloud_polling",
+  "requirements": [
+    "gkeepapi==0.15.0",
+    "gpsoauth==1.0.2",
+    "urllib3==1.26.18"
+  ],
+  "ssdp": [ ],
+  "zeroconf": [ ],
+  "version": "0.9.0",
+  "loggers": [ "custom_components.google_keep_sync" ]
+}

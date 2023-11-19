@@ -1,0 +1,32 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Integrationen är redan konfigurerad",
+            "reauth_successful": "Omautentisering lyckades"
+        },
+        "error": {
+            "cannot_connect": "Misslyckades med att ansluta",
+            "invalid_auth": "Ogiltig autentisering",
+            "unknown": "Oväntat fel",
+            "already_configured": "Integrationen är redan konfigurerad"
+        },
+        "step": {
+            "user": {
+                "title": "Ange inloggningsuppgifter",
+                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto. Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.",
+                "data": {
+                    "username": "Användarnamn",
+                    "password": "Lösenord"
+                }
+            },
+            "select_lists": {
+                "title": "Välj listor",
+                "description": "Välj de listor du vill synkronisera med Home Assistant."
+            },
+            "reauth_confirm": {
+                "title": "Autentisera igen",
+                "description": "Google Keep Sync-integrationen behöver autentisera ditt konto igen"
+            }
+        }
+    }
+}

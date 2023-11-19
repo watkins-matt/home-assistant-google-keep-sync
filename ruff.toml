@@ -1,0 +1,29 @@
+select = [
+    "B",   # bugbear
+    "C90", # mccabe
+    "D",   # pydocstyle
+    "E",   # pycodestyle
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "PL",  # Pylint
+    "S",   # bandit
+    "W",   # pycodestyle
+]
+
+# Black defaults to a line length of 88 characters
+line-length = 88
+
+# W293: Blank line contains whitespace (too many false positives
+#       while typing, formatter will remove any whitespace as necessary)\
+# D203: 1 blank line required before class docstring (inconsistent with
+#       other docstrings)
+# D213: Multi-line docstring summary should start at the second line
+ignore = ["W293", "D203", "D213"]
+
+exclude = [".venv"]
+
+[extend-per-file-ignores]
+# S101: Allow assert statements in test
+# S105: Hardcoded fake passwords are okay in test modules
+"test_*.py" = ["S101", "S105"]

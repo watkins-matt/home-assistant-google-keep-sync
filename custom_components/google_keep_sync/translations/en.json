@@ -1,0 +1,32 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Integration is already configured",
+            "reauth_successful": "Reauthentication successful"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error",
+            "already_configured": "Integration is already configured"
+        },
+        "step": {
+            "user": {
+                "title": "Enter credentials",
+                "description": "Enter your username and password for your Google account. Please ensure you are using an app password; you can create one at https://myaccount.google.com/apppasswords.",
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                }
+            },
+            "select_lists": {
+                "title": "Select lists",
+                "description": "Select the lists you want to sync with Home Assistant."
+            },
+            "reauth_confirm": {
+                "title": "Reauthenticate",
+                "description": "The Google Keep Sync integration needs to re-authenticate your account"
+            }
+        }
+    }
+}
