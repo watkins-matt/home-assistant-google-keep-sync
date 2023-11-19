@@ -15,7 +15,7 @@ select = [
 line-length = 88
 
 # W293: Blank line contains whitespace (too many false positives
-#       while typing, formatter will remove any whitespace as necessary)\
+#       while typing, formatter will remove any whitespace as necessary)
 # D203: 1 blank line required before class docstring (inconsistent with
 #       other docstrings)
 # D213: Multi-line docstring summary should start at the second line
