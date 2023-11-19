@@ -22,7 +22,9 @@ class GoogleKeepAPI:
         self._hass = hass
         self._username = username
         self._password = password
-        self._store = storage.Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}")
+        self._store = storage.Store(
+            hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
+        )
         self._authenticated = False
         self._token: str | None = None
 
