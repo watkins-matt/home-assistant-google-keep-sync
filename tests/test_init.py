@@ -1,5 +1,5 @@
 """Test the Google Keep Sync setup entry."""
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -8,8 +8,17 @@ from custom_components.google_keep_sync import async_setup_entry, async_unload_e
 from custom_components.google_keep_sync.const import DOMAIN as GOOGLE_KEEP_DOMAIN
 
 
+@pytest.fixture
+def mock_store():
+    """Fixture for mocking storage."""
+    store = MagicMock()
+    store.async_load = AsyncMock()
+    store.async_save = AsyncMock()
+    return store
+
+
 @pytest.fixture()
-def mock_api():
+def mock_api(mock_store):
     """Return a mocked Google Keep API."""
     with patch(
         "custom_components.google_keep_sync.GoogleKeepAPI", autospec=True
@@ -17,6 +26,7 @@ def mock_api():
         mock_api_instance = mock_api_class.return_value
         mock_api_instance.authenticate = AsyncMock(return_value=True)
         mock_api_instance.async_sync_data = AsyncMock(return_value=True)
+        mock_api_instance._store = mock_store
         yield mock_api_instance
 
 
@@ -28,6 +38,7 @@ async def test_async_setup_entry_successful(
     mock_config_entry.add_to_hass(hass)
     assert await async_setup_entry(hass, mock_config_entry)
     assert hass.data[GOOGLE_KEEP_DOMAIN]
+    await hass.async_block_till_done()
 
 
 @pytest.mark.asyncio

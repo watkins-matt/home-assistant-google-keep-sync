@@ -3,3 +3,4 @@ gpsoauth==1.0.3
 pytest-homeassistant-custom-component
 pytest-socket==0.6.0
 urllib3==1.26.18
+aiohttp-cors==0.7.0
