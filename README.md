@@ -81,11 +81,49 @@ use the built-in services to add, remove and update items from your synchronized
 - **Authentication**: Use of an app password is strongly recommended, as there is no way for accounts with 2-Factor-Authentication to be connected otherwise. This will also allow you to easily revoke access to the integration without affecting your Google account and requiring you to change your password.
 
 ## Security
-As an additional security precaution, you can sign up for a new Google account to use exclusively with this integration. Afterward, on your primary account, add this new Google account as a collaborator on your Google Keep lists.
+As an additional security precaution, you can sign up for a new Google account to use exclusively with this integration. Afterward, on your primary account, add this new Google account as a collaborator on any lists you wish to synchronize.
 
 Then provide the credentials for this new account (preferably still using an app password) to the integration. This will allow the integration limited access your Google Keep lists without having access to your entire primary Google account.
 
+## Troubleshooting
 
+Encountering issues? Here are some common problems and their potential solutions:
+
+### Invalid Authentication Errors
+
+If you're experiencing `Invalid authentication` errors, it could be due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, consider using a manually-retrieved token for authentication instead of a password.
+
+#### Generating a Token
+
+To generate a token:
+
+1. Install the requirements from the `requirements.txt` file. This ensures that all necessary dependencies are installed in your Python environment.
+    ```bash
+    pip install -r scripts/requirements.txt
+    ```
+2. Run the `fetch_token.py` script located in the `scripts` directory of the integration. This script will guide you through the process of generating a token.
+    ```bash
+    python scripts/fetch_token.py
+    ```
+3. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
+
+### Sync Delays
+
+- Remember that changes made in Google Keep might not immediately reflect in Home Assistant due to the polling interval of the integration, which is set to every 15 minutes.
+
+### Connection Issues
+
+- If you're unable to connect, check your network settings and ensure your Home Assistant instance can access the internet.
+
+### Integration Does Not Appear in Home Assistant
+
+- After installing via HACS or manually, ensure you have restarted Home Assistant.
+- Check the `custom_components` directory to verify that the `google_keep_sync` folder is present and correctly named.
+
+### Lists Not Syncing
+
+- Ensure the lists you want to sync are selected during the integration setup.
+- Verify that the Google account used has access to the desired Google Keep lists.
 
 ## Disclaimer
 
