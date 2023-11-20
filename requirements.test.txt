@@ -1,6 +1,6 @@
-gkeepapi==0.15.0
-gpsoauth==1.0.3
+aiohttp-cors==0.7.0
+gkeepapi==0.14.2
+gpsoauth==1.0.2
 pytest-homeassistant-custom-component
 pytest-socket==0.6.0
 urllib3==1.26.18
-aiohttp-cors==0.7.0
