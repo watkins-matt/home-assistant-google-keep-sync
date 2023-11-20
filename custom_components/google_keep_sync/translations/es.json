@@ -13,10 +13,11 @@
         "step": {
             "user": {
                 "title": "Introduce las credenciales",
-                "description": "Introduce tu nombre de usuario y contraseña de tu cuenta de Google. Asegúrate de estar usando una contraseña de aplicación; puedes crear una en https://myaccount.google.com/apppasswords.",
+                "description": "Introduce tu nombre de usuario y contraseña de tu cuenta de Google (dejando el campo del token en blanco). Asegúrate de estar usando una contraseña de aplicación; puedes crear una en https://myaccount.google.com/apppasswords.\n\nIniciar sesión con un nombre de usuario y contraseña puede fallar con ciertas versiones de la biblioteca. Si esto ocurre, puedes iniciar sesión con tu nombre de usuario y token que hayas obtenido manualmente en su lugar (dejando el campo de la contraseña en blanco).",
                 "data": {
                     "username": "Nombre de usuario",
-                    "password": "Contraseña"
+                    "password": "Contraseña",
+                    "token": "Token"
                 }
             },
             "select_lists": {

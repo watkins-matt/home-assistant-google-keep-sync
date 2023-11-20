@@ -34,6 +34,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     """Test the initial user setup form."""
     user_name = "testuser@example.com"
     user_password = "testpass"
+    user_token = "testtoken"
 
     # Initiate the config flow
     initial_form_result = await hass.config_entries.flow.async_init(
@@ -43,7 +44,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     assert initial_form_result["errors"] == {}
 
     # Submit user credentials
-    user_input = {"username": user_name, "password": user_password}
+    user_input = {"username": user_name, "password": user_password, "token": user_token}
     credentials_form_result = await hass.config_entries.flow.async_configure(
         initial_form_result["flow_id"], user_input=user_input
     )
@@ -64,6 +65,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     assert final_form_result["data"] == {
         "username": user_name,
         "password": user_password,
+        "token": user_token,
         "lists_to_sync": ["list_id_1", "list_id_2"],
     }
 

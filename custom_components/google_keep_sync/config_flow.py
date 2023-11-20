@@ -18,7 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("username"): str,
-        vol.Required("password"): str,
+        vol.Optional("password"): str,
+        vol.Optional("token"): str,
     }
 )
 
@@ -153,18 +154,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Validate the user input allows us to connect."""
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
+        token = data.get("token", "").strip()
 
-        if not username or not password:
-            _LOGGER.error("Invalid username or password provided.")
+        if not (username and (password or token)):
+            _LOGGER.error(
+                "Credentials are missing; a username and password or "
+                "token must be provided."
+            )
             raise InvalidAuthError
 
-        self.api = GoogleKeepAPI(hass, username, password)
+        self.api = GoogleKeepAPI(hass, username, password, token)
         success = await self.api.authenticate()
 
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {"username": username, "password": password}
+        self.user_data = {"username": username, "password": password, "token": token}
         return {"title": "Google Keep", "entry_id": username.lower()}
 
     async def async_step_user(
