@@ -16,7 +16,13 @@ _LOGGER = logging.getLogger(__name__)
 class GoogleKeepAPI:
     """Class to authenticate and interact with Google Keep."""
 
-    def __init__(self, hass: HomeAssistant, username: str, password: str):
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        username: str,
+        password: str = "",
+        token: str | None = None,
+    ):
         """Initialize the API."""
         self._keep = gkeepapi.Keep()
         self._hass = hass
@@ -26,10 +32,10 @@ class GoogleKeepAPI:
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
         )
         self._authenticated = False
-        self._token: str | None = None
+        self._token = token
 
-    async def authenticate(self) -> bool:
-        """Log in to Google Keep."""
+    async def async_login_with_saved_state(self) -> bool:
+        """Log in to Google Keep using the saved state and token."""
         # Load the saved token and state
         (
             saved_token,
@@ -37,26 +43,62 @@ class GoogleKeepAPI:
             saved_username,
         ) = await self._async_load_state_and_token()
 
-        # Check if the credentials have changed or if there's no saved token
-        if not saved_token or not saved_state or self._username != saved_username:
-            try:
-                await self._hass.async_add_executor_job(
-                    self._keep.login, self._username, self._password
-                )
-                self._token = self._keep.getMasterToken()  # Store the new token
-                await self._async_save_state_and_token()
-            except gkeepapi.exception.LoginException as e:
-                _LOGGER.error("Failed to login to Google Keep: %s", e)
-                return False
-        else:
+        if saved_token and saved_state and saved_username:
             try:
                 await self._hass.async_add_executor_job(
                     self._keep.resume, self._username, saved_token, saved_state
                 )
                 self._token = saved_token  # Use the saved token
             except gkeepapi.exception.LoginException as e:
-                _LOGGER.error("Failed to login to Google Keep: %s", e)
+                _LOGGER.error(
+                    "Failed to resume Google Keep with token and state: %s", e
+                )
                 return False
+        else:
+            return False
+
+        return True
+
+    async def async_login_with_saved_token(self) -> bool:
+        """Log in to Google Keep using the saved token."""
+        if self._username and self._token:
+            try:
+                await self._hass.async_add_executor_job(
+                    self._keep.resume, self._username, self._token, None
+                )
+                self._token = self._keep.getMasterToken()  # Store the new token
+                await self._async_save_state_and_token()
+
+            except gkeepapi.exception.LoginException as e:
+                _LOGGER.error("Failed to resume Google Keep with token: %s", e)
+                return False
+        else:
+            return False
+
+        return True
+
+    async def async_login_with_password(self) -> bool:
+        """Login to Google Keep using the username and password."""
+        try:
+            await self._hass.async_add_executor_job(
+                self._keep.login, self._username, self._password
+            )
+            self._token = self._keep.getMasterToken()  # Store the new token
+            await self._async_save_state_and_token()
+        except gkeepapi.exception.LoginException as e:
+            _LOGGER.error(
+                "Failed to login to Google Keep with username and password: %s", e
+            )
+            return False
+
+        return True
+
+    async def authenticate(self) -> bool:
+        """Log in to Google Keep."""
+        if not await self.async_login_with_saved_state():
+            if not await self.async_login_with_saved_token():
+                if not await self.async_login_with_password():
+                    return False
 
         self._authenticated = True
         return True
