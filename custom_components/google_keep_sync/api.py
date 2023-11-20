@@ -32,7 +32,7 @@ class GoogleKeepAPI:
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
         )
         self._authenticated = False
-        self._token = token
+        self._token = token if token else None
 
     async def async_login_with_saved_state(self) -> bool:
         """Log in to Google Keep using the saved state and token."""
