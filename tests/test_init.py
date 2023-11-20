@@ -50,6 +50,7 @@ async def test_async_setup_entry_failed(
     mock_config_entry.add_to_hass(hass)
     assert not await async_setup_entry(hass, mock_config_entry)
     assert GOOGLE_KEEP_DOMAIN not in hass.data
+    await hass.async_block_till_done()
 
 
 @pytest.mark.asyncio
@@ -59,3 +60,4 @@ async def test_async_unload_entry(hass: HomeAssistant, mock_api, mock_config_ent
     await async_setup_entry(hass, mock_config_entry)
     assert await async_unload_entry(hass, mock_config_entry)
     assert not hass.data[GOOGLE_KEEP_DOMAIN].get(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
