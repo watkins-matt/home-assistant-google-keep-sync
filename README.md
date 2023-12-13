@@ -9,6 +9,7 @@ Google Keep Sync is an unofficial custom integration for Home Assistant that all
 There are existing Home Assistant integrations for Google Keep, why create a new one? Basically, I tried all of them and none of them quite worked the way I wanted them to.
 
 ## Features
+
 Bidirectional synchronization of lists between Google Keep and Home Assistant. You select the lists
 you wish to sync, and they are created as todo
 entities in your Home Assistant instance.
@@ -41,7 +42,7 @@ HACS is strongly recommended.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
-    - Generate and use an **App Password** for your Google account (see https://myaccount.google.com/apppasswords).
+    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>).
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
 
 ### Manual Installation
@@ -55,7 +56,7 @@ HACS is strongly recommended.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
-    - Generate and use an **App Password** for your Google account (see https://myaccount.google.com/apppasswords).
+    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>).
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
 
 ## Usage
@@ -73,7 +74,6 @@ use the built-in services to add, remove and update items from your synchronized
 - `todo.remove_item`
 - `todo.update_item`
 
-
 ## Limitations
 
 - **Polling Interval**: While changes made in Home Assistant are instantly reflected in Google Keep, changes made in Google Keep are not instantly reflected in Home Assistant. The integration polls Google Keep for updates every 15 minutes. Therefore, any changes made directly in Google Keep will be visible in Home Assistant after the next polling interval.
@@ -81,6 +81,7 @@ use the built-in services to add, remove and update items from your synchronized
 - **Authentication**: Use of an app password is strongly recommended, as there is no way for accounts with 2-Factor-Authentication to be connected otherwise. This will also allow you to easily revoke access to the integration without affecting your Google account and requiring you to change your password.
 
 ## Security
+
 As an additional security precaution, you can sign up for a new Google account to use exclusively with this integration. Afterward, on your primary account, add this new Google account as a collaborator on any lists you wish to synchronize.
 
 Then provide the credentials for this new account (preferably still using an app password) to the integration. This will allow the integration limited access your Google Keep lists without having access to your entire primary Google account.
@@ -95,17 +96,25 @@ If you're experiencing `Invalid authentication` errors, it could be due to incom
 
 #### Generating a Token
 
+Note that this method is provided as a temporary workaround, and may not work depending on your environment.
+
 To generate a token:
 
-1. Install the requirements from the `requirements.txt` file. This ensures that all necessary dependencies are installed in your Python environment.
+1. Download scripts/fetch_token.py and scripts/requirements.txt to your computer which has Python installed.
+
+2. Install the requirements from the `requirements.txt` file. This ensures that all necessary dependencies are installed in your Python environment.
+
     ```bash
     pip install -r scripts/requirements.txt
     ```
-2. Run the `fetch_token.py` script located in the `scripts` directory of the integration. This script will guide you through the process of generating a token.
+
+3. Run the `fetch_token.py` script located in the `scripts` directory of the integration. This script will guide you through the process of generating a token.
+
     ```bash
     python scripts/fetch_token.py
     ```
-3. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
+
+4. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
 
 ### Sync Delays
 
