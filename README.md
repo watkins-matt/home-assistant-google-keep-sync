@@ -24,20 +24,30 @@ Google Keep Sync can be installed either manually or via HACS, although using
 HACS is strongly recommended.
 
 ### Installation via HACS
+    
+1. **Add Integration via HACS**:
 
-1. **Add Custom Repository**:
-   - Open HACS in Home Assistant.
-   - Go to `Integrations`.
-   - Click on the `...` in the top right corner and select `Custom repositories`.
-   - Add the URL `https://github.com/watkins-matt/home-assistant-google-keep-sync`
-   - Set the category to `Integration` and click `Add`.
+    If you already have HACS installed, you can simply click this button:
 
-2. **Install the Integration**:
-   - Search for `Google Keep Sync` in the HACS Integrations.
-   - Click `Download`.
-   - Restart Home Assistant.
+    [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=watkins-matt&repository=home-assistant-google-keep-sync&category=integration)
+    - Click `Download`.
+    - Restart Home Assistant.
 
-3. **Configuration**:
+    Alternatively, you can follow these instructions to add it via HACS:
+
+    1. **Add Custom Repository**:
+        - Open HACS in Home Assistant.
+        - Go to `Integrations`.
+        - Click on the `...` in the top right corner and select `Custom repositories`.
+        - Add the URL `https://github.com/watkins-matt/home-assistant-google-keep-sync`
+        - Set the category to `Integration` and click `Add`.
+
+    1. **Install the Integration**:
+        - Search for `Google Keep Sync` in the HACS Integrations.
+        - Click `Download`.
+        - Restart Home Assistant.
+
+1. **Configure Integration**:
     - Go to `Settings` -> `Devices & Services`.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
