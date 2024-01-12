@@ -40,7 +40,6 @@ def mock_coordinator():
     return coordinator
 
 
-@pytest.mark.asyncio
 async def test_async_setup_entry(
     hass: HomeAssistant, mock_api, mock_config_entry, mock_coordinator
 ):
@@ -57,29 +56,29 @@ async def test_async_setup_entry(
         assert mock_add_entities.call_count == 1
 
 
-@pytest.mark.asyncio
 async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test creating a todo item."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    list_prefix = ""
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": []}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list)
+    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
 
     await entity.async_create_todo_item(TodoItem(summary="Milk"))
     mock_api.async_create_todo_item.assert_called_once()
     assert any(item["text"] == "Milk" for item in mock_coordinator.data[0]["items"])
 
 
-@pytest.mark.asyncio
 async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test updating a todo item."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    list_prefix = ""
     initial_item = {"id": "milk_item", "text": "Milk", "checked": False}
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": [initial_item]}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list)
+    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
     entity.hass = hass
 
     updated_item = TodoItem(
@@ -94,10 +93,10 @@ async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     )
 
 
-@pytest.mark.asyncio
 async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test deleting todo items."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    list_prefix = ""
     initial_items = [
         {"id": "milk_item", "text": "Milk", "checked": False},
         {"id": "eggs_item", "text": "Eggs", "checked": False},
@@ -105,7 +104,7 @@ async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": initial_items}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list)
+    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
     entity.hass = hass
 
     await entity.async_delete_todo_items(["milk_item"])
