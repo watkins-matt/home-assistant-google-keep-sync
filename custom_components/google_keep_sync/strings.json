@@ -7,7 +7,8 @@
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
-          "token": "[%key:common::config_flow::data::token%]"
+          "token": "[%key:common::config_flow::data::token%]",
+          "list_prefix": "List Prefix"
         }
       },
       "select_lists": {

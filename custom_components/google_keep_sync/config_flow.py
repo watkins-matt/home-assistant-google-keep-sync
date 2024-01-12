@@ -20,6 +20,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("username"): str,
         vol.Optional("password"): str,
         vol.Optional("token"): str,
+        vol.Optional("list_prefix"): str,
     }
 )
 
@@ -155,6 +156,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
         token = data.get("token", "").strip()
+        list_prefix = data.get("list_prefix", "").strip()
 
         if not (username and (password or token)):
             _LOGGER.error(
@@ -169,7 +171,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {"username": username, "password": password, "token": token}
+        self.user_data = {
+            "username": username,
+            "password": password,
+            "token": token,
+            "list_prefix": list_prefix,
+        }
         return {"title": "Google Keep", "entry_id": username.lower()}
 
     async def async_step_user(

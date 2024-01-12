@@ -17,7 +17,8 @@
                 "data": {
                     "username": "Nombre de usuario",
                     "password": "Contraseña",
-                    "token": "Token"
+                    "token": "Token",
+                    "list_prefix": "Prefijo de lista"
                 }
             },
             "select_lists": {
