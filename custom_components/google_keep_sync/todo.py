@@ -40,13 +40,16 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
         api: GoogleKeepAPI,
         coordinator: DataUpdateCoordinator,
         gkeep_list: gkeepapi.node.List,
+        list_prefix: str,
     ):
         """Initialize the Google Keep Todo List Entity."""
         super().__init__(coordinator)
         self.api = api
         self._gkeep_list = gkeep_list
         self._gkeep_list_id = gkeep_list.id
-        self._attr_name = f"{gkeep_list.title}"
+        self._attr_name = (
+            f"{list_prefix} " if list_prefix else ""
+        ) + f"{gkeep_list.title}"
         self._attr_unique_id = f"{DOMAIN}.list.{gkeep_list.id}"
         self.entity_id = self._get_entity_id(gkeep_list.title)
 
@@ -194,11 +197,15 @@ async def async_setup_entry(
 
     # Retrieve user-selected lists from the configuration
     selected_lists = entry.data.get("lists_to_sync", [])
+    list_prefix = entry.data.get("list_prefix", "")
 
     # Filter Google Keep lists based on user selection
     all_lists = await api.fetch_all_lists()
     lists_to_sync = [lst for lst in all_lists if lst.id in selected_lists]
 
     async_add_entities(
-        [GoogleKeepTodoListEntity(api, coordinator, list) for list in lists_to_sync]
+        [
+            GoogleKeepTodoListEntity(api, coordinator, list, list_prefix)
+            for list in lists_to_sync
+        ]
     )

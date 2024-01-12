@@ -17,7 +17,8 @@
                 "data": {
                     "username": "Användarnamn",
                     "password": "Lösenord",
-                    "token": "Token"
+                    "token": "Token",
+                    "list_prefix": "Listprefix"
                 }
             },
             "select_lists": {
