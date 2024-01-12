@@ -29,7 +29,6 @@ def mock_google_keep_api():
         mock.reset_mock()
 
 
-@pytest.mark.asyncio
 async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     """Test the initial user setup form."""
     user_name = "testuser@example.com"
@@ -71,7 +70,6 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     }
 
 
-@pytest.mark.asyncio
 async def test_invalid_auth_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of invalid authentication."""
     user_input = {"username": "testuser", "password": "wrongpass"}
@@ -92,7 +90,6 @@ async def test_invalid_auth_handling(hass: HomeAssistant, mock_google_keep_api):
     assert auth_fail_result["errors"] == {"base": "invalid_auth"}
 
 
-@pytest.mark.asyncio
 async def test_user_input_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test user input handling."""
     user_input = {"username": "validuser@example.com", "password": "validpassword"}
@@ -104,7 +101,6 @@ async def test_user_input_handling(hass: HomeAssistant, mock_google_keep_api):
     assert result["step_id"] == "select_lists"
 
 
-@pytest.mark.asyncio
 async def test_invalid_user_input(hass: HomeAssistant):
     """Test invalid user input."""
     user_input = {"username": "", "password": ""}
@@ -114,7 +110,6 @@ async def test_invalid_user_input(hass: HomeAssistant):
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-@pytest.mark.asyncio
 async def test_unexpected_exception_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of unexpected exceptions."""
     # Access the mocked GoogleKeepAPI instance and set authenticate
@@ -133,7 +128,6 @@ async def test_unexpected_exception_handling(hass: HomeAssistant, mock_google_ke
     assert result["errors"] == {"base": "unknown"}
 
 
-@pytest.mark.asyncio
 async def test_reauth_flow(hass: HomeAssistant, mock_google_keep_api):
     """Test reauthentication flow."""
     # Create a mock entry to simulate existing config entry
@@ -171,7 +165,6 @@ async def test_reauth_flow(hass: HomeAssistant, mock_google_keep_api):
     assert updated_entry.data["password"] == "new_password"
 
 
-@pytest.mark.asyncio
 async def test_options_flow(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):
@@ -196,7 +189,6 @@ async def test_options_flow(
     assert submission_response["type"] == "create_entry"
 
 
-@pytest.mark.asyncio
 async def test_reauth_flow_invalid_credentials(
     hass: HomeAssistant, mock_google_keep_api
 ):
@@ -229,7 +221,6 @@ async def test_reauth_flow_invalid_credentials(
     assert config_flow_result["errors"] == {"base": "invalid_auth"}
 
 
-@pytest.mark.asyncio
 async def test_options_flow_fetch_list_failure(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):
@@ -250,7 +241,6 @@ async def test_options_flow_fetch_list_failure(
     assert init_form_response["errors"] == {"base": "list_fetch_error"}
 
 
-@pytest.mark.asyncio
 async def test_empty_username_or_password(hass: HomeAssistant):
     """Test that empty username or password is handled."""
     # Test with empty username
@@ -268,7 +258,6 @@ async def test_empty_username_or_password(hass: HomeAssistant):
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-@pytest.mark.asyncio
 async def test_authentication_network_issue(hass: HomeAssistant, mock_google_keep_api):
     """Test network issues during authentication."""
     user_input = {"username": "testuser", "password": "testpass"}
@@ -284,7 +273,6 @@ async def test_authentication_network_issue(hass: HomeAssistant, mock_google_kee
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-@pytest.mark.asyncio
 async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api):
     """Test that creating a duplicate configuration entry is handled."""
     user_name = "duplicateuser@example.com"
@@ -307,7 +295,6 @@ async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api)
     assert result["errors"] == {"base": "already_configured"}
 
 
-@pytest.mark.asyncio
 async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
     """Test reauthentication flow is aborted on success."""
     user_name = "testuser@example.com"
@@ -342,7 +329,6 @@ async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
     assert config_flow_result["reason"] == "reauth_successful"
 
 
-@pytest.mark.asyncio
 async def test_options_flow_update_data(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):
@@ -367,7 +353,6 @@ async def test_options_flow_update_data(
     assert updated_entry.data["lists_to_sync"] == ["list_id_1", "list_id_3"]
 
 
-@pytest.mark.asyncio
 async def test_options_flow_create_entry(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):
@@ -390,7 +375,6 @@ async def test_options_flow_create_entry(
     assert result["data"] == user_input
 
 
-@pytest.mark.asyncio
 async def test_options_flow_reauth_required(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):
@@ -410,7 +394,6 @@ async def test_options_flow_reauth_required(
     assert init_result["reason"] == "reauth_required"
 
 
-@pytest.mark.asyncio
 async def test_user_form_cannot_connect(hass: HomeAssistant, mock_google_keep_api):
     """Test the user setup form handles connection issues."""
     mock_instance = mock_google_keep_api.return_value
@@ -429,7 +412,6 @@ async def test_user_form_cannot_connect(hass: HomeAssistant, mock_google_keep_ap
     assert result["errors"] == {"base": "cannot_connect"}
 
 
-@pytest.mark.asyncio
 async def test_reauth_confirm_cannot_connect(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of network issues during reauthentication."""
     # Create a mock entry to simulate existing config entry
@@ -460,7 +442,6 @@ async def test_reauth_confirm_cannot_connect(hass: HomeAssistant, mock_google_ke
     assert config_flow_result["errors"] == {"base": "cannot_connect"}
 
 
-@pytest.mark.asyncio
 async def test_reauth_confirm_entry_not_found(
     hass: HomeAssistant, mock_google_keep_api
 ):
