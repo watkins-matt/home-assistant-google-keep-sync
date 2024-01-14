@@ -32,6 +32,7 @@ def mock_api():
         yield mock_api
 
 
+@pytest.mark.asyncio
 @pytest.fixture
 def mock_coordinator():
     """Return a mocked update coordinator."""
@@ -40,6 +41,7 @@ def mock_coordinator():
     return coordinator
 
 
+@pytest.mark.asyncio
 async def test_async_setup_entry(
     hass: HomeAssistant, mock_api, mock_config_entry, mock_coordinator
 ):
@@ -56,6 +58,7 @@ async def test_async_setup_entry(
         assert mock_add_entities.call_count == 1
 
 
+@pytest.mark.asyncio
 async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test creating a todo item."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
@@ -72,6 +75,7 @@ async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     assert any(item["text"] == "Milk" for item in mock_coordinator.data[0]["items"])
 
 
+@pytest.mark.asyncio
 async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test updating a todo item."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
@@ -97,6 +101,7 @@ async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     )
 
 
+@pytest.mark.asyncio
 async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test deleting todo items."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
