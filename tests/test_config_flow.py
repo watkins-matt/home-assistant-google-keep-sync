@@ -62,7 +62,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     assert final_form_result["type"] == "create_entry"
     assert final_form_result["title"] == user_name
     assert final_form_result["data"] == {
-        'list_prefix': '',
+        "list_prefix": "",
         "username": user_name,
         "password": user_password,
         "token": user_token,

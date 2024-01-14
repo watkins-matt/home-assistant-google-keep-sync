@@ -63,7 +63,9 @@ async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": []}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
+    entity = GoogleKeepTodoListEntity(
+        mock_api, mock_coordinator, grocery_list, list_prefix
+    )
 
     await entity.async_create_todo_item(TodoItem(summary="Milk"))
     mock_api.async_create_todo_item.assert_called_once()
@@ -78,7 +80,9 @@ async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": [initial_item]}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
+    entity = GoogleKeepTodoListEntity(
+        mock_api, mock_coordinator, grocery_list, list_prefix
+    )
     entity.hass = hass
 
     updated_item = TodoItem(
@@ -104,7 +108,9 @@ async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": initial_items}
     ]
-    entity = GoogleKeepTodoListEntity(mock_api, mock_coordinator, grocery_list, list_prefix)
+    entity = GoogleKeepTodoListEntity(
+        mock_api, mock_coordinator, grocery_list, list_prefix
+    )
     entity.hass = hass
 
     await entity.async_delete_todo_items(["milk_item"])
