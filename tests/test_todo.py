@@ -125,3 +125,30 @@ async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator
     # Verify "milk_item" is deleted and "eggs_item" remains
     assert "milk_item" not in [item["id"] for item in updated_list["items"]]
     assert "eggs_item" in [item["id"] for item in updated_list["items"]]
+
+
+@pytest.mark.asyncio
+async def test_default_list_prefix(hass, mock_api, mock_coordinator):
+    """Test default list prefix setting (not set)."""
+    list_prefix = ""
+    grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+
+    entity = GoogleKeepTodoListEntity(
+        mock_api, mock_coordinator, grocery_list, list_prefix
+    )
+
+    # Test default prefix
+    assert entity.name == "Grocery List"
+
+
+@pytest.mark.asyncio
+async def test_custom_list_prefix(hass, mock_api, mock_coordinator):
+    """Test custom list prefix setting ."""
+    list_prefix = "Foo"
+    grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+
+    # Test custom prefix
+    entity = GoogleKeepTodoListEntity(
+        mock_api, mock_coordinator, grocery_list, list_prefix
+    )
+    assert entity.name == "Foo Grocery List"
