@@ -128,19 +128,11 @@ class GoogleKeepAPI:
         return wrapper
 
     @authenticated_required
-    async def async_create_todo_item(self, list_id: str, text: str) -> str:
+    async def async_create_todo_item(self, list_id: str, text: str) -> None:
         """Create a new item in a specified list in Google Keep."""
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
             await self._hass.async_add_executor_job(keep_list.add, text, False)
-            await self._hass.async_add_executor_job(self._keep.sync)
-
-            # Iterate through the list items to find the newly added item
-            for item in reversed(keep_list.items):
-                if item.text == text and not item.checked:
-                    return item.id  # Return the ID of the newly created item
-
-            raise Exception("Failed to find the newly created item in Google Keep.")
         else:
             raise Exception(f"List with ID {list_id} not found in Google Keep.")
 
@@ -183,7 +175,6 @@ class GoogleKeepAPI:
             if item_to_delete:
                 # Delete the item using the delete method on the ListItem object
                 await self._hass.async_add_executor_job(item_to_delete.delete)
-                await self._hass.async_add_executor_job(self._keep.sync)
                 _LOGGER.debug(
                     "Item %s deleted from list %s in Google Keep", item_id, list_id
                 )
@@ -210,7 +201,6 @@ class GoogleKeepAPI:
                     if checked is not None:
                         item.checked = checked
                     break
-            await self._hass.async_add_executor_job(self._keep.sync)
 
     @authenticated_required
     async def fetch_all_lists(self) -> list[gkeepapi.node.List]:
@@ -230,17 +220,24 @@ class GoogleKeepAPI:
             # Run the synchronous Keep sync method in the executor
             await self._hass.async_add_executor_job(self._keep.sync)
 
+            # TODO: Why iterate over all gkeep lists and notes. this could be slow!
+            # filtering on list type, alternatively can filter on required id's
+            # eg. (self.api.get())
+            data = await self.hass.async_add_executor_job(
+                functools.partial(
+                    self.api.find,
+                    func=lambda x: isinstance(x, gkeepapi.node.List),
+                ),
+            )
+
             # Process and return the list data with their items' checked status
             lists = []
-            for node in self._keep.all():
-                if isinstance(node, gkeepapi.node.List):
-                    list_items = [
-                        {"id": item.id, "text": item.text, "checked": item.checked}
-                        for item in node.items
-                    ]
-                    lists.append(
-                        {"id": node.id, "title": node.title, "items": list_items}
-                    )
+            for node in data:
+                list_items = [
+                    {"id": item.id, "text": item.text, "checked": item.checked}
+                    for item in node.items
+                ]
+                lists.append({"id": node.id, "title": node.title, "items": list_items})
 
             return lists
 
