@@ -214,30 +214,20 @@ class GoogleKeepAPI:
         ]
 
     @authenticated_required
-    async def async_sync_data(self) -> list[dict[str, Any]] | None:
-        """Asynchronously synchronize data with Google Keep."""
+    async def async_sync_data(
+        self, lists_to_sync: [str]
+    ) -> list[gkeepapi.node.List] | None:
+        """Synchronize data only from configured lists with Google Keep."""
         try:
             # Run the synchronous Keep sync method in the executor
             await self._hass.async_add_executor_job(self._keep.sync)
 
-            # TODO: Why iterate over all gkeep lists and notes. this could be slow!
-            # filtering on list type, alternatively can filter on required id's
-            # eg. (self.api.get())
-            data = await self.hass.async_add_executor_job(
-                functools.partial(
-                    self.api.find,
-                    func=lambda x: isinstance(x, gkeepapi.node.List),
-                ),
-            )
-
-            # Process and return the list data with their items' checked status
+            # only get the lists that are configured to sync
             lists = []
-            for node in data:
-                list_items = [
-                    {"id": item.id, "text": item.text, "checked": item.checked}
-                    for item in node.items
-                ]
-                lists.append({"id": node.id, "title": node.title, "items": list_items})
+            for list_id in lists_to_sync:
+                lists.append(
+                    await self._hass.async_add_executor_job(self._keep.get, list_id)
+                )
 
             return lists
 
