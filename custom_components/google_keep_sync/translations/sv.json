@@ -13,7 +13,7 @@
         "step": {
             "user": {
                 "title": "Ange inloggningsuppgifter",
-                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto (lämna token-fältet tomt). Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.\n\nAtt logga in med användarnamn och lösenord kan misslyckas med vissa versioner av biblioteket. Om detta händer kan du logga in med ditt användarnamn och token som du manuellt har hämtat istället (lämna lösenordsfältet tomt). Se [Readme]({invalid_auth_url}) för detaljer.\n\nListprefix lägger till en unik identifierare på framsidan av varje listnamn i Home Assistant t.ex. inställningen 'Google' visar din inköpslista som 'Google inköpslista'.",
+                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto (lämna token-fältet tomt). Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.\n\nAtt logga in med användarnamn och lösenord kan misslyckas med vissa versioner av biblioteket. Om detta händer kan du logga in med ditt användarnamn och token som du manuellt har hämtat istället (lämna lösenordsfältet tomt). Se [Readme]({invalid_auth_url}) för detaljer.\n\n*VALFRITT:* Listprefix lägger till en unik identifierare på framsidan av varje listnamn i Home Assistant t.ex. inställningen 'Google' visar din inköpslista som 'Google inköpslista'. Lämna tomt för att få listorna namngivna som de är i Google Keep.",
                 "data": {
                     "username": "Användarnamn",
                     "password": "Lösenord",

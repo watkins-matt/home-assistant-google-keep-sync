@@ -13,7 +13,7 @@
         "step": {
             "user": {
                 "title": "Enter credentials",
-                "description": "Enter your username and password for your Google account (leaving the token field blank). Please ensure you are using an app password; you can create one at https://myaccount.google.com/apppasswords.\n\nLogging in with a username and password may fail with certain library versions. If this happens, you can login with your username and token that you have manually retrieved instead (leaving the password field blank). See [Readme]({invalid_auth_url}) for details.\n\nList Prefix adds a unique identifier to the front of each list name in Home Assistant eg. entering 'Google' will display your shopping list as 'Google Shopping List'.",
+                "description": "Enter your username and password for your Google account (leaving the token field blank). Please ensure you are using an app password; you can create one at https://myaccount.google.com/apppasswords.\n\nLogging in with a username and password may fail with certain library versions. If this happens, you can login with your username and token that you have manually retrieved instead (leaving the password field blank). See [Readme]({invalid_auth_url}) for details.\n\n*OPTIONAL:* List Prefix adds a unique identifier to the front of each list name in Home Assistant eg. entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
                 "data": {
                     "username": "Username",
                     "password": "Password",
