@@ -105,7 +105,7 @@ Encountering issues? Here are some common problems and their potential solutions
 
 If you're experiencing `Invalid authentication` errors, it could be due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, consider using a manually-retrieved token for authentication instead of a password.
 
-#### Generating a Token
+#### Generating a Token Using the Included Script
 
 Note that this method is provided as a temporary workaround, and may not work depending on your environment.
 
@@ -124,6 +124,33 @@ To generate a token:
     ```bash
     python scripts/fetch_token.py
     ```
+
+4. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
+
+#### Generating a Token Using a Docker Container
+
+Alternatively, you can use a [Docker container](https://github.com/leikoilja/ha-google-home/issues/599#issuecomment-1756207026) created by @Brephlas.
+
+To generate a token:
+
+1. In a environment with Docker installed, enter the following commands.
+   
+    ```bash
+    docker pull breph/ha-google-home_get-token:latest
+    docker run -it -d breph/ha-google-home_get-token
+    ```
+    
+2. Copy the returned container ID to use in the following command.
+
+   ```bash
+   docker exec -it <ID> bash
+   ```
+   
+3. Inside the container, enter the following command and answer the prompts to generate a master token. For the password, you can use either your regular password or an app password,
+
+   ```bash
+   python3 get_tokens.py
+   ```
 
 4. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
 
