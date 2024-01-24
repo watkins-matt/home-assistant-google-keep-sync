@@ -1,3 +1,0 @@
-gkeepapi==0.14.2
-gpsoauth==1.0.2
-urllib3==1.26.18
