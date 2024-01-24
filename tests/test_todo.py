@@ -61,17 +61,47 @@ async def test_async_setup_entry(
 @pytest.mark.asyncio
 async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test creating a todo item."""
+    # Create a mock Google Keep list
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    grocery_list.items = []
     list_prefix = ""
+
+    # Initialize the coordinator data
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": []}
     ]
+
+    # Side effect to simulate adding item to Google Keep list
+    # when mock_api.async_create_todo_item is called
+    def async_create_todo_item_side_effect(list_id, text):
+        if list_id == "grocery_list":
+            new_item = MagicMock()
+            new_item.text = text
+            grocery_list.items.append(new_item)
+
+    mock_api.async_create_todo_item.side_effect = async_create_todo_item_side_effect
+
+    # Side effect to update coordinator data to reflect changes in the list
+    def async_refresh_side_effect():
+        mock_coordinator.data[0]["items"] = [
+            {"text": item.text} for item in grocery_list.items
+        ]
+
+    mock_coordinator.async_refresh = AsyncMock(side_effect=async_refresh_side_effect)
+
+    # Create the entity and add a new item
     entity = GoogleKeepTodoListEntity(
         mock_api, mock_coordinator, grocery_list, list_prefix
     )
-
     await entity.async_create_todo_item(TodoItem(summary="Milk"))
-    mock_api.async_create_todo_item.assert_called_once()
+
+    # Ensure the proper methods were called
+    mock_api.async_create_todo_item.assert_called_once_with("grocery_list", "Milk")
+    mock_coordinator.async_refresh.assert_called_once()
+
+    # Assertions to ensure the item is correctly added
+    assert any(item.text == "Milk" for item in grocery_list.items)
+    assert any(item.summary == "Milk" for item in entity.todo_items)
     assert any(item["text"] == "Milk" for item in mock_coordinator.data[0]["items"])
 
 
