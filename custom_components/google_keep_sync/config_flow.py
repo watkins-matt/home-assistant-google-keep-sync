@@ -17,16 +17,15 @@ _LOGGER = logging.getLogger(__name__)
 
 INVALID_AUTH_URL = "https://github.com/watkins-matt/home-assistant-google-keep-sync?tab=readme-ov-file#invalid-authentication-errors"
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
+SCHEMA_USER_DATA_STEP = vol.Schema(
     {
         vol.Required("username"): str,
         vol.Optional("password"): str,
         vol.Optional("token"): str,
-        vol.Optional("list_prefix"): str,
     }
 )
 
-REAUTH_SCHEMA = vol.Schema(
+SCHEMA_REAUTH = vol.Schema(
     {
         vol.Required("password"): str,
     }
@@ -72,6 +71,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             errors["base"] = "list_fetch_error"
 
         existing_lists = self.config_entry.data.get("lists_to_sync", [])
+        list_prefix = self.config_entry.data.get("list_prefix", "")
 
         return self.async_show_form(
             step_id="init",
@@ -79,7 +79,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         "lists_to_sync", default=existing_lists
-                    ): cv.multi_select({list.id: list.title for list in lists})
+                    ): cv.multi_select({list.id: list.title for list in lists}),
+                    vol.Optional("list_prefix", default=list_prefix): str,
                 }
             ),
             errors=errors,
@@ -133,7 +134,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=REAUTH_SCHEMA,
+            data_schema=SCHEMA_REAUTH,
             errors=errors,
         )
 
@@ -158,7 +159,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
         token = data.get("token", "").strip()
-        list_prefix = data.get("list_prefix", "").strip()
 
         if not (username and (password or token)):
             _LOGGER.error(
@@ -173,18 +173,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {
-            "username": username,
-            "password": password,
-            "token": token,
-            "list_prefix": list_prefix,
-        }
+        self.user_data = {"username": username, "password": password, "token": token}
         return {"title": "Google Keep", "entry_id": username.lower()}
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
+        """Handle the initial step for the user to enter their credentials."""
         errors = {}
         if user_input:
             try:
@@ -196,7 +191,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 # Check if an entry with the same unique_id already exists
                 self._abort_if_unique_id_configured()
 
-                return await self.async_step_select_lists()
+                return await self.async_step_options()
 
             except InvalidAuthError:
                 errors["base"] = "invalid_auth"
@@ -210,35 +205,42 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         return self.async_show_form(
             step_id="user",
-            data_schema=STEP_USER_DATA_SCHEMA,
+            data_schema=SCHEMA_USER_DATA_STEP,
             errors=errors,
             description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
         )
 
-    async def async_step_select_lists(
+    async def async_step_options(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the step to select Google Keep lists to sync."""
+        """Handle the options step."""
+        errors = {}
+
         if user_input is not None:
             entry_data = {
                 **self.user_data,
                 "lists_to_sync": user_input.get("lists_to_sync", []),
+                "list_prefix": user_input.get("list_prefix", ""),
             }
             return self.async_create_entry(
                 title=self.context["unique_id"], data=entry_data
             )
 
         lists = await self.api.fetch_all_lists()
+
+        options_schema = vol.Schema(
+            {
+                vol.Required("lists_to_sync"): cv.multi_select(
+                    {list.id: list.title for list in lists}
+                ),
+                vol.Optional("list_prefix"): str,
+            }
+        )
+
         return self.async_show_form(
-            step_id="select_lists",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("lists_to_sync"): cv.multi_select(
-                        {list.id: list.title for list in lists}
-                    )
-                }
-            ),
-            errors={},
+            step_id="options",
+            data_schema=options_schema,
+            errors=errors,
         )
 
 
