@@ -122,7 +122,7 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
         """Get the current set of To-do items."""
         # if self._gkeep_list.id not in self.coordinator.data:
         #     _LOGGER.warning(
-        #         "Unable to load data for Google Keep list: %s", self._gkeep_list.summary
+        #     "Unable to load data for Google Keep list: %s", self._gkeep_list.summary
         #     )
         #     return []
 

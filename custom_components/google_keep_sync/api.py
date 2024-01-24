@@ -1,7 +1,6 @@
 """API for synchronization with Google Keep."""
 import functools
 import logging
-from typing import Any
 
 import gkeepapi
 from homeassistant.core import HomeAssistant
