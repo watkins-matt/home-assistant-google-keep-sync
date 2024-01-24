@@ -6,10 +6,17 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.google_keep_sync.config_flow import (
-    CannotConnectError,
-)
+from custom_components.google_keep_sync.config_flow import CannotConnectError
 from custom_components.google_keep_sync.const import DOMAIN
+
+
+class MockList:
+    """Mock class representing a list."""
+
+    def __init__(self, id: str, title: str):
+        """Initialize the MockList."""
+        self.id = id
+        self.title = title
 
 
 @pytest.fixture()
@@ -35,7 +42,6 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     user_name = "testuser@example.com"
     user_password = "testpass"
     user_token = "testtoken"
-    user_list_prefix = "testprefix"
 
     # Initiate the config flow
     initial_form_result = await hass.config_entries.flow.async_init(
@@ -49,31 +55,33 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "username": user_name,
         "password": user_password,
         "token": user_token,
-        "list_prefix": user_list_prefix,
     }
     credentials_form_result = await hass.config_entries.flow.async_configure(
         initial_form_result["flow_id"], user_input=user_input
     )
 
-    # Check if the next step is list selection
+    # Check if the next step is the options step
     assert credentials_form_result["type"] == "form"
-    assert credentials_form_result["step_id"] == "select_lists"
+    assert credentials_form_result["step_id"] == "options"
 
-    # Simulate list selection - use the mock list IDs
-    list_selection = {"lists_to_sync": ["list_id_1", "list_id_2"]}
+    # Simulate options selection - including list selection and list prefix
+    options_input = {
+        "lists_to_sync": ["list_id_1", "list_id_2"],
+        "list_prefix": "testprefix",
+    }
     final_form_result = await hass.config_entries.flow.async_configure(
-        credentials_form_result["flow_id"], user_input=list_selection
+        credentials_form_result["flow_id"], user_input=options_input
     )
 
     # Check the final result for entry creation
     assert final_form_result["type"] == "create_entry"
     assert final_form_result["title"] == user_name
     assert final_form_result["data"] == {
-        "list_prefix": user_list_prefix,
         "username": user_name,
         "password": user_password,
         "token": user_token,
         "lists_to_sync": ["list_id_1", "list_id_2"],
+        "list_prefix": "testprefix",
     }
 
 
@@ -106,8 +114,9 @@ async def test_user_input_handling(hass: HomeAssistant, mock_google_keep_api):
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
     )
+    # The next step after user input should be the options step
     assert result["type"] == "form"
-    assert result["step_id"] == "select_lists"
+    assert result["step_id"] == "options"
 
 
 @pytest.mark.asyncio
@@ -186,7 +195,11 @@ async def test_options_flow(
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
-    user_input = {"lists_to_sync": ["list_id_1", "list_id_3"]}
+    # Update user_input to include 'list_prefix'
+    user_input = {
+        "lists_to_sync": ["list_id_1", "list_id_3"],
+        "list_prefix": "TestPrefix",
+    }
 
     # Initialize the options flow
     init_form_response = await hass.config_entries.options.async_init(
@@ -195,11 +208,24 @@ async def test_options_flow(
     assert init_form_response["type"] == "form"
     assert init_form_response["step_id"] == "init"
 
+    # Fetch lists for dynamic options
+    mock_google_keep_api.fetch_all_lists.return_value = [
+        # Mock some lists for testing
+        MockList(id="list_id_1", title="List One"),
+        MockList(id="list_id_2", title="List Two"),
+        MockList(id="list_id_3", title="List Three"),
+    ]
+
+    # Assert the initial form includes the 'list_prefix' field
+    assert "list_prefix" in init_form_response["data_schema"].schema
+
     # Submit user input and get the response
     submission_response = await hass.config_entries.options.async_configure(
         init_form_response["flow_id"], user_input=user_input
     )
     assert submission_response["type"] == "create_entry"
+    # Ensure the submitted 'list_prefix' is correctly handled
+    assert submission_response["data"]["list_prefix"] == "TestPrefix"
 
 
 @pytest.mark.asyncio
@@ -357,7 +383,16 @@ async def test_options_flow_update_data(
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 
-    user_input = {"lists_to_sync": ["list_id_1", "list_id_3"]}
+    # New user input that changes the existing configuration
+    user_input = {
+        "lists_to_sync": ["list_id_1", "list_id_3"],
+        "list_prefix": "TestPrefix",
+    }
+
+    # Assert that the entry data is not updated yet
+    initial_entry = hass.config_entries.async_get_entry(mock_config_entry.entry_id)
+    assert initial_entry.data["lists_to_sync"] != user_input["lists_to_sync"]
+    assert initial_entry.data["list_prefix"] != user_input["list_prefix"]
 
     # Initialize the options flow and capture the flow ID
     init_result = await hass.config_entries.options.async_init(
@@ -365,12 +400,14 @@ async def test_options_flow_update_data(
     )
     flow_id = init_result["flow_id"]
 
-    # Submit user input and update the configuration entry
+    # Submit new user input and update the configuration entry
+
     await hass.config_entries.options.async_configure(flow_id, user_input=user_input)
 
-    # Assert that the entry data is updated
+    # Assert that the entry data is updated and reflects the changes
     updated_entry = hass.config_entries.async_get_entry(mock_config_entry.entry_id)
     assert updated_entry.data["lists_to_sync"] == ["list_id_1", "list_id_3"]
+    assert updated_entry.data["list_prefix"] == "TestPrefix"
 
 
 @pytest.mark.asyncio
@@ -385,7 +422,7 @@ async def test_options_flow_create_entry(
         mock_config_entry.entry_id
     )
 
-    user_input = {"lists_to_sync": ["list_id_1", "list_id_2"]}
+    user_input = {"lists_to_sync": ["list_id_1", "list_id_2"], "list_prefix": "Test"}
 
     # Submit user input
     result = await hass.config_entries.options.async_configure(
