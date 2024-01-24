@@ -36,6 +36,7 @@ def mock_config_entry():
             "username": "testuser@example.com",
             "password": "testpassword",
             "lists_to_sync": [],
+            "list_prefix": "",
         },
         unique_id="testuser@example.com",
     )
