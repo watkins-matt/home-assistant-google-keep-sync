@@ -101,8 +101,7 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
         text = item.summary
 
         try:
-            # Create item in Google Keep and get the item ID
-            # new_item_id = await self.api.async_create_todo_item(list_id, text)
+            # Create the new item in the specified list
             await self.api.async_create_todo_item(list_id, text)
 
             _LOGGER.debug(
