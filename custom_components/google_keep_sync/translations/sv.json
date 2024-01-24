@@ -13,22 +13,50 @@
         "step": {
             "user": {
                 "title": "Ange inloggningsuppgifter",
-                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto (lämna token-fältet tomt). Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.\n\nAtt logga in med användarnamn och lösenord kan misslyckas med vissa versioner av biblioteket. Om detta händer kan du logga in med ditt användarnamn och token som du manuellt har hämtat istället (lämna lösenordsfältet tomt). Se [Readme]({invalid_auth_url}) för detaljer.\n\n*VALFRITT:* Listprefix lägger till en unik identifierare på framsidan av varje listnamn i Home Assistant t.ex. inställningen 'Google' visar din inköpslista som 'Google inköpslista'. Lämna tomt för att få listorna namngivna som de är i Google Keep.",
+                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto (lämna token-fältet tomt). Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.\n\nAtt logga in med användarnamn och lösenord kan misslyckas med vissa versioner av biblioteket. Om detta händer kan du logga in med ditt användarnamn och token som du manuellt har hämtat istället (lämna lösenordsfältet tomt). Se [Readme]({invalid_auth_url}) för detaljer.",
                 "data": {
                     "username": "Användarnamn",
                     "password": "Lösenord",
-                    "token": "Token",
-                    "list_prefix": "Listprefix"
+                    "token": "Token"
                 }
             },
-            "select_lists": {
-                "title": "Välj listor",
-                "description": "Välj de listor du vill synkronisera med Home Assistant."
+            "options": {
+                "title": "Konfigurera alternativ",
+                "description": "Välj vilka Google Keep-listor som ska synkroniseras.\n\n*Listprefix* (Valfritt): Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
+                "data": {
+                    "lists_to_sync": "Listor att Synkronisera",
+                    "list_prefix": "Listprefix"
+                },
+                "data_description": {
+                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep."
+                }
             },
             "reauth_confirm": {
                 "title": "Autentisera igen",
                 "description": "Google Keep Sync-integrationen behöver autentisera ditt konto igen"
             }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Konfigurera alternativ",
+                "description": "Välj vilka listor som ska synkroniseras och lägg eventuellt till ett prefix till listnamnen i Home Assistant.",
+                "data": {
+                    "lists_to_sync": "Listor att Synkronisera",
+                    "list_prefix": "Listprefix"
+                },
+                "data_description": {
+                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep."
+                }
+            }
+        },
+        "error": {
+            "list_fetch_error": "Fel uppstod vid hämtning av listor"
+        },
+        "abort": {
+            "reauth_required": "Omautentisering krävs",
+            "integration_not_setup": "Integrationen är inte konfigurerad"
         }
     }
 }

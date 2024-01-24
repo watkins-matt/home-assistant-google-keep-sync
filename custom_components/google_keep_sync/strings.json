@@ -1,24 +1,8 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "[%key:common::config_flow::step::user::title%]",
-        "description": "[%key:common::config_flow::step::user::description%]",
-        "data": {
-          "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "token": "[%key:common::config_flow::data::token%]",
-          "list_prefix": "List Prefix"
-        }
-      },
-      "select_lists": {
-        "title": "[%key:common::config_flow::step::select_lists::title%]",
-        "description": "[%key:common::config_flow::step::select_lists::description%]"
-      },
-      "reauth_confirm": {
-        "title": "[%key:common::config_flow::title::reauth%]",
-        "description": "[%key:common::config_flow::description::reauth_confirm%]"
-      }
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
@@ -26,9 +10,55 @@
       "unknown": "[%key:common::config_flow::error::unknown%]",
       "already_configured": "[%key:common::config_flow::error::already_configured%]"
     },
+    "step": {
+      "user": {
+        "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
+        "description": "Enter your credentials for Google Keep Sync.",
+        "data": {
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "token": "[%key:common::config_flow::data::api_token%]"
+        }
+      },
+      "options": {
+        "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
+        "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
+        "data": {
+          "lists_to_sync": "Lists to Sync",
+          "list_prefix": "List Prefix"
+        },
+        "data_description": {
+          "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+        }
+      },
+      "reauth_confirm": {
+        "title": "[%key:common::config_flow::title::reauth%]",
+        "description": "The Google Keep Sync integration needs to re-authenticate your account."
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
+        "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
+        "data": {
+          "lists_to_sync": "Lists to Sync",
+          "list_prefix": "List Prefix"
+        },
+        "data_description": {
+          "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+        }
+      }
+    },
+    "error": {
+      "list_fetch_error": "Error occurred while fetching lists",
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]"
+    },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
+      "reauth_required": "[%key:common::config_flow::abort::reauth_successful%]",
+      "integration_not_setup": "[%key:common::config_flow::abort::cloud_not_connected%]"
     }
   }
 }

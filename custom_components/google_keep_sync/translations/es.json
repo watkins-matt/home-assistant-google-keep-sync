@@ -13,22 +13,52 @@
         "step": {
             "user": {
                 "title": "Introduce las credenciales",
-                "description": "Introduce tu nombre de usuario y contraseña de tu cuenta de Google (dejando el campo del token en blanco). Asegúrate de estar usando una contraseña de aplicación; puedes crear una en https://myaccount.google.com/apppasswords.\n\nIniciar sesión con un nombre de usuario y contraseña puede fallar con ciertas versiones de la biblioteca. Si esto ocurre, puedes iniciar sesión con tu nombre de usuario y token que hayas obtenido manualmente en su lugar (dejando el campo de la contraseña en blanco). Consulte [Léame]({invalid_auth_url}) para obtener más detalles.\n\n*OPCIONAL:* List Prefix agrega un identificador único al frente de cada nombre de lista en Home Assistant, por ejemplo. Al configurar 'Google' se mostrará su lista de compras como 'Google Lista de compras'. Déjelo vacío para que las listas tengan el nombre tal como están en Google Keep.",
+                "description": "Introduce tu nombre de usuario y contraseña de tu cuenta de Google (dejando el campo del token en blanco). Asegúrate de estar usando una contraseña de aplicación; puedes crear una en https://myaccount.google.com/apppasswords.\n\nIniciar sesión con un nombre de usuario y contraseña puede fallar con ciertas versiones de la biblioteca. Si esto ocurre, puedes iniciar sesión con tu nombre de usuario y token que hayas obtenido manualmente en su lugar (dejando el campo de la contraseña en blanco). Consulta [Léame]({invalid_auth_url}) para obtener más detalles.",
                 "data": {
                     "username": "Nombre de usuario",
                     "password": "Contraseña",
-                    "token": "Token",
-                    "list_prefix": "Prefijo de lista"
+                    "token": "Token"
                 }
             },
-            "select_lists": {
-                "title": "Seleccionar listas",
-                "description": "Selecciona las listas que deseas sincronizar con Home Assistant."
+            "options": {
+                "title": "Configurar opciones",
+                "description": "Selecciona las listas de Google Keep que deseas sincronizar.\n\n*Prefijo de Lista* (Opcional): Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
+                "data": {
+                    "lists_to_sync": "Listas a Sincronizar",
+                    "list_prefix": "Prefijo de Lista"
+                },
+                "data_description": {
+                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep."
+                }
             },
             "reauth_confirm": {
                 "title": "Reautenticar",
                 "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta"
             }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Configurar opciones",
+                "description": "Selecciona las listas de Google Keep que deseas sincronizar y, opcionalmente, añade un prefijo a los nombres de las listas en Home Assistant.",
+                "data": {
+                    "lists_to_sync": "Listas a Sincronizar",
+                    "list_prefix": "Prefijo de Lista"
+                },
+                "data_description": {
+                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep."
+                }
+            }
+        },
+        "error": {
+            "list_fetch_error": "Error al obtener las listas",
+            "cannot_connect": "No se puede conectar",
+            "invalid_auth": "Autenticación inválida"
+        },
+        "abort": {
+            "reauth_required": "Reautenticación necesaria",
+            "integration_not_setup": "Integración no configurada"
         }
     }
 }
