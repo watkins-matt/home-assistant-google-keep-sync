@@ -24,7 +24,7 @@ Google Keep Sync can be installed either manually or via HACS, although using
 HACS is strongly recommended.
 
 ### Installation via HACS
-    
+
 1. **Add Integration via HACS**:
 
     If you already have HACS installed, you can simply click this button:
@@ -90,8 +90,8 @@ use the built-in services to add, remove and update items from your synchronized
 - **Polling Interval**: While changes made in Home Assistant are instantly reflected in Google Keep, changes made in Google Keep are not instantly reflected in Home Assistant. The integration polls Google Keep for updates every 15 minutes. Therefore, any changes made directly in Google Keep will be visible in Home Assistant after the next polling interval.
 
 - **Authentication**: Use of an app password is strongly recommended, as there is no way for accounts with 2-Factor-Authentication to be connected otherwise. This will also allow you to easily revoke access to the integration without affecting your Google account and requiring you to change your password.
-  
-- **Checkboxes in Keep**: Only Google Keep notes with `Show checkboxes` selected will appear as options to sync with Home Assistant using this integration. 
+
+- **Checkboxes in Keep**: Only Google Keep notes with `Show checkboxes` selected will appear as options to sync with Home Assistant using this integration.
 
 ## Security
 
@@ -107,47 +107,25 @@ Encountering issues? Here are some common problems and their potential solutions
 
 If you're experiencing `Invalid authentication` errors, it could be due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, consider using a manually-retrieved token for authentication instead of a password.
 
-#### Generating a Token Using the Included Script
+#### Generating a Token Using the Docker Container
 
-Note that this method is provided as a temporary workaround, and may not work depending on your environment.
-
-To generate a token:
-
-1. Download scripts/fetch_token.py and scripts/requirements.txt to your computer which has Python installed.
-
-2. Install the requirements from the `requirements.txt` file. This ensures that all necessary dependencies are installed in your Python environment.
-
-    ```bash
-    pip install -r scripts/requirements.txt
-    ```
-
-3. Run the `fetch_token.py` script located in the `scripts` directory of the integration. This script will guide you through the process of generating a token.
-
-    ```bash
-    python scripts/fetch_token.py
-    ```
-
-4. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
-
-#### Generating a Token Using a Docker Container
-
-Alternatively, you can use a [Docker container](https://github.com/leikoilja/ha-google-home/issues/599#issuecomment-1756207026) created by @Brephlas.
+You can use the [Docker container](https://github.com/leikoilja/ha-google-home/issues/599#issuecomment-1756207026) created by @Brephlas.
 
 To generate a token:
 
 1. In a environment with Docker installed, enter the following commands.
-   
+
     ```bash
     docker pull breph/ha-google-home_get-token:latest
     docker run -it -d breph/ha-google-home_get-token
     ```
-    
+
 2. Copy the returned container ID to use in the following command.
 
    ```bash
    docker exec -it <ID> bash
    ```
-   
+
 3. Inside the container, enter the following command and answer the prompts to generate a master token. For the password, you can use either your regular password or an app password,
 
    ```bash
