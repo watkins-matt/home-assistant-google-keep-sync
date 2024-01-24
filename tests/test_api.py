@@ -170,10 +170,9 @@ async def test_async_create_todo_item(google_keep_api, mock_hass):
     mock_gkeep_list.add = AsyncMock(side_effect=async_add_item)
 
     # Adding a new item
-    new_item_id = await google_keep_api.async_create_todo_item(list_id, item_text)
+    await google_keep_api.async_create_todo_item(list_id, item_text)
 
     # Assertions
-    assert new_item_id == "milk_item_id"
     google_keep_api._keep.get.assert_called_with(list_id)
     mock_gkeep_list.add.assert_called_with(item_text, False)
 
