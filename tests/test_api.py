@@ -249,10 +249,16 @@ async def test_async_sync_data(google_keep_api, mock_hass):
     mock_list.title = "Grocery List"
     mock_item = MagicMock(id="milk_item_id", text="Milk", checked=False)
     mock_list.items = [mock_item]
-    google_keep_api._keep.all.return_value = [mock_list]
+
+    # Side effect to return the mock list
+    def get_side_effect(list_id):
+        if list_id == "grocery_list_id":
+            return mock_list
+
+    google_keep_api._keep.get = AsyncMock(side_effect=get_side_effect)
 
     # Syncing data
-    lists = await google_keep_api.async_sync_data()
+    lists = await google_keep_api.async_sync_data(["grocery_list_id"])
 
     # Expected data structure
     expected_lists = [
@@ -262,7 +268,13 @@ async def test_async_sync_data(google_keep_api, mock_hass):
             "items": [{"id": "milk_item_id", "text": "Milk", "checked": False}],
         }
     ]
-
     # Assertions
-    assert lists == expected_lists
-    google_keep_api._keep.all.assert_called_once()
+    # assert lists == [expected_lists]
+    assert lists[0].id == expected_lists[0]["id"]
+    assert lists[0].title == expected_lists[0]["title"]
+    assert lists[0].items[0].id == expected_lists[0]["items"][0]["id"]
+    assert lists[0].items[0].text == expected_lists[0]["items"][0]["text"]
+    assert lists[0].items[0].checked == expected_lists[0]["items"][0]["checked"]
+
+    google_keep_api._keep.sync.assert_called_once()
+    google_keep_api._keep.get.assert_called_once()
