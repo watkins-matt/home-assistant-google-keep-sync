@@ -215,7 +215,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the options step."""
-        errors = {}
+        errors: dict[str, str] = {}
 
         if user_input is not None:
             entry_data = {

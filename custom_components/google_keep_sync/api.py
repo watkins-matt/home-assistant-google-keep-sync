@@ -215,7 +215,7 @@ class GoogleKeepAPI:
 
     @authenticated_required
     async def async_sync_data(
-        self, lists_to_sync: [str]
+        self, lists_to_sync: list[str]
     ) -> list[gkeepapi.node.List] | None:
         """Synchronize data only from configured lists with Google Keep."""
         try:
