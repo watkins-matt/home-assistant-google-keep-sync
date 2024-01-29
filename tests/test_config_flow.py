@@ -1,4 +1,5 @@
 """Test config flow for Google Keep Sync."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

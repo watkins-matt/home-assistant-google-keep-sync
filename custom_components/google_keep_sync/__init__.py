@@ -1,4 +1,5 @@
 """Integration for synchronization with Google Keep."""
+
 from __future__ import annotations
 
 import logging

@@ -1,4 +1,5 @@
 """Config flow for Google Keep Sync integration."""
+
 import logging
 from collections.abc import Mapping
 from typing import Any

@@ -1,4 +1,5 @@
 """Platform for creating to do list entries based on Google Keep lists."""
+
 import logging
 from datetime import timedelta
 
@@ -129,9 +130,11 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
             TodoItem(
                 summary=item.text,
                 uid=item.id,
-                status=TodoItemStatus.COMPLETED
-                if item.checked
-                else TodoItemStatus.NEEDS_ACTION,
+                status=(
+                    TodoItemStatus.COMPLETED
+                    if item.checked
+                    else TodoItemStatus.NEEDS_ACTION
+                ),
             )
             for item in self._gkeep_list.items
         ]

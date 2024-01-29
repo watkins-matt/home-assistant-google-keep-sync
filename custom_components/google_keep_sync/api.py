@@ -1,4 +1,5 @@
 """API for synchronization with Google Keep."""
+
 import functools
 import logging
 

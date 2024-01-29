@@ -1,4 +1,5 @@
 """Configure pytest for Home Assistant custom component testing."""
+
 import os
 import sys
 

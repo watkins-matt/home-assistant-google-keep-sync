@@ -1,4 +1,5 @@
 """Test the Google Keep Sync setup entry."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
