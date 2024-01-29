@@ -3,5 +3,5 @@ gkeepapi==0.15.1
 gpsoauth==1.0.4
 pytest-homeassistant-custom-component
 pytest-socket==0.6.0
-urllib3==1.26.18
 tzdata
+urllib3==1.26.18
