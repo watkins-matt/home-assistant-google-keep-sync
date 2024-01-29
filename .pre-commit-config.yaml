@@ -7,10 +7,12 @@ repos:
           - --fix
       - id: ruff-format
 
-  - repo: https://github.com/psf/black
-    rev: 23.11.0
+  # Use mypyc-compiled black, see https://black.readthedocs.io/en/stable/integrations/source_version_control.html
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 24.1.1
     hooks:
       - id: black
+        language_version: python3.11
         args:
           - --quiet
 
