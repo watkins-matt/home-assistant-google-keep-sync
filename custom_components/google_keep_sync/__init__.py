@@ -32,7 +32,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Fetch data from API."""
         try:
             # Directly call the async_sync_data method
-            return await api.async_sync_data()
+            lists_to_sync = entry.data.get("lists_to_sync", [])
+            return await api.async_sync_data(lists_to_sync)
         except Exception as error:
             raise UpdateFailed(f"Error communicating with API: {error}") from error
 

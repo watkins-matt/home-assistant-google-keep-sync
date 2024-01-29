@@ -61,17 +61,6 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
         """Delete todo items from Google Keep."""
         list_id = self._gkeep_list_id
 
-        # Update local state first
-        for list_data in self.coordinator.data:
-            if list_data["id"] == list_id:
-                list_data["items"] = [
-                    item for item in list_data["items"] if item["id"] not in uids
-                ]
-                break
-
-        # Update Home Assistant UI immediately after local state update
-        self.async_write_ha_state()
-
         # Perform deletion in Google Keep API for each item
         for item_id in uids:
             try:
@@ -83,7 +72,7 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
                 )
 
         # Resync data with Google Keep
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
         _LOGGER.debug("Requested data refresh.")
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
@@ -94,19 +83,6 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
             new_text = item.summary
             checked = item.status == TodoItemStatus.COMPLETED
 
-            # Update local state first
-            for list_data in self.coordinator.data:
-                if list_data["id"] == list_id:
-                    for list_item in list_data["items"]:
-                        if list_item["id"] == item_id:
-                            list_item["text"] = new_text
-                            list_item["checked"] = checked
-                            break
-                    break
-
-            # Update Home Assistant UI immediately after local state update
-            self.async_write_ha_state()
-
             # Update Google Keep in the background
             await self.api.async_update_todo_item(list_id, item_id, new_text, checked)
             _LOGGER.debug("Successfully updated item in Google Keep.")
@@ -116,7 +92,7 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
 
         finally:
             # Resync data with Google Keep
-            await self.coordinator.async_request_refresh()
+            await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh and updated Home Assistant UI.")
 
     async def async_create_todo_item(self, item: TodoItem) -> None:
@@ -125,23 +101,8 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
         text = item.summary
 
         try:
-            # Create item in Google Keep and get the item ID
-            new_item_id = await self.api.async_create_todo_item(list_id, text)
-
-            # Update local state
-            for list_data in self.coordinator.data:
-                if list_data["id"] == list_id:
-                    # Add the new item to the local list data
-                    new_item = {
-                        "id": new_item_id,
-                        "text": text,
-                        "checked": False,
-                    }
-                    list_data["items"].append(new_item)
-                    break
-
-            # Update Home Assistant UI
-            self.async_write_ha_state()
+            # Create the new item in the specified list
+            await self.api.async_create_todo_item(list_id, text)
 
             _LOGGER.debug(
                 "Successfully created new item in Google Keep and updated locally."
@@ -152,37 +113,27 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
 
         finally:
             # Request refresh to synchronize with Google Keep
-            await self.coordinator.async_request_refresh()
+            await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh and updated Home Assistant UI.")
 
     @property
     def todo_items(self) -> list[TodoItem]:
         """Get the current set of To-do items."""
-        # Use the coordinator's data to ensure we have the latest updates.
-        updated_list = next(
-            (
-                list_data
-                for list_data in self.coordinator.data
-                if list_data["id"] == self._gkeep_list.id
-            ),
-            None,
-        )
-
-        if not updated_list:
-            _LOGGER.warning(
-                "Unable to load data for Google Keep list: %s", self._gkeep_list.id
-            )
-            return []
+        # if self._gkeep_list.id not in self.coordinator.data:
+        #     _LOGGER.warning(
+        #     "Unable to load data for Google Keep list: %s", self._gkeep_list.summary
+        #     )
+        #     return []
 
         return [
             TodoItem(
-                summary=item["text"],
-                uid=item["id"],
+                summary=item.text,
+                uid=item.id,
                 status=TodoItemStatus.COMPLETED
-                if item["checked"]
+                if item.checked
                 else TodoItemStatus.NEEDS_ACTION,
             )
-            for item in updated_list["items"]
+            for item in self._gkeep_list.items
         ]
 
 
