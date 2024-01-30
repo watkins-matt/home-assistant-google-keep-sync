@@ -18,7 +18,9 @@ PLATFORMS: list[Platform] = [Platform.TODO]
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: C901
+async def async_setup_entry(  # noqa: C901
+    hass: HomeAssistant, entry: ConfigEntry
+) -> bool:
     """Set up Google Keep Sync from a config entry."""
     # Create API instance
     api = GoogleKeepAPI(hass, entry.data["username"], entry.data["password"])
