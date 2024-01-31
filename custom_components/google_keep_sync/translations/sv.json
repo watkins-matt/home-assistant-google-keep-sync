@@ -1,14 +1,19 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integrationen är redan konfigurerad",
-            "reauth_successful": "Omautentisering lyckades"
+            "already_configured": "Integrationen är redan konfigurerad för denna användare.",
+            "reauth_successful": "Om-autentisering lyckades"
         },
         "error": {
-            "cannot_connect": "Misslyckades med att ansluta",
-            "invalid_auth": "Ogiltig autentisering",
-            "unknown": "Oväntat fel",
-            "already_configured": "Integrationen är redan konfigurerad"
+            "cannot_connect": "Misslyckades med att ansluta.",
+            "invalid_auth": "Ogiltig autentisering.",
+            "unknown": "Ett oväntat fel inträffade.",
+            "already_configured": "Integrationen är redan konfigurerad för denna användare.",
+            "blank_username": "Användarnamnet får inte vara tomt.",
+            "invalid_email": "Ogiltig e-postadress.",
+            "both_password_and_token": "Ange antingen lösenord eller token, inte båda.",
+            "neither_password_nor_token": "Antingen lösenord eller token måste anges.",
+            "invalid_token_format": "Ogiltig token angiven. Token måste börja med aas_et/ och vara 223 tecken lång."
         },
         "step": {
             "user": {
