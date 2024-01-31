@@ -1,6 +1,13 @@
 name: Black
 
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths:
+      - '**/*.py'
+  pull_request:
+    paths:
+      - '**/*.py'
+  workflow_dispatch:
 
 jobs:
   lint:
