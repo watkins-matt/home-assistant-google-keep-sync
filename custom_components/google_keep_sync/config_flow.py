@@ -215,6 +215,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             # Show an error if the same username has already been configured
             except AbortFlow:
                 errors["base"] = "already_configured"
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=SCHEMA_USER_DATA_STEP,
+                    errors=errors,
+                    description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
+                )
 
             # Validate the user input for any issues
             errors = await self.handle_user_input(user_input)
