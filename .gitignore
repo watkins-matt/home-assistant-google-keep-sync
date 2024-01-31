@@ -1,0 +1,8 @@
+*.code-workspace
+*.pyc
+.venv
+.pytest_cache
+.ruff_cache
+.vscode
+.coverage
+htmlcov
