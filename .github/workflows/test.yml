@@ -104,6 +104,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-badge
+          path: badges
 
       - name: Deploy Badge to gh-pages
         uses: stefanzweifel/git-auto-commit-action@v5
@@ -111,5 +112,3 @@ jobs:
           commit_message: "Update coverage badge [skip ci]"
           branch: gh-pages
           file_pattern: badges/coverage.svg
-          skip_fetch: true
-          skip_checkout: true
