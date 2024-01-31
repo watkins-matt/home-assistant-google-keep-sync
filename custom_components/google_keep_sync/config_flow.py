@@ -1,6 +1,7 @@
 """Config flow for Google Keep Sync integration."""
 
 import logging
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -28,7 +29,8 @@ SCHEMA_USER_DATA_STEP = vol.Schema(
 
 SCHEMA_REAUTH = vol.Schema(
     {
-        vol.Required("password"): str,
+        vol.Optional("password"): str,
+        vol.Optional("token"): str,
     }
 )
 
@@ -109,34 +111,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 _LOGGER.error("Configuration entry not found")
                 return self.async_abort(reason="config_entry_not_found")
 
-            password = user_input["password"]
-            data = {
-                "username": self.entry.data["username"],
-                "password": password,
-            }
+            # Add the username to user_input, since the reauth step doesn't include it
+            user_input["username"] = self.entry.data["username"]
 
-            try:
-                await self.validate_input(self.hass, data)
+            # Process validation and handle errors
+            errors = await self.handle_user_input(user_input)
 
-            except InvalidAuthError:
-                errors["base"] = "invalid_auth"
-            except CannotConnectError:
-                errors["base"] = "cannot_connect"
-            else:
-                self.hass.config_entries.async_update_entry(
-                    self.entry,
-                    data={
-                        "username": self.entry.data["username"],
-                        "password": password,
-                    },
-                )
+            # No errors, so update the entry and reload the integration
+            if not errors:
+                self.hass.config_entries.async_update_entry(self.entry, data=user_input)
                 await self.hass.config_entries.async_reload(self.entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
-            step_id="reauth_confirm",
-            data_schema=SCHEMA_REAUTH,
-            errors=errors,
+            step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
         )
 
     @staticmethod
@@ -153,20 +141,32 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.api = None
         self.user_data = {}
 
-    async def validate_input(
-        self, hass: HomeAssistant, data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def validate_input(self, hass: HomeAssistant, data: dict[str, Any]) -> None:
         """Validate the user input allows us to connect."""
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
         token = data.get("token", "").strip()
 
-        if not (username and (password or token)):
-            _LOGGER.error(
-                "Credentials are missing; a username and password or "
-                "token must be provided."
-            )
-            raise InvalidAuthError
+        # Check for blank username
+        if not username:
+            raise BlankUsernameError
+
+        # Validate email address
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", username):
+            raise InvalidEmailError
+
+        # Check password and token conditions
+        if password and token:
+            raise BothPasswordAndTokenError
+        if not (password or token):
+            raise NeitherPasswordNorTokenError
+
+        # Validate token format
+        valid_token_length = 223
+        if token and (
+            not token.startswith("aas_et/") or len(token) != valid_token_length
+        ):
+            raise InvalidTokenFormatError
 
         self.api = GoogleKeepAPI(hass, username, password, token)
         success = await self.api.authenticate()
@@ -175,7 +175,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             raise InvalidAuthError
 
         self.user_data = {"username": username, "password": password, "token": token}
-        return {"title": "Google Keep", "entry_id": username.lower()}
+
+    async def handle_user_input(self, user_input: dict[str, Any]) -> dict[str, str]:
+        """Handle user input, checking for any errors."""
+        errors = {}
+        try:
+            await self.validate_input(self.hass, user_input)
+        except InvalidAuthError:
+            errors["base"] = "invalid_auth"
+        except CannotConnectError:
+            errors["base"] = "cannot_connect"
+        except BlankUsernameError:
+            errors["base"] = "blank_username"
+        except InvalidEmailError:
+            errors["base"] = "invalid_email"
+        except BothPasswordAndTokenError:
+            errors["base"] = "both_password_and_token"
+        except NeitherPasswordNorTokenError:
+            errors["base"] = "neither_password_nor_token"
+        except InvalidTokenFormatError:
+            errors["base"] = "invalid_token_format"
+        except Exception as exc:
+            _LOGGER.exception("Unexpected exception: %s", exc)
+            errors["base"] = "unknown"
+        return errors
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -183,26 +206,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Handle the initial step for the user to enter their credentials."""
         errors = {}
         if user_input:
+            # Check to see if the same username has already been configured
             try:
-                info = await self.validate_input(self.hass, user_input)
-
-                unique_id = info["entry_id"]
+                unique_id = user_input["username"].lower()
                 await self.async_set_unique_id(unique_id)
-
-                # Check if an entry with the same unique_id already exists
                 self._abort_if_unique_id_configured()
 
-                return await self.async_step_options()
-
-            except InvalidAuthError:
-                errors["base"] = "invalid_auth"
-            except CannotConnectError:
-                errors["base"] = "cannot_connect"
+            # Show an error if the same username has already been configured
             except AbortFlow:
                 errors["base"] = "already_configured"
-            except Exception as exc:
-                _LOGGER.exception("Unexpected exception: %s", exc)
-                errors["base"] = "unknown"
+
+            # Validate the user input for any issues
+            errors = await self.handle_user_input(user_input)
+
+            # No errors, so proceed to the next step
+            if not errors:
+                return await self.async_step_options()
 
         return self.async_show_form(
             step_id="user",
@@ -251,3 +270,23 @@ class CannotConnectError(HomeAssistantError):
 
 class InvalidAuthError(HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class BlankUsernameError(HomeAssistantError):
+    """Exception raised when the username is blank."""
+
+
+class InvalidEmailError(HomeAssistantError):
+    """Exception raised when the username is not a valid email."""
+
+
+class BothPasswordAndTokenError(HomeAssistantError):
+    """Exception raised when both password and token are provided."""
+
+
+class NeitherPasswordNorTokenError(HomeAssistantError):
+    """Exception raised when neither password nor token are provided."""
+
+
+class InvalidTokenFormatError(HomeAssistantError):
+    """Exception raised when the token format is invalid."""
