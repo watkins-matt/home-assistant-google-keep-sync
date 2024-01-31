@@ -63,8 +63,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: 'gh-pages'
 
       - name: Download .coverage
         uses: actions/download-artifact@v4
@@ -83,29 +81,9 @@ jobs:
       - name: Generate coverage badge
         run: |
           mkdir -p badges
-          coverage-badge -o badges/new_coverage.svg
-
-      - name: Check for changes
-        id: diff-check
-        run: |
-          if [ ! -f badges/coverage.svg ]; then
-            echo "Coverage badge does not exist. It will be created."
-            echo "::set-output name=badge_changed::true"
-          elif cmp -s badges/new_coverage.svg badges/coverage.svg; then
-            echo "No changes in coverage badge."
-            echo "::set-output name=badge_changed::false"
-          else
-            echo "Coverage badge has changed."
-            echo "::set-output name=badge_changed::true"
-          fi
-
-      - name: Copy new coverage badge
-        if: steps.diff-check.outputs.badge_changed == 'true'
-        run: |
-          mv badges/new_coverage.svg badges/coverage.svg
+          coverage-badge -o badges/coverage.svg
 
       - name: Deploy Badge to gh-pages
-        if: steps.diff-check.outputs.badge_changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Update coverage badge [skip ci]"
