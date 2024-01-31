@@ -62,15 +62,16 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          path: 'codebase'
+          path: 'home-assistant-google-keep-sync'
 
       - name: Download .coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-data
-          path: 'codebase'
+          path: 'home-assistant-google-keep-sync'
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -80,12 +81,11 @@ jobs:
       - name: Install coverage-badge
         run: |
           pip install coverage-badge
-          cd codebase
 
       - name: Generate coverage badge
         run: |
-          mkdir -p codebase/badges
-          cd codebase
+          cd home-assistant-google-keep-sync
+          mkdir -p badges
           coverage-badge -o badges/coverage.svg
 
       - uses: actions/checkout@v4
