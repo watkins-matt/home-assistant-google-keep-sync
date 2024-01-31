@@ -1,14 +1,19 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integration is already configured",
+            "already_configured": "Integration is already configured for this user.",
             "reauth_successful": "Reauthentication successful"
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error",
-            "already_configured": "Integration is already configured"
+            "cannot_connect": "Failed to connect.",
+            "invalid_auth": "Invalid authentication.",
+            "unknown": "An unexpected error occurred.",
+            "already_configured": "Integration is already configured for this user.",
+            "blank_username": "Username cannot be blank.",
+            "invalid_email": "Invalid email address.",
+            "both_password_and_token": "Provide either password or token, not both.",
+            "neither_password_nor_token": "Either password or token must be provided.",
+            "invalid_token_format": "Invalid token provided. The token must start with aas_et/ and be 223 characters long."
         },
         "step": {
             "user": {
@@ -52,7 +57,7 @@
             }
         },
         "error": {
-            "list_fetch_error": "An error occurred while fetching lists"
+            "list_fetch_error": "An error occurred while fetching lists."
         },
         "abort": {
             "reauth_required": "Reauthentication required",
