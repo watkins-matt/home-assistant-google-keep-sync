@@ -69,6 +69,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     options_input = {
         "lists_to_sync": ["list_id_1", "list_id_2"],
         "list_prefix": "testprefix",
+        "list_auto_sort": False,
     }
     final_form_result = await hass.config_entries.flow.async_configure(
         credentials_form_result["flow_id"], user_input=options_input
@@ -83,6 +84,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "token": user_token,
         "lists_to_sync": ["list_id_1", "list_id_2"],
         "list_prefix": "testprefix",
+        "list_auto_sort": False,
     }
 
 
@@ -528,7 +530,11 @@ async def test_options_flow_create_entry(
         mock_config_entry.entry_id
     )
 
-    user_input = {"lists_to_sync": ["list_id_1", "list_id_2"], "list_prefix": "Test"}
+    user_input = {
+        "lists_to_sync": ["list_id_1", "list_id_2"],
+        "list_prefix": "Test",
+        "list_auto_sort": False,
+    }
 
     # Submit user input
     result = await hass.config_entries.options.async_configure(
