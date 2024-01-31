@@ -34,7 +34,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             # Directly call the async_sync_data method
             lists_to_sync = entry.data.get("lists_to_sync", [])
-            return await api.async_sync_data(lists_to_sync)
+
+            # Check if we need to sort the lists
+            auto_sort = entry.data.get("list_auto_sort", False)
+
+            return await api.async_sync_data(lists_to_sync, auto_sort)
         except Exception as error:
             raise UpdateFailed(f"Error communicating with API: {error}") from error
 
