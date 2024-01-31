@@ -6,3 +6,5 @@
 .vscode
 .coverage
 htmlcov
+coverage.json
+coverage.svg
