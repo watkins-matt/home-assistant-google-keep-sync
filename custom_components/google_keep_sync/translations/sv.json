@@ -30,10 +30,12 @@
                 "description": "Välj vilka Google Keep-listor som ska synkroniseras.\n\n*Listprefix* (Valfritt): Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
                 "data": {
                     "lists_to_sync": "Listor att Synkronisera",
-                    "list_prefix": "Listprefix"
+                    "list_prefix": "Listprefix",
+                    "list_auto_sort": "Sortera Listor Automatiskt"
                 },
                 "data_description": {
-                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep."
+                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
+                    "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras."
                 }
             },
             "reauth_confirm": {
@@ -49,10 +51,12 @@
                 "description": "Välj vilka listor som ska synkroniseras och lägg eventuellt till ett prefix till listnamnen i Home Assistant.",
                 "data": {
                     "lists_to_sync": "Listor att Synkronisera",
-                    "list_prefix": "Listprefix"
+                    "list_prefix": "Listprefix",
+                    "list_auto_sort": "Sortera Listor Automatiskt"
                 },
                 "data_description": {
-                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep."
+                    "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
+                    "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras."
                 }
             }
         },
