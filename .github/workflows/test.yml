@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pytest --cov --cov-report json
 
-      - name: Fail if coverage under 90%
+      - name: Fail if coverage under 95%
         run: |
           # Load coverage percentage from coverage.json
           coverage_percent=$(python -c 'import json; print(json.load(open("coverage.json"))["totals"]["percent_covered"])')
@@ -39,8 +39,8 @@ jobs:
           echo "Coverage percentage: ${coverage_percent}%"
 
           # Check if coverage is below the threshold
-          if (( $(echo "${coverage_percent} < 90" | bc -l) )); then
-            echo "Test coverage under 90%, was ${coverage_percent}%"
+          if (( $(echo "${coverage_percent} < 95" | bc -l) )); then
+            echo "Test coverage under 95%, was ${coverage_percent}%"
             exit 1
           else
             echo "Coverage meets the threshold."
@@ -100,7 +100,7 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Download .coverage
+      - name: Download coverage badge
         uses: actions/download-artifact@v4
         with:
           name: coverage-badge
