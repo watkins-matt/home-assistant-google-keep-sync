@@ -49,8 +49,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         if user_input is not None:
             # Update the config entry with new data
+            updated_data = {
+                **self.config_entry.data,
+                **user_input,
+                "list_auto_sort": user_input.get("list_auto_sort", False),
+            }
             self.hass.config_entries.async_update_entry(
-                self.config_entry, data={**self.config_entry.data, **user_input}
+                self.config_entry, data=updated_data
             )
             # Reload the integration to apply new settings
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
@@ -71,8 +76,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.error("Error fetching lists: %s", e)
             errors["base"] = "list_fetch_error"
 
+        # Retrieve existing values
         existing_lists = self.config_entry.data.get("lists_to_sync", [])
         list_prefix = self.config_entry.data.get("list_prefix", "")
+        auto_sort = self.config_entry.data.get("list_auto_sort", False)
 
         return self.async_show_form(
             step_id="init",
@@ -82,6 +89,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         "lists_to_sync", default=existing_lists
                     ): cv.multi_select({list.id: list.title for list in lists}),
                     vol.Optional("list_prefix", default=list_prefix): str,
+                    vol.Optional("list_auto_sort", default=auto_sort): bool,
                 }
             ),
             errors=errors,
@@ -222,19 +230,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 **self.user_data,
                 "lists_to_sync": user_input.get("lists_to_sync", []),
                 "list_prefix": user_input.get("list_prefix", ""),
+                "list_auto_sort": user_input.get("list_auto_sort", False),
             }
             return self.async_create_entry(
                 title=self.context["unique_id"], data=entry_data
             )
 
+        # Get existing configuration options
+        existing_lists = self.user_data.get("lists_to_sync", [])
+        list_prefix = self.user_data.get("list_prefix", "")
+        auto_sort = self.user_data.get("list_auto_sort", False)
+
+        # Fetch all lists from Google Keep to display as options
         lists = await self.api.fetch_all_lists()
 
         options_schema = vol.Schema(
             {
-                vol.Required("lists_to_sync"): cv.multi_select(
+                vol.Required("lists_to_sync", default=existing_lists): cv.multi_select(
                     {list.id: list.title for list in lists}
                 ),
-                vol.Optional("list_prefix"): str,
+                vol.Optional("list_prefix", default=list_prefix): str,
+                vol.Optional("list_auto_sort", default=auto_sort): bool,
             }
         )
 

@@ -25,10 +25,12 @@
                 "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
                 "data": {
                     "lists_to_sync": "Lists to Sync",
-                    "list_prefix": "List Prefix"
+                    "list_prefix": "List Prefix",
+                    "list_auto_sort": "Automatically Sort Lists"
                 },
                 "data_description": {
-                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
+                    "list_auto_sort": "If checked, all of your lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted."
                 }
             },
             "reauth_confirm": {
@@ -44,10 +46,12 @@
                 "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
                 "data": {
                     "lists_to_sync": "Lists to Sync",
-                    "list_prefix": "List Prefix"
+                    "list_prefix": "List Prefix",
+                    "list_auto_sort": "Automatically Sort Lists"
                 },
                 "data_description": {
-                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
+                    "list_auto_sort": "If checked, all of your lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted."
                 }
             }
         },
