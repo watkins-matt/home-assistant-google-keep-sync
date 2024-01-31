@@ -46,12 +46,12 @@ jobs:
             echo "Coverage meets the threshold."
           fi
 
-      - name: Upload coverage.json for main branch
+      - name: Upload .coverage for main branch
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-data
-          path: coverage.json
+          path: .coverage
 
   update-coverage-badge:
     name: Update Coverage Badge
@@ -66,8 +66,8 @@ jobs:
         with:
           ref: 'gh-pages'
 
-      - name: Download coverage.json
-        uses: actions/download-artifact@v2
+      - name: Download .coverage
+        uses: actions/download-artifact@v4
         with:
           name: coverage-data
 
