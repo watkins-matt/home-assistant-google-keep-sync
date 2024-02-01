@@ -17,7 +17,7 @@ from custom_components.google_keep_sync.todo import (
 def mock_api():
     """Return a mocked Google Keep API."""
     with patch(
-        "custom_components.google_keep_sync.todo.GoogleKeepAPI"
+        "custom_components.google_keep_sync.api.GoogleKeepAPI"
     ) as mock_api_class:
         mock_api = mock_api_class.return_value
         mock_api.async_create_todo_item = AsyncMock(return_value="new_item_id")
@@ -48,9 +48,7 @@ async def test_async_setup_entry(
 ):
     """Test platform setup of todo."""
     mock_config_entry.add_to_hass(hass)
-    hass.data[DOMAIN] = {
-        mock_config_entry.entry_id: {"api": mock_api, "coordinator": mock_coordinator}
-    }
+    hass.data[DOMAIN] = {mock_config_entry.entry_id: mock_coordinator}
 
     with patch(
         "homeassistant.helpers.entity_platform.AddEntitiesCallback"
@@ -68,6 +66,7 @@ async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     list_prefix = ""
 
     # Initialize the coordinator data
+    mock_coordinator.api = mock_api
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": []}
     ]
@@ -91,9 +90,7 @@ async def test_create_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     mock_coordinator.async_refresh = AsyncMock(side_effect=async_refresh_side_effect)
 
     # Create the entity and add a new item
-    entity = GoogleKeepTodoListEntity(
-        mock_api, mock_coordinator, grocery_list, list_prefix
-    )
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
     await entity.async_create_todo_item(TodoItem(summary="Milk"))
 
     # Ensure the proper methods were called
@@ -114,6 +111,7 @@ async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     initial_item = {"id": "milk_item", "text": "Milk", "checked": False}
     grocery_list.items = [initial_item]
 
+    mock_coordinator.api = mock_api
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": [initial_item]}
     ]
@@ -135,9 +133,7 @@ async def test_update_todo_item(hass: HomeAssistant, mock_api, mock_coordinator)
     mock_coordinator.async_refresh = AsyncMock(side_effect=async_refresh_side_effect)
 
     # Create the entity
-    entity = GoogleKeepTodoListEntity(
-        mock_api, mock_coordinator, grocery_list, list_prefix
-    )
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
     entity.hass = hass
 
     # update item
@@ -167,6 +163,7 @@ async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator
         {"id": "eggs_item", "text": "Eggs", "checked": False},
     ]
     grocery_list.items = initial_items
+    mock_coordinator.api = mock_api
     mock_coordinator.data = [
         {"id": "grocery_list", "title": "Grocery List", "items": initial_items}
     ]
@@ -186,9 +183,7 @@ async def test_delete_todo_items(hass: HomeAssistant, mock_api, mock_coordinator
     mock_coordinator.async_refresh = AsyncMock(side_effect=async_refresh_side_effect)
 
     # Create the entity
-    entity = GoogleKeepTodoListEntity(
-        mock_api, mock_coordinator, grocery_list, list_prefix
-    )
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
     entity.hass = hass
 
     # Delete item
@@ -209,9 +204,7 @@ async def test_default_list_prefix(hass, mock_api, mock_coordinator):
     list_prefix = ""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
 
-    entity = GoogleKeepTodoListEntity(
-        mock_api, mock_coordinator, grocery_list, list_prefix
-    )
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
 
     # Test default prefix
     assert entity.name == "Grocery List"
@@ -224,7 +217,5 @@ async def test_custom_list_prefix(hass, mock_api, mock_coordinator):
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
 
     # Test custom prefix
-    entity = GoogleKeepTodoListEntity(
-        mock_api, mock_coordinator, grocery_list, list_prefix
-    )
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
     assert entity.name == "Foo Grocery List"
