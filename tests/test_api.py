@@ -65,7 +65,6 @@ async def test_init(google_keep_api):
     assert google_keep_api._authenticated is False
 
 
-@pytest.mark.asyncio
 async def test_authenticate_new_login(google_keep_api, mock_hass, mock_store):
     """Test authentication with new login."""
     # Setting up mocks
@@ -88,7 +87,6 @@ async def test_authenticate_new_login(google_keep_api, mock_hass, mock_store):
         google_keep_api._async_save_state_and_token.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_authenticate_resume(google_keep_api, mock_hass, mock_store):
     """Test resuming authentication with saved credentials."""
     # Setup mock store with saved credentials
@@ -109,7 +107,6 @@ async def test_authenticate_resume(google_keep_api, mock_hass, mock_store):
         assert google_keep_api._token == TEST_TOKEN
 
 
-@pytest.mark.asyncio
 async def test_authenticate_failed_login(google_keep_api, mock_hass, mock_store):
     """Test authentication handling when login fails."""
     # Setup mock store with no saved credentials
@@ -126,7 +123,6 @@ async def test_authenticate_failed_login(google_keep_api, mock_hass, mock_store)
     google_keep_api._keep.login.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_authenticate_failed_resume(google_keep_api, mock_hass, mock_store):
     """Test authentication handling when resuming session fails."""
     mock_store.async_load.return_value = {
@@ -148,7 +144,6 @@ async def test_authenticate_failed_resume(google_keep_api, mock_hass, mock_store
     assert google_keep_api._authenticated is False
 
 
-@pytest.mark.asyncio
 async def test_async_create_todo_item(google_keep_api, mock_hass):
     """Test creating a new todo item."""
     google_keep_api._authenticated = True
@@ -177,7 +172,6 @@ async def test_async_create_todo_item(google_keep_api, mock_hass):
     mock_gkeep_list.add.assert_called_with(item_text, False)
 
 
-@pytest.mark.asyncio
 async def test_async_delete_todo_item(google_keep_api, mock_hass):
     """Test deleting a specific todo item."""
     google_keep_api._authenticated = True
@@ -199,7 +193,6 @@ async def test_async_delete_todo_item(google_keep_api, mock_hass):
     mock_target_item.delete.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_async_update_todo_item(google_keep_api, mock_hass):
     """Test updating an existing todo item."""
     google_keep_api._authenticated = True
@@ -223,7 +216,6 @@ async def test_async_update_todo_item(google_keep_api, mock_hass):
     assert mock_target_item.checked is True
 
 
-@pytest.mark.asyncio
 async def test_fetch_all_lists(google_keep_api, mock_hass):
     """Test fetching all lists from Google Keep."""
     google_keep_api._authenticated = True
@@ -240,7 +232,6 @@ async def test_fetch_all_lists(google_keep_api, mock_hass):
     google_keep_api._keep.all.assert_called_once()
 
 
-@pytest.mark.asyncio
 async def test_async_sync_data(google_keep_api, mock_hass):
     """Test synchronizing data with Google Keep."""
     google_keep_api._authenticated = True

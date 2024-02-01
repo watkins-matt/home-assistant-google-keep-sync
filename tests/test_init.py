@@ -31,7 +31,6 @@ def mock_api(mock_store):
         yield mock_api_instance
 
 
-@pytest.mark.asyncio
 async def test_async_setup_entry_successful(
     hass: HomeAssistant, mock_api, mock_config_entry
 ):
@@ -42,7 +41,6 @@ async def test_async_setup_entry_successful(
     await hass.async_block_till_done()
 
 
-@pytest.mark.asyncio
 async def test_async_setup_entry_failed(
     hass: HomeAssistant, mock_api, mock_config_entry
 ):
@@ -54,7 +52,6 @@ async def test_async_setup_entry_failed(
     await hass.async_block_till_done()
 
 
-@pytest.mark.asyncio
 async def test_async_unload_entry(hass: HomeAssistant, mock_api, mock_config_entry):
     """Test unloading a Google Keep Sync config entry."""
     mock_config_entry.add_to_hass(hass)
