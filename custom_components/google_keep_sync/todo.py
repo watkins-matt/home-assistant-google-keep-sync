@@ -18,15 +18,17 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-from .api import GoogleKeepAPI
 from .const import DOMAIN
+from .coordinator import GoogleKeepSyncCoordinator
 
 SCAN_INTERVAL = timedelta(minutes=15)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
+class GoogleKeepTodoListEntity(
+    CoordinatorEntity[GoogleKeepSyncCoordinator], TodoListEntity
+):
     """A To-do List representation of a Google Keep List."""
 
     _attr_has_entity_name = True
@@ -38,14 +40,13 @@ class GoogleKeepTodoListEntity(CoordinatorEntity, TodoListEntity):
 
     def __init__(
         self,
-        api: GoogleKeepAPI,
         coordinator: DataUpdateCoordinator,
         gkeep_list: gkeepapi.node.List,
         list_prefix: str,
     ):
         """Initialize the Google Keep Todo List Entity."""
         super().__init__(coordinator)
-        self.api = api
+        self.api = coordinator.api
         self._gkeep_list = gkeep_list
         self._gkeep_list_id = gkeep_list.id
         self._attr_name = (
@@ -144,22 +145,19 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Google Keep todo platform."""
-    api: GoogleKeepAPI = hass.data[DOMAIN][entry.entry_id]["api"]
-    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id][
-        "coordinator"
-    ]
+    coordinator: GoogleKeepSyncCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     # Retrieve user-selected lists from the configuration
     selected_lists = entry.data.get("lists_to_sync", [])
     list_prefix = entry.data.get("list_prefix", "")
 
     # Filter Google Keep lists based on user selection
-    all_lists = await api.fetch_all_lists()
+    all_lists = await coordinator.api.fetch_all_lists()
     lists_to_sync = [lst for lst in all_lists if lst.id in selected_lists]
 
     async_add_entities(
         [
-            GoogleKeepTodoListEntity(api, coordinator, list, list_prefix)
+            GoogleKeepTodoListEntity(coordinator, list, list_prefix)
             for list in lists_to_sync
         ]
     )
