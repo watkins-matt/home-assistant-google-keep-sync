@@ -215,7 +215,7 @@ class GoogleKeepAPI:
 
     @authenticated_required
     async def async_sync_data(
-        self, lists_to_sync: list[str]
+        self, lists_to_sync: list[str], sort_lists=False
     ) -> list[gkeepapi.node.List] | None:
         """Synchronize data only from configured lists with Google Keep."""
         try:
@@ -225,9 +225,14 @@ class GoogleKeepAPI:
             # only get the lists that are configured to sync
             lists = []
             for list_id in lists_to_sync:
-                lists.append(
-                    await self._hass.async_add_executor_job(self._keep.get, list_id)
+                keep_list = await self._hass.async_add_executor_job(
+                    self._keep.get, list_id
                 )
+
+                if sort_lists:
+                    await self._hass.async_add_executor_job(keep_list.sort_items)
+
+                lists.append(keep_list)
 
             return lists
 

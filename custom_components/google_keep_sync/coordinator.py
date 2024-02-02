@@ -43,9 +43,12 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
         try:
             # save lists prior to syncing
             original_lists = await self._parse_gkeep_data_dict()
-            # Directly call the async_sync_data method
+
+            # Sync data with Google Keep
             lists_to_sync = self.config_entry.data.get("lists_to_sync", [])
-            result = await self.api.async_sync_data(lists_to_sync)
+            auto_sort = self.config_entry.data.get("list_auto_sort", False)
+            result = await self.api.async_sync_data(lists_to_sync, auto_sort)
+
             # save lists after syncing
             updated_lists = await self._parse_gkeep_data_dict()
             # compare both list for changes, and fire event for changes

@@ -1,14 +1,19 @@
 {
     "config": {
         "abort": {
-            "already_configured": "La integración ya está configurada",
+            "already_configured": "Integración ya configurada para este usuario.",
             "reauth_successful": "Reautenticación exitosa"
         },
         "error": {
-            "cannot_connect": "Error al conectar",
-            "invalid_auth": "Autenticación inválida",
-            "unknown": "Error desconocido",
-            "already_configured": "La integración ya está configurada"
+            "cannot_connect": "Fallo al conectar.",
+            "invalid_auth": "Autenticación inválida.",
+            "unknown": "Ocurrió un error inesperado.",
+            "already_configured": "Integración ya configurada para este usuario.",
+            "blank_username": "El nombre de usuario no puede estar en blanco.",
+            "invalid_email": "Dirección de correo electrónico inválida.",
+            "both_password_and_token": "Proporcione contraseña o token, no ambos.",
+            "neither_password_nor_token": "Se debe proporcionar contraseña o token.",
+            "invalid_token_format": "Token inválido proporcionado. El token debe comenzar con aas_et/ y tener 223 caracteres."
         },
         "step": {
             "user": {
@@ -25,10 +30,12 @@
                 "description": "Selecciona las listas de Google Keep que deseas sincronizar.\n\n*Prefijo de Lista* (Opcional): Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
                 "data": {
                     "lists_to_sync": "Listas a Sincronizar",
-                    "list_prefix": "Prefijo de Lista"
+                    "list_prefix": "Prefijo de Lista",
+                    "list_auto_sort": "Ordenar Listas Automáticamente"
                 },
                 "data_description": {
-                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep."
+                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
+                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas."
                 }
             },
             "reauth_confirm": {
@@ -44,10 +51,12 @@
                 "description": "Selecciona las listas de Google Keep que deseas sincronizar y, opcionalmente, añade un prefijo a los nombres de las listas en Home Assistant.",
                 "data": {
                     "lists_to_sync": "Listas a Sincronizar",
-                    "list_prefix": "Prefijo de Lista"
+                    "list_prefix": "Prefijo de Lista",
+                    "list_auto_sort": "Ordenar Listas Automáticamente"
                 },
                 "data_description": {
-                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep."
+                    "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
+                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas."
                 }
             }
         },

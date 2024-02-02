@@ -1,14 +1,19 @@
 {
     "config": {
         "abort": {
-            "already_configured": "Integration is already configured",
+            "already_configured": "Integration is already configured for this user.",
             "reauth_successful": "Reauthentication successful"
         },
         "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error",
-            "already_configured": "Integration is already configured"
+            "cannot_connect": "Failed to connect.",
+            "invalid_auth": "Invalid authentication.",
+            "unknown": "An unexpected error occurred.",
+            "already_configured": "Integration is already configured for this user.",
+            "blank_username": "Username cannot be blank.",
+            "invalid_email": "Invalid email address.",
+            "both_password_and_token": "Provide either password or token, not both.",
+            "neither_password_nor_token": "Either password or token must be provided.",
+            "invalid_token_format": "Invalid token provided. The token must start with aas_et/ and be 223 characters long."
         },
         "step": {
             "user": {
@@ -25,10 +30,12 @@
                 "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
                 "data": {
                     "lists_to_sync": "Lists to Sync",
-                    "list_prefix": "List Prefix"
+                    "list_prefix": "List Prefix",
+                    "list_auto_sort": "Automatically Sort Lists"
                 },
                 "data_description": {
-                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
+                    "list_auto_sort": "If checked, all of your selected lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted."
                 }
             },
             "reauth_confirm": {
@@ -44,15 +51,17 @@
                 "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
                 "data": {
                     "lists_to_sync": "Lists to Sync",
-                    "list_prefix": "List Prefix"
+                    "list_prefix": "List Prefix",
+                    "list_auto_sort": "Automatically Sort Lists"
                 },
                 "data_description": {
-                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep."
+                    "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
+                    "list_auto_sort": "If checked, all of your selected lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted."
                 }
             }
         },
         "error": {
-            "list_fetch_error": "An error occurred while fetching lists"
+            "list_fetch_error": "An error occurred while fetching lists."
         },
         "abort": {
             "reauth_required": "Reauthentication required",

@@ -1,6 +1,7 @@
 # Google Keep Sync for Home Assistant
 
 [![Tests](https://github.com/watkins-matt/home-assistant-google-keep-sync/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/watkins-matt/home-assistant-google-keep-sync/actions/workflows/test.yml)
+[![Coverage](https://watkins-matt.github.io/home-assistant-google-keep-sync/badges/coverage.svg)](https://github.com/watkins-matt/home-assistant-google-keep-sync/actions)
 
 Google Keep Sync is an unofficial custom integration for Home Assistant that allows users to synchronize their Google Keep lists with Home Assistant. This project is in no way affiliated with, created, or endorsed by Google.
 
@@ -270,7 +271,9 @@ To generate a token:
    python3 get_tokens.py
    ```
 
-4. Once generated, use this token in the integration's configuration process by entering it into the token field (leave the password field blank).
+4. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
+
+5. Use this token in the integration's configuration process by entering it into the token field (make sure you leave the password field blank).
 
 ### Sync Delays
 
