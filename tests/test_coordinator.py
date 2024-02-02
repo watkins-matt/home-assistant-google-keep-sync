@@ -1,9 +1,10 @@
 """Unit tests for the todo component."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.components.todo import TodoItem
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.google_keep_sync.coordinator import (
     GoogleKeepSyncCoordinator,
@@ -29,6 +30,21 @@ def mock_api():
     api = MagicMock()
     api.async_create_todo_item = MagicMock()
     return api
+
+
+async def test_async_update_data(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
+    """Test update_data method."""
+    with patch.object(mock_api, "async_sync_data", AsyncMock()):
+        mock_api.async_sync_data.return_value = ["list1", "list2"]
+
+        coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+        coordinator.config_entry = mock_config_entry
+
+        result = await coordinator._async_update_data()
+
+        assert result == ["list1", "list2"]
 
 
 async def test_parse_gkeep_data_dict_empty(mock_api: MagicMock, mock_hass: MagicMock):
