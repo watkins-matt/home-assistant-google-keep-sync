@@ -161,8 +161,9 @@ Below are some examples of how to do this, click to expand.
         data:
         status: completed
         item: "{{item_name}}"
-    ""
-    mode: single
+    # The maximum number of updates you want to process each update. If you do a lot of chanes, increase this number.
+    mode: parallel
+    max: 50
     ```
 
     </details>
@@ -215,8 +216,9 @@ The same process works for Bring Shopping list or any other integrated list to H
         data:
         status: completed
         item: "{{item_name}}"
-    mode: single
-
+    # The maximum number of updates you want to process each update. If you do a lot of chanes, increase this number.
+    mode: parallel
+    max: 50
     ```
 
     </details>
