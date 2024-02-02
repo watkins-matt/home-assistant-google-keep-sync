@@ -3,12 +3,11 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.components.todo import TodoItem
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.google_keep_sync.coordinator import (
     GoogleKeepSyncCoordinator,
-    TodoItem,  # noqa: F811
+    TodoItem,
     TodoItemData,
     TodoList,
 )
@@ -39,7 +38,7 @@ async def test_async_update_data(
     with patch.object(mock_api, "async_sync_data", AsyncMock()):
         mock_api.async_sync_data.return_value = ["list1", "list2"]
 
-        coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+        coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
         coordinator.config_entry = mock_config_entry
 
         result = await coordinator._async_update_data()
@@ -47,18 +46,22 @@ async def test_async_update_data(
         assert result == ["list1", "list2"]
 
 
-async def test_parse_gkeep_data_dict_empty(mock_api: MagicMock, mock_hass: MagicMock):
+async def test_parse_gkeep_data_dict_empty(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
     """Test _parse_gkeep_data_dict when empty."""
     test_input: dict = {}
     expected: dict = {}
-    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
     coordinator.data = test_input
 
     actual = await coordinator._parse_gkeep_data_dict()
     assert actual == expected
 
 
-async def test_parse_gkeep_data_dict_normal(mock_api: MagicMock, mock_hass: MagicMock):
+async def test_parse_gkeep_data_dict_normal(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
     """Test _parse_gkeep_data_dict with data."""
     mock_list = MagicMock(id="grocery_list_id", title="Grocery List")
     mock_item = MagicMock(id="milk_item_id", text="Milk", checked=False)
@@ -70,17 +73,19 @@ async def test_parse_gkeep_data_dict_normal(mock_api: MagicMock, mock_hass: Magi
         )
     }
 
-    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
     coordinator.data = [mock_list]
 
     actual = await coordinator._parse_gkeep_data_dict()
     assert actual == expected
 
 
-async def test_handle_new_items_added(mock_api: MagicMock, mock_hass: MagicMock):
+async def test_handle_new_items_added(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
     """Test handling new items added to a list."""
     # Set up coordinator and mock API
-    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
 
     list1 = {
         "grocery_list_id": TodoList(
@@ -114,10 +119,12 @@ async def test_handle_new_items_added(mock_api: MagicMock, mock_hass: MagicMock)
     callback.assert_called_once()
 
 
-async def test_handle_new_items_not_added(mock_api: MagicMock, mock_hass: MagicMock):
+async def test_handle_new_items_not_added(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
     """Test handling when no new items are added to a list."""
     # Set up coordinator and mock API
-    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api)
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
 
     list1 = {
         "grocery_list_id": TodoList(
