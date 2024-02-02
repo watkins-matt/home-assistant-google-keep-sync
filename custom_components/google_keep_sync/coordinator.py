@@ -6,6 +6,7 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from gkeepapi.node import List as GKeepList
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -27,6 +28,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
         self,
         hass: HomeAssistant,
         api: GoogleKeepAPI,
+        entry: ConfigEntry,
     ) -> None:
         """Initialize the Google Keep Todo coordinator."""
         super().__init__(
@@ -36,6 +38,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
             update_interval=timedelta(minutes=15),
         )
         self.api = api
+        self.config_entry = entry
 
     # Define the update method for the coordinator
     async def _async_update_data(self) -> list[GKeepList]:
@@ -94,28 +97,28 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
         # :param on_new_item: Callback function to execute for each new item found.
         """
         # for each list
-        for updated_list_id, upldated_list in updated_lists.items():
+        for updated_list_id, updated_list in updated_lists.items():
             if updated_list_id not in original_lists:
-                _LOGGER.debug("Found new list not in original: %s", upldated_list.name)
+                _LOGGER.debug("Found new list not in original: %s", updated_list.name)
                 continue
 
             # for each todo item in the list
-            upldated_list_item: TodoItem
+            updated_list_item: TodoItem
             for (
-                upldated_list_item_id,
-                upldated_list_item,
-            ) in upldated_list.items.items():
+                updated_list_item_id,
+                updated_list_item,
+            ) in updated_list.items.items():
                 # get original list with updated_list_id
                 original_list = original_lists[updated_list_id]
 
                 # if todo is not in original list, then it is new
-                if upldated_list_item_id not in original_list.items:
+                if updated_list_item_id not in original_list.items:
                     item_data = TodoItemData(
-                        item_name=upldated_list_item.summary,
-                        item_id=upldated_list_item_id,
-                        item_checked=upldated_list_item.checked,
+                        item_name=updated_list_item.summary,
+                        item_id=updated_list_item_id,
+                        item_checked=updated_list_item.checked,
                         list_name=(f"{list_prefix} " if list_prefix else "")
-                        + upldated_list.name,
+                        + updated_list.name,
                         list_id=updated_list_id,
                     )
 

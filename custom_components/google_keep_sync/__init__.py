@@ -28,7 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False  # Exit early if authentication fails
 
     # Create the coordinator
-    coordinator = GoogleKeepSyncCoordinator(hass, api)
+    coordinator = GoogleKeepSyncCoordinator(hass, api, entry)
 
     # Start the data update coordinator
     await coordinator.async_config_entry_first_refresh()
