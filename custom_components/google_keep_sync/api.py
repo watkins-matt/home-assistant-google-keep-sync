@@ -230,7 +230,10 @@ class GoogleKeepAPI:
                 )
 
                 if sort_lists:
-                    await self._hass.async_add_executor_job(keep_list.sort_items)
+                    # Sort the items, case-insensitive by default
+                    await self._hass.async_add_executor_job(
+                        keep_list.sort_items, lambda item: item.text.lower()
+                    )
 
                 lists.append(keep_list)
 
