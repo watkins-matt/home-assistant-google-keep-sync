@@ -135,11 +135,11 @@ Below are some examples of how to do this, click to expand.
     - platform: event
         event_type: google_keep_sync_new_item
         variables:
-        item_name: "{{ trigger.event.data.item_name }}"
-        item_id: "{{ trigger.event.data.item_id }}"
-        item_checked: "{{ trigger.event.data.item_checked }}"
-        list_name: "{{ trigger.event.data.list_name }}"
-        list_id: "{{ trigger.event.data.list_id }}"
+            item_name: "{{ trigger.event.data.item_name }}"
+            item_id: "{{ trigger.event.data.item_id }}"
+            item_checked: "{{ trigger.event.data.item_checked }}"
+            list_name: "{{ trigger.event.data.list_name }}"
+            list_id: "{{ trigger.event.data.list_id }}"
     condition:
     # Update this to the name of your shopping list in Home Assistant.
     - condition: template
@@ -162,7 +162,7 @@ Below are some examples of how to do this, click to expand.
         data:
         status: completed
         item: "{{item_name}}"
-    # The maximum number of updates you want to process each update. If you do a lot of chanes, increase this number.
+    # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
     mode: parallel
     max: 50
     ```
@@ -187,11 +187,11 @@ The same process works for Bring Shopping list or any other integrated list to H
     - platform: event
         event_type: google_keep_sync_new_item
         variables:
-        item_name: "{{ trigger.event.data.item_name }}"
-        item_id: "{{ trigger.event.data.item_id }}"
-        item_checked: "{{ trigger.event.data.item_checked }}"
-        list_name: "{{ trigger.event.data.list_name }}"
-        list_id: "{{ trigger.event.data.list_id }}"
+            item_name: "{{ trigger.event.data.item_name }}"
+            item_id: "{{ trigger.event.data.item_id }}"
+            item_checked: "{{ trigger.event.data.item_checked }}"
+            list_name: "{{ trigger.event.data.list_name }}"
+            list_id: "{{ trigger.event.data.list_id }}"
     condition:
     # Update this to the name of your shopping list in Home Assistant.
     - condition: template
@@ -217,7 +217,7 @@ The same process works for Bring Shopping list or any other integrated list to H
         data:
         status: completed
         item: "{{item_name}}"
-    # The maximum number of updates you want to process each update. If you do a lot of chanes, increase this number.
+    # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
     mode: parallel
     max: 50
     ```
