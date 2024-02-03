@@ -59,7 +59,9 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
                 original_lists,
                 updated_lists,
                 self.config_entry.data.get("list_prefix", ""),
-                lambda item_data: self.hass.bus.async_fire(EVENT_NEW_ITEM, item_data),
+                lambda item_data: self.hass.bus.async_fire(
+                    EVENT_NEW_ITEM, item_data._asdict()
+                ),
             )
 
             return result
