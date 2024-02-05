@@ -90,7 +90,9 @@ use the built-in services to add, remove and update items from your synchronized
 
 Google recently removed third party integrations from Google Assistant. Now you can re-create these integrations.
 
-When a new item is added to a synced list via Google Assistant or from Google Keep, a `google_keep_sync_new_item` event will be triggered. This allows Home Assistant to pick up new items from Google Keep and sync them with third party systems such as Trello, Bring, Anylist etc.
+When a new item is added to a synced list via Google Assistant or from Google Keep, an `add_item` service call event will be triggered. This allows Home Assistant to pick up new items from Google Keep and sync them with third party systems such as Trello, Bring, Anylist etc.
+
+This plugin extends Home Assistant's events so that the `add_item` service call is fired regardless of where the new item was added. The `origin` field in the event will be `REMOTE` if the item was added remotely to Google Keep, or `LOCAL` if it was added within Home Assistant.
 
 Note: Only new items that are not completed at the time of syncing will trigger the event.
 
@@ -133,17 +135,19 @@ Below are some examples of how to do this, click to expand.
     description: Send new items added to Google's Todo List to Trello
     trigger:
     - platform: event
-        event_type: google_keep_sync_new_item
+        event_type: call_service
+        event_data:
+            domain: todo
+            service: add_item
         variables:
-            item_name: "{{ trigger.event.data.item_name }}"
-            item_id: "{{ trigger.event.data.item_id }}"
-            item_checked: "{{ trigger.event.data.item_checked }}"
-            list_name: "{{ trigger.event.data.list_name }}"
-            list_id: "{{ trigger.event.data.list_id }}"
+            item_name: "{{ trigger.event.data.service_data.item }}"
+            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
+            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+            origin: "{{ trigger.event.origin }}"
     condition:
-    # Update this to the name of your shopping list in Home Assistant.
+    # Update this to the name of your To-do list in Home Assistant.
     - condition: template
-        value_template: "{{ list_name == 'Google To Do' }}"
+        value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
     action:
     # Optional: Send a notification of new item in HA.
     - service: notify.persistent_notification
@@ -185,17 +189,19 @@ The same process works for Bring Shopping list or any other integrated list to H
     description: Sync Google Shopping List with Anylist
     trigger:
     - platform: event
-        event_type: google_keep_sync_new_item
+        event_type: call_service
+        event_data:
+            domain: todo
+            service: add_item
         variables:
-            item_name: "{{ trigger.event.data.item_name }}"
-            item_id: "{{ trigger.event.data.item_id }}"
-            item_checked: "{{ trigger.event.data.item_checked }}"
-            list_name: "{{ trigger.event.data.list_name }}"
-            list_id: "{{ trigger.event.data.list_id }}"
+            item_name: "{{ trigger.event.data.service_data.item }}"
+            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
+            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+            origin: "{{ trigger.event.origin }}"
     condition:
-    # Update this to the name of your shopping list in Home Assistant.
+    # Update this to the name of your To-do list in Home Assistant.
     - condition: template
-        value_template: "{{ list_name == 'Google Shopping list' }}"
+        value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
     action:
     # Optional: Send a notification of new item in Home Assistant.
     - service: notify.persistent_notification
@@ -254,10 +260,10 @@ To generate a token:
 
 1. In a environment with Docker installed, enter the following commands.
 
-    ```bash
-    docker pull breph/ha-google-home_get-token:latest
-    docker run -it -d breph/ha-google-home_get-token
-    ```
+   ```bash
+   docker pull breph/ha-google-home_get-token:latest
+   docker run -it -d breph/ha-google-home_get-token
+   ```
 
 2. Copy the returned container ID to use in the following command.
 
