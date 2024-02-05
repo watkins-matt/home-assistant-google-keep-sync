@@ -2,23 +2,22 @@
 
 import logging
 from collections import namedtuple
-from collections.abc import Callable
 from datetime import timedelta
 
 from gkeepapi.node import List as GKeepList
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_CALL_SERVICE, Platform
+from homeassistant.core import EventOrigin, HomeAssistant
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import GoogleKeepAPI
-from .const import DOMAIN, EVENT_NEW_ITEM
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 TodoItem = namedtuple("TodoItem", ["summary", "checked"])
 TodoList = namedtuple("TodoList", ["name", "items"])
-TodoItemData = namedtuple(
-    "TodoItemData", ["item_name", "item_id", "item_checked", "list_name", "list_id"]
-)
+TodoItemData = namedtuple("TodoItemData", ["item", "entity_id"])
 
 
 class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
@@ -55,14 +54,11 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
             # save lists after syncing
             updated_lists = await self._parse_gkeep_data_dict()
             # compare both list for changes, and fire event for changes
-            await self._handle_new_items_added(
+            new_items = await self._handle_new_items_added(
                 original_lists,
                 updated_lists,
-                self.config_entry.data.get("list_prefix", ""),
-                lambda item_data: self.hass.bus.async_fire(
-                    EVENT_NEW_ITEM, item_data._asdict()
-                ),
             )
+            await self._notify_new_items(new_items)
 
             return result
         except Exception as error:
@@ -87,9 +83,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
         self,
         original_lists: dict[str, TodoList],
         updated_lists: dict[str, TodoList],
-        list_prefix: str,
-        on_new_item: Callable[[TodoItemData], None],
-    ) -> None:
+    ) -> [TodoItemData]:
         """Compare original and updated lists to find new TodoItems.
 
         For each new TodoItem found, call the provided on_new_item callback.
@@ -98,6 +92,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
         :param updated_lists: The updated todo list data.
         # :param on_new_item: Callback function to execute for each new item found.
         """
+        new_items = []
         # for each list
         for updated_list_id, updated_list in updated_lists.items():
             if updated_list_id not in original_lists:
@@ -115,14 +110,36 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
 
                 # if todo is not in original list, then it is new
                 if updated_list_item_id not in original_list.items:
-                    item_data = TodoItemData(
-                        item_name=updated_list_item.summary,
-                        item_id=updated_list_item_id,
-                        item_checked=updated_list_item.checked,
-                        list_name=(f"{list_prefix} " if list_prefix else "")
-                        + updated_list.name,
-                        list_id=updated_list_id,
+                    # Get HA List entity_id for _gkeep_list_id
+                    entity_reg = entity_registry.async_get(self.hass)
+                    uuid = f"{DOMAIN}.list.{updated_list_id}"
+                    list_entity_id = entity_reg.async_get_entity_id(
+                        Platform.TODO, DOMAIN, uuid
+                    )
+                    new_items.append(
+                        TodoItemData(
+                            item=updated_list_item.summary, entity_id=list_entity_id
+                        )
                     )
 
-                    _LOGGER.debug("Found new TodoItem: %s", item_data)
-                    on_new_item(item_data)
+                    _LOGGER.debug(
+                        "Found new TodoItem: '%s' in List entity_id: '%s'",
+                        updated_list_item.summary,
+                        list_entity_id,
+                    )
+        return new_items
+
+    async def _notify_new_items(self, new_items: [TodoItemData]) -> None:
+        """Emit add_item service call event for new remote Todo items."""
+        for new_item in new_items:
+            event_data = {
+                "domain": "todo",
+                "service": "add_item",
+                "service_data": {
+                    "item": new_item.item,
+                    "entity_id": [new_item.entity_id],
+                },
+            }
+            self.hass.bus.async_fire(
+                EVENT_CALL_SERVICE, event_data, origin=EventOrigin.remote
+            )

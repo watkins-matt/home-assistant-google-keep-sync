@@ -3,6 +3,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.const import EVENT_CALL_SERVICE
+from homeassistant.core import EventOrigin
+from homeassistant.helpers import entity_registry
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.google_keep_sync.coordinator import (
@@ -81,7 +84,9 @@ async def test_parse_gkeep_data_dict_normal(
 
 
 async def test_handle_new_items_added(
-    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+    mock_api: MagicMock,
+    mock_hass: MagicMock,
+    mock_config_entry: MockConfigEntry,
 ):
     """Test handling new items added to a list."""
     # Set up coordinator and mock API
@@ -103,20 +108,22 @@ async def test_handle_new_items_added(
         )
     }
 
-    # Call method under test
-    callback = MagicMock()
-    await coordinator._handle_new_items_added(list1, list2, "", callback)
+    with patch.object(entity_registry, "async_get") as er:
+        instance = er.return_value
+        instance.async_get_entity_id.return_value = "list_entity_id"
 
-    # Assertions
-    expected = TodoItemData(
-        item_name="Bread",
-        item_id="bread_item_id",
-        item_checked=False,
-        list_name="Grocery List",
-        list_id="grocery_list_id",
-    )
-    callback.assert_called_with(expected)
-    callback.assert_called_once()
+        # Call method under test
+        # callback = MagicMock()
+        new_items = await coordinator._handle_new_items_added(list1, list2)
+
+        # Assertions
+        expected = [
+            TodoItemData(
+                item="Bread",
+                entity_id="list_entity_id",
+            )
+        ]
+        assert new_items == expected
 
 
 async def test_handle_new_items_not_added(
@@ -134,8 +141,38 @@ async def test_handle_new_items_not_added(
     }
 
     # Call method under test
-    callback = MagicMock()
-    await coordinator._handle_new_items_added(list1, list1, "", callback)
+    new_items = await coordinator._handle_new_items_added(list1, list1)
 
     # Assertions
-    callback.assert_not_called()
+    assert new_items == []
+
+
+async def test_notify_new_items(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
+    """Test sending notifications of new items added to a list."""
+    # Set up coordinator and mock API
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
+
+    new_items = [
+        TodoItemData(
+            item="Bread",
+            entity_id="list_entity_id",
+        )
+    ]
+    # Call method under test
+    await coordinator._notify_new_items(new_items)
+
+    expected = {
+        "domain": "todo",
+        "service": "add_item",
+        "service_data": {
+            "item": "Bread",
+            "entity_id": ["list_entity_id"],
+        },
+    }
+
+    # Assertions
+    mock_hass.bus.async_fire.assert_called_once_with(
+        EVENT_CALL_SERVICE, expected, origin=EventOrigin.remote
+    )

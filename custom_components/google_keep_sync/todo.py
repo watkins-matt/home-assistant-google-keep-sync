@@ -53,11 +53,6 @@ class GoogleKeepTodoListEntity(
             f"{list_prefix} " if list_prefix else ""
         ) + f"{gkeep_list.title}"
         self._attr_unique_id = f"{DOMAIN}.list.{gkeep_list.id}"
-        self.entity_id = self._get_entity_id(gkeep_list.title)
-
-    def _get_entity_id(self, title: str) -> str:
-        """Return the entity ID for the given title."""
-        return f"todo.google_keep_{title.lower().replace(' ', '_')}"
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete todo items from Google Keep."""
