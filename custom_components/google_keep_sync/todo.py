@@ -51,6 +51,16 @@ class GoogleKeepTodoListEntity(
         ) + f"{gkeep_list.title}"
         self._attr_unique_id = f"{DOMAIN}.list.{gkeep_list.id}"
 
+        # Set the default entity ID based on the list title.
+        # We use a prefix to avoid conflicts with todo entities from other
+        # integrations, and so the entities specific to this integration
+        # can be filtered easily in developer tools.
+        self.entity_id = self._get_default_entity_id(gkeep_list.title)
+
+    def _get_default_entity_id(self, title: str) -> str:
+        """Return the entity ID for the given title."""
+        return f"todo.google_keep_{title.lower().replace(' ', '_')}"
+
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete todo items from Google Keep."""
         list_id = self._gkeep_list_id
