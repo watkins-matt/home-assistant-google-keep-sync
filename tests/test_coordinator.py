@@ -83,7 +83,7 @@ async def test_parse_gkeep_data_dict_normal(
     assert actual == expected
 
 
-async def test_handle_new_items_added(
+async def test_get_new_items_added(
     mock_api: MagicMock,
     mock_hass: MagicMock,
     mock_config_entry: MockConfigEntry,
@@ -114,7 +114,7 @@ async def test_handle_new_items_added(
 
         # Call method under test
         # callback = MagicMock()
-        new_items = await coordinator._handle_new_items_added(list1, list2)
+        new_items = await coordinator._get_new_items_added(list1, list2)
 
         # Assertions
         expected = [
@@ -126,7 +126,7 @@ async def test_handle_new_items_added(
         assert new_items == expected
 
 
-async def test_handle_new_items_not_added(
+async def test_get_new_items_not_added(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
     """Test handling when no new items are added to a list."""
@@ -141,7 +141,7 @@ async def test_handle_new_items_not_added(
     }
 
     # Call method under test
-    new_items = await coordinator._handle_new_items_added(list1, list1)
+    new_items = await coordinator._get_new_items_added(list1, list1)
 
     # Assertions
     assert new_items == []
