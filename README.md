@@ -86,6 +86,150 @@ use the built-in services to add, remove and update items from your synchronized
 - `todo.remove_item`
 - `todo.update_item`
 
+## Events
+
+Google recently removed third party integrations from Google Assistant. Now you can re-create these integrations.
+
+When a new item is added to a synced list via Google Assistant or from Google Keep, an `add_item` service call event will be triggered. This allows Home Assistant to pick up new items from Google Keep and sync them with third party systems such as Trello, Bring, Anylist etc.
+
+This plugin extends Home Assistant's events so that the `add_item` service call is fired regardless of where the new item was added. The `origin` field in the event will be `REMOTE` if the item was added remotely to Google Keep, or `LOCAL` if it was added within Home Assistant.
+
+Note: Only new items that are not completed at the time of syncing will trigger the event.
+
+Below are some examples of how to do this, click to expand.
+
+<details>
+<summary>Sync Google Todo List with Trello via email</summary>
+
+1.  Install and configure this plugin
+
+1.  Install and configure the Anylist plugin
+
+1.  Create an email notify service in Home assistant
+
+    1. Create a new [app password](https://myaccount.google.com/apppasswords>) in your Gmail.
+
+    1. Setup [creating cards by email]([https://support.atlassian.com/trello/docs/creating-cards-by-email/) in Trello
+
+    1. Add the following to your config.yaml file.
+
+    ```yaml
+    notify:
+    - name: "Email to Trello Todo"
+        platform: smtp
+        server: "smtp.gmail.com"
+        port: 587
+        timeout: 15
+        encryption: starttls
+        sender: "your_email@gmail.com"
+        username: "your_email@gmail.com"
+        password: "app password"
+        sender_name: "your name"
+        recipient: "your_cards_by_email_address@boards.trello.com"
+    ```
+
+1.  Create an Automation in Home Assistant:
+
+    ```yaml
+    alias: Google Todo List
+    description: Send new items added to Google's Todo List to Trello
+    trigger:
+    - platform: event
+        event_type: call_service
+        event_data:
+            domain: todo
+            service: add_item
+        variables:
+            item_name: "{{ trigger.event.data.service_data.item }}"
+            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
+            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+            origin: "{{ trigger.event.origin }}"
+    condition:
+    # Update this to the name of your To-do list in Home Assistant.
+    - condition: template
+        value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
+    action:
+    # Optional: Send a notification of new item in HA.
+    - service: notify.persistent_notification
+        data:
+        message: "'{{item_name}}' was just added to the '{{list_name}}' list."
+    # Call Home Assistant Notify service to send item to Trello Board.
+    - service: notify.email_to_trello_todo
+        data:
+        title: "{{item_name}}"
+        message:
+    # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list.
+    # Update entity_id to the id of your google list in Home Assistant.
+    - service: todo.update_item
+        target:
+        entity_id: todo.google_keep_to_do
+        data:
+        status: completed
+        item: "{{item_name}}"
+    # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
+    mode: parallel
+    max: 50
+    ```
+
+    </details>
+
+<details>
+<summary>Sync Google Shopping List with Anylist</summary>
+
+The same process works for Bring Shopping list or any other integrated list to Home Assistant.
+
+1.  Install and configure this plugin
+
+1.  Install and configure the Anylist plugin
+
+1.  Create an Automation in Home Assistant:
+
+    ```yaml
+    alias: Google Shopping List
+    description: Sync Google Shopping List with Anylist
+    trigger:
+    - platform: event
+        event_type: call_service
+        event_data:
+            domain: todo
+            service: add_item
+        variables:
+            item_name: "{{ trigger.event.data.service_data.item }}"
+            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
+            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+            origin: "{{ trigger.event.origin }}"
+    condition:
+    # Update this to the name of your To-do list in Home Assistant.
+    - condition: template
+        value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
+    action:
+    # Optional: Send a notification of new item in Home Assistant.
+    - service: notify.persistent_notification
+        data:
+        message: "'{{item_name}}' was just added to the '{{list_name}}' list."
+    # Add new item to your Anylist list
+    # Update the entity_id list name to your list in Home Assistant.
+    - service: todo.add_item
+        data:
+        item: "{{item_name}}"
+        target:
+        entity_id: todo.anylist_alexa_shopping_list
+        enabled: true
+    # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list
+    # Update entity_id to the id of your google list in Home Assistant.
+    - service: todo.update_item
+        target:
+        entity_id: todo.google_keep_shopping_list
+        data:
+        status: completed
+        item: "{{item_name}}"
+    # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
+    mode: parallel
+    max: 50
+    ```
+
+    </details>
+
 ## Limitations
 
 - **Polling Interval**: While changes made in Home Assistant are instantly reflected in Google Keep, changes made in Google Keep are not instantly reflected in Home Assistant. The integration polls Google Keep for updates every 15 minutes. Therefore, any changes made directly in Google Keep will be visible in Home Assistant after the next polling interval.
@@ -116,10 +260,10 @@ To generate a token:
 
 1. In a environment with Docker installed, enter the following commands.
 
-    ```bash
-    docker pull breph/ha-google-home_get-token:latest
-    docker run -it -d breph/ha-google-home_get-token
-    ```
+   ```bash
+   docker pull breph/ha-google-home_get-token:latest
+   docker run -it -d breph/ha-google-home_get-token
+   ```
 
 2. Copy the returned container ID to use in the following command.
 

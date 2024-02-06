@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import GoogleKeepAPI
 from .const import DOMAIN
+from .coordinator import GoogleKeepSyncCoordinator
 
 PLATFORMS: list[Platform] = [Platform.TODO]
 
@@ -28,42 +27,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to authenticate Google Keep API")
         return False  # Exit early if authentication fails
 
-    # Define the update method for the coordinator
-    async def async_update_data():
-        """Fetch data from API."""
-        try:
-            # Directly call the async_sync_data method
-            lists_to_sync = entry.data.get("lists_to_sync", [])
-
-            # Check if we need to sort the lists
-            auto_sort = entry.data.get("list_auto_sort", False)
-
-            return await api.async_sync_data(lists_to_sync, auto_sort)
-        except Exception as error:
-            raise UpdateFailed(f"Error communicating with API: {error}") from error
-
     # Create the coordinator
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="Google Keep",
-        update_method=async_update_data,
-        update_interval=timedelta(minutes=15),
-    )
+    coordinator = GoogleKeepSyncCoordinator(hass, api, entry)
 
     # Start the data update coordinator
-    await coordinator.async_refresh()
+    await coordinator.async_config_entry_first_refresh()
 
-    # Store the API and coordinator objects in hass.data
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        "api": api,
-        "coordinator": coordinator,
-    }
+    # Store the coordinator object in hass.data
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # Forward the setup to the todo platform
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
