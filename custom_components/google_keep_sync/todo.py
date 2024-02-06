@@ -1,7 +1,6 @@
 """Platform for creating to do list entries based on Google Keep lists."""
 
 import logging
-from datetime import timedelta
 
 import gkeepapi
 from homeassistant.components.todo import (
@@ -20,8 +19,6 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import DOMAIN
 from .coordinator import GoogleKeepSyncCoordinator
-
-SCAN_INTERVAL = timedelta(minutes=15)
 
 _LOGGER = logging.getLogger(__name__)
 

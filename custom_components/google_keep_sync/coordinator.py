@@ -2,7 +2,6 @@
 
 import logging
 from collections import namedtuple
-from datetime import timedelta
 
 from gkeepapi.node import List as GKeepList
 from homeassistant.config_entries import ConfigEntry
@@ -12,7 +11,7 @@ from homeassistant.helpers import entity_registry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import GoogleKeepAPI
-from .const import DOMAIN
+from .const import DOMAIN, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 TodoItem = namedtuple("TodoItem", ["summary", "checked"])
@@ -34,7 +33,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(minutes=15),
+            update_interval=SCAN_INTERVAL,
         )
         self.api = api
         self.config_entry = entry
@@ -54,7 +53,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
             # save lists after syncing
             updated_lists = await self._parse_gkeep_data_dict()
             # compare both list for changes, and fire event for changes
-            new_items = await self._handle_new_items_added(
+            new_items = await self._get_new_items_added(
                 original_lists,
                 updated_lists,
             )
@@ -79,11 +78,11 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
             all_keep_lists[keep_list.id] = TodoList(name=keep_list.title, items=items)
         return all_keep_lists
 
-    async def _handle_new_items_added(
+    async def _get_new_items_added(
         self,
         original_lists: dict[str, TodoList],
         updated_lists: dict[str, TodoList],
-    ) -> [TodoItemData]:
+    ) -> list[TodoItemData]:
         """Compare original and updated lists to find new TodoItems.
 
         For each new TodoItem found, call the provided on_new_item callback.
@@ -129,7 +128,7 @@ class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
                     )
         return new_items
 
-    async def _notify_new_items(self, new_items: [TodoItemData]) -> None:
+    async def _notify_new_items(self, new_items: list[TodoItemData]) -> None:
         """Emit add_item service call event for new remote Todo items."""
         for new_item in new_items:
             event_data = {
