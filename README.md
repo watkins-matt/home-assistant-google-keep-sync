@@ -115,7 +115,7 @@ Below are some examples of how to do this, click to expand.
 
     ```yaml
     notify:
-    - name: "Email to Trello Todo"
+      - name: "Email to Trello Todo"
         platform: smtp
         server: "smtp.gmail.com"
         port: 587
@@ -134,38 +134,38 @@ Below are some examples of how to do this, click to expand.
     alias: Google Todo List
     description: Send new items added to Google's Todo List to Trello
     trigger:
-    - platform: event
+      - platform: event
         event_type: call_service
         event_data:
-            domain: todo
-            service: add_item
+          domain: todo
+          service: add_item
         variables:
-            item_name: "{{ trigger.event.data.service_data.item }}"
-            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
-            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
-            origin: "{{ trigger.event.origin }}"
+          item_name: "{{ trigger.event.data.service_data.item }}"
+          list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0], 'friendly_name')}}"
+          list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+          origin: "{{ trigger.event.origin }}"
     condition:
-    # Update this to the name of your To-do list in Home Assistant.
-    - condition: template
+      # Update this to the name of your To-do list in Home Assistant.
+      - condition: template
         value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
     action:
-    # Optional: Send a notification of new item in HA.
-    - service: notify.persistent_notification
+      # Optional: Send a notification of new item in HA.
+      - service: notify.persistent_notification
         data:
-        message: "'{{item_name}}' was just added to the '{{list_name}}' list."
-    # Call Home Assistant Notify service to send item to Trello Board.
-    - service: notify.email_to_trello_todo
+          message: "'{{item_name}}' was just added to the '{{list_name}}' list."
+      # Call Home Assistant Notify service to send item to Trello Board.
+      - service: notify.email_to_trello_todo
         data:
-        title: "{{item_name}}"
-        message:
-    # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list.
-    # Update entity_id to the id of your google list in Home Assistant.
-    - service: todo.update_item
+          title: "{{item_name}}"
+          message:
+      # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list.
+      # Update entity_id to the id of your google list in Home Assistant.
+      - service: todo.update_item
         target:
-        entity_id: todo.google_keep_to_do
+          entity_id: todo.google_keep_to_do
         data:
-        status: completed
-        item: "{{item_name}}"
+          status: completed
+          item: "{{item_name}}"
     # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
     mode: parallel
     max: 50
@@ -188,41 +188,40 @@ The same process works for Bring Shopping list or any other integrated list to H
     alias: Google Shopping List
     description: Sync Google Shopping List with Anylist
     trigger:
-    - platform: event
+      - platform: event
         event_type: call_service
         event_data:
-            domain: todo
-            service: add_item
+          domain: todo
+          service: add_item
         variables:
-            item_name: "{{ trigger.event.data.service_data.item }}"
-            list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
-            list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
-            origin: "{{ trigger.event.origin }}"
+          item_name: "{{ trigger.event.data.service_data.item }}"
+          list_name: "{{state_attr((trigger.event.data.service_data.entity_id)[0],'friendly_name')}}"
+          list_entity_id: "{{ (trigger.event.data.service_data.entity_id)[0] }}"
+          origin: "{{ trigger.event.origin }}"
     condition:
-    # Update this to the name of your To-do list in Home Assistant.
-    - condition: template
-        value_template: "{{ list_entity_id == 'todo.google_keep_to_do' }}"
+      # Update this to the name of your To-do list in Home Assistant.
+      - condition: template
+        value_template: "{{ list_entity_id == 'todo.google_keep_shopping_list' }}"
     action:
-    # Optional: Send a notification of new item in Home Assistant.
-    - service: notify.persistent_notification
+      # Optional: Send a notification of new item in Home Assistant.
+      - service: notify.persistent_notification
         data:
-        message: "'{{item_name}}' was just added to the '{{list_name}}' list."
-    # Add new item to your Anylist list
-    # Update the entity_id list name to your list in Home Assistant.
-    - service: todo.add_item
+          message: "'{{item_name}}' was just added to the '{{list_name}}' list."
+      # Add new item to your Anylist list
+      # Update the entity_id list name to your list in Home Assistant.
+      - service: todo.add_item
         data:
-        item: "{{item_name}}"
+          item: "{{item_name}}"
         target:
-        entity_id: todo.anylist_alexa_shopping_list
-        enabled: true
-    # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list
-    # Update entity_id to the id of your google list in Home Assistant.
-    - service: todo.update_item
+          entity_id: todo.anylist_alexa_shopping_list
+      # Complete item from google shopping list. Can also call todo.remove_item to delete it from the list
+      # Update entity_id to the id of your google list in Home Assistant.
+      - service: todo.update_item
         target:
-        entity_id: todo.google_keep_shopping_list
+          entity_id: todo.google_keep_shopping_list
         data:
-        status: completed
-        item: "{{item_name}}"
+          status: completed
+          item: "{{item_name}}"
     # The maximum number of updates you want to process each update. If you make frequent changes, increase this number.
     mode: parallel
     max: 50
