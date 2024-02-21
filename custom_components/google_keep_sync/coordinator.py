@@ -8,7 +8,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CALL_SERVICE, Platform
 from homeassistant.core import EventOrigin, HomeAssistant
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    TimestampDataUpdateCoordinator,
+    UpdateFailed,
+)
 
 from .api import GoogleKeepAPI
 from .const import DOMAIN, SCAN_INTERVAL
@@ -19,7 +22,7 @@ TodoList = namedtuple("TodoList", ["name", "items"])
 TodoItemData = namedtuple("TodoItemData", ["item", "entity_id"])
 
 
-class GoogleKeepSyncCoordinator(DataUpdateCoordinator[list[GKeepList]]):
+class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]]):
     """Coordinator for updating task data from Google Keep."""
 
     def __init__(

@@ -7,6 +7,8 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import callback
+from homeassistant.util.dt import as_timestamp, utcnow
 
 from .api import GoogleKeepAPI
 from .const import DOMAIN
@@ -37,9 +39,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    @callback
+    async def async_handle_request_sync(call):
+        """Handle the request_sync call."""
+        # Allow a maximum of 1 call per minute, with a 5 second buffer
+        sync_threshold = 55
+        last_update_timestamp = as_timestamp(coordinator.last_update_success_time)
+        seconds_since_update = as_timestamp(utcnow()) - last_update_timestamp
+
+        if seconds_since_update > sync_threshold:
+            _LOGGER.warning("Requesting manual sync.")
+            await coordinator.async_request_refresh()
+        else:
+            time_to_next_allowed_update = round(sync_threshold - seconds_since_update)
+            _LOGGER.warning(
+                "Requesting sync too soon after last update."
+                f" Try again in {time_to_next_allowed_update} seconds."
+            )
+
+    hass.services.async_register(DOMAIN, "request_sync", async_handle_request_sync)
+
     # Forward the setup to the todo platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
     return True
 
 
