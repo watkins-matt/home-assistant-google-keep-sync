@@ -123,12 +123,6 @@ class GoogleKeepTodoListEntity(
     @property
     def todo_items(self) -> list[TodoItem]:
         """Get the current set of To-do items."""
-        # if self._gkeep_list.id not in self.coordinator.data:
-        #     _LOGGER.warning(
-        #     "Unable to load data for Google Keep list: %s", self._gkeep_list.summary
-        #     )
-        #     return []
-
         return [
             TodoItem(
                 summary=item.text,
