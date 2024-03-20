@@ -269,3 +269,162 @@ async def test_async_sync_data(google_keep_api, mock_hass):
 
     google_keep_api._keep.sync.assert_called_once()
     google_keep_api._keep.get.assert_called_once()
+
+
+async def test_async_sync_data_sort_unchecked(google_keep_api, mock_hass):
+    """Test synchronizing and sorting data with Google Keep."""
+    google_keep_api._authenticated = True
+
+    # Creating a mock list with unsorted unchecked items
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = "todo_list_id"
+    mock_list.title = "Todo List"
+    mock_item1 = MagicMock(id="milk_item_id", text="Milk", checked=False)
+    mock_item2 = MagicMock(id="apple_item_id", text="apple", checked=False)
+    mock_list.items = [mock_item1, mock_item2]
+    mock_list.unchecked = [mock_item1, mock_item2]
+
+    # Mocking sort_items method
+    mock_list.sort_items = AsyncMock()
+
+    # Side effect to return the mock list
+    google_keep_api._keep.get = AsyncMock(return_value=mock_list)
+
+    # Mocking the is_list_sorted method
+    google_keep_api.is_list_sorted = MagicMock(return_value=False)
+
+    # Syncing data with sort_lists=True
+    lists = await google_keep_api.async_sync_data(["todo_list_id"], sort_lists=True)
+
+    # Assertions to ensure sorting logic was called correctly
+    google_keep_api.is_list_sorted.assert_called_once_with([mock_item1, mock_item2])
+    mock_list.sort_items.assert_called_once()
+
+    # Ensure the list is in the returned lists and has been sorted
+    assert lists[0].id == "todo_list_id"
+    assert lists[0].title == "Todo List"
+    assert lists[0].items == [mock_item1, mock_item2]
+
+    # Check if sync was called twice, once at the beginning and once after sorting
+    expected_sync_call_count = 2
+    assert google_keep_api._keep.sync.call_count == expected_sync_call_count
+
+
+async def test_is_list_sorted(google_keep_api, mock_hass):
+    """Tests whether is_list_sorted works as expected."""
+    # Create mock items
+    item1 = gkeepapi.node.ListItem()
+    item1.text = "Apple"
+    item2 = gkeepapi.node.ListItem()
+    item2.text = "banana"
+    item3 = gkeepapi.node.ListItem()
+    item3.text = "Cherry"
+
+    # List is sorted
+    sorted_list = [item1, item2, item3]
+    assert (
+        google_keep_api.is_list_sorted(sorted_list) is True
+    ), "The list should be identified as sorted"
+
+    # List is not sorted
+    not_sorted_list = [item3, item1, item2]
+    assert (
+        google_keep_api.is_list_sorted(not_sorted_list) is False
+    ), "The list should be identified as not sorted"
+
+
+async def test_async_login_with_saved_token(google_keep_api, mock_hass):
+    """Test logging in to Google Keep using the saved token."""
+    google_keep_api._authenticated = False
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = TEST_TOKEN
+
+    # Patching token save method and logging in
+    with patch.object(google_keep_api, "_async_save_state_and_token", AsyncMock()):
+        result = await google_keep_api.async_login_with_saved_token()
+
+        # Assertions
+        assert result is True
+        assert google_keep_api._authenticated is True
+        assert google_keep_api._token == google_keep_api._keep.getMasterToken()
+        google_keep_api._keep.resume.assert_called_once_with(
+            TEST_USERNAME, TEST_TOKEN, None
+        )
+        google_keep_api._async_save_state_and_token.assert_called_once()
+
+
+async def test_async_login_with_saved_token_no_username(google_keep_api, mock_hass):
+    """Test logging in to Google Keep using the saved token without a username."""
+    google_keep_api._authenticated = False
+    google_keep_api._username = None
+    google_keep_api._token = TEST_TOKEN
+
+    result = await google_keep_api.async_login_with_saved_token()
+
+    assert result is False
+    assert google_keep_api._authenticated is False
+
+
+async def test_async_login_with_saved_token_no_token(google_keep_api, mock_hass):
+    """Test logging in to Google Keep using the saved token without a token."""
+    google_keep_api._authenticated = False
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = None
+
+    result = await google_keep_api.async_login_with_saved_token()
+
+    assert result is False
+    assert google_keep_api._authenticated is False
+
+
+async def test_async_login_with_saved_token_failed_login(google_keep_api, mock_hass):
+    """Test logging in to Google Keep using the saved token with a failed login."""
+    google_keep_api._authenticated = False
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = TEST_TOKEN
+    google_keep_api._keep.resume.side_effect = gkeepapi.exception.LoginException
+    google_keep_api._async_save_state_and_token = AsyncMock()
+
+    result = await google_keep_api.async_login_with_saved_token()
+
+    assert result is False
+    assert google_keep_api._authenticated is False
+    google_keep_api._keep.resume.assert_called_once_with(
+        TEST_USERNAME, TEST_TOKEN, None
+    )
+    google_keep_api._async_save_state_and_token.assert_not_called()
+
+
+async def test_username(google_keep_api, mock_hass):
+    """Test username."""
+    google_keep_api._username = TEST_USERNAME
+    assert google_keep_api.username == TEST_USERNAME
+
+
+async def test_token(google_keep_api, mock_hass):
+    """Test token."""
+    google_keep_api._token = TEST_TOKEN
+    assert google_keep_api.token == TEST_TOKEN
+
+
+async def test_async_save_state_and_token(google_keep_api, mock_hass, mock_store):
+    """Test saving the state, token, and username of Google Keep."""
+    google_keep_api._authenticated = True
+    google_keep_api._token = TEST_TOKEN
+    google_keep_api._store = mock_store
+
+    # Mock the dump method as an async function
+    async def async_dump_state():
+        return TEST_STATE
+
+    google_keep_api._keep.dump = AsyncMock(side_effect=async_dump_state)
+
+    # Saving the state and token
+    await google_keep_api._async_save_state_and_token()
+
+    # Assertions
+    google_keep_api._keep.dump.assert_called_once()
+    google_keep_api._keep.getMasterToken.assert_not_called()
+    mock_store.async_save.assert_called_once_with(
+        {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
+    )
