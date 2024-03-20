@@ -67,7 +67,7 @@ HACS is strongly recommended.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
-    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>) OR a [Token](#generating-a-token)
+    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>) OR a [Token](#generating-a-token-using-the-docker-container)
     - Add an optional list prefix that will be prepended to all lists added to Home Assistant.
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
 
