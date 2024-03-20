@@ -81,7 +81,7 @@ async def test_async_service_request_sync_refresh_called(hass: HomeAssistant, mo
         # Simulate the service call
         await async_service_request_sync(coordinator, None)
         assert coordinator.async_refresh.called
-        mock_logger.warning.assert_called_with("Requesting manual sync.")
+        mock_logger.info.assert_called_with("Requesting manual sync.")
 
 
 async def test_async_service_request_sync_too_soon_warning(
