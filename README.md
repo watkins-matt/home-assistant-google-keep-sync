@@ -5,10 +5,6 @@
 
 Google Keep Sync is an unofficial custom integration for Home Assistant that allows users to synchronize their Google Keep lists with Home Assistant. This project is in no way affiliated with, created, or endorsed by Google.
 
-## Why?
-
-There are existing Home Assistant integrations for Google Keep, why create a new one? Basically, I tried all of them and none of them quite worked the way I wanted them to.
-
 ## Features
 
 Bidirectional synchronization of lists between Google Keep and Home Assistant. You select the lists
