@@ -26,7 +26,7 @@ async def async_service_request_sync(coordinator: GoogleKeepSyncCoordinator, cal
     seconds_since_update = as_timestamp(utcnow()) - last_update_timestamp
 
     if seconds_since_update > sync_threshold:
-        _LOGGER.warning("Requesting manual sync.")
+        _LOGGER.info("Requesting manual sync.")
         await coordinator.async_refresh()
     else:
         time_to_next_allowed_update = round(sync_threshold - seconds_since_update)
