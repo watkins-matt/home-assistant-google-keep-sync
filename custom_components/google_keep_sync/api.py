@@ -57,6 +57,7 @@ class GoogleKeepAPI:
         else:
             return False
 
+        self._authenticated = True
         return True
 
     async def async_login_with_saved_token(self) -> bool:
@@ -75,6 +76,7 @@ class GoogleKeepAPI:
         else:
             return False
 
+        self._authenticated = True
         return True
 
     async def async_login_with_password(self) -> bool:
@@ -91,6 +93,7 @@ class GoogleKeepAPI:
             )
             return False
 
+        self._authenticated = True
         return True
 
     async def authenticate(self) -> bool:
@@ -100,7 +103,6 @@ class GoogleKeepAPI:
                 if not await self.async_login_with_password():
                     return False
 
-        self._authenticated = True
         return True
 
     @property
@@ -218,27 +220,49 @@ class GoogleKeepAPI:
         self, lists_to_sync: list[str], sort_lists=False
     ) -> list[gkeepapi.node.List] | None:
         """Synchronize data only from configured lists with Google Keep."""
+        lists_changed: bool = False
+
         try:
             # Run the synchronous Keep sync method in the executor
             await self._hass.async_add_executor_job(self._keep.sync)
 
-            # only get the lists that are configured to sync
+            # Only get the lists that are configured to sync
             lists = []
             for list_id in lists_to_sync:
-                keep_list = await self._hass.async_add_executor_job(
+                keep_list: gkeepapi.node.List = await self._hass.async_add_executor_job(
                     self._keep.get, list_id
                 )
 
                 if sort_lists:
-                    # Sort the items, case-insensitive by default
-                    await self._hass.async_add_executor_job(
-                        keep_list.sort_items, lambda item: item.text.lower()
-                    )
+                    unchecked: list[gkeepapi.node.ListItem] = keep_list.unchecked
+
+                    # Don't sort the list if it's already sorted
+                    if not self.is_list_sorted(unchecked):
+                        # Sort the items, case-insensitive by default
+                        await self._hass.async_add_executor_job(
+                            keep_list.sort_items, lambda item: item.text.lower()
+                        )
+                        lists_changed = True
 
                 lists.append(keep_list)
+
+            # If we made changes, we need to force an immediate resync
+            # to ensure that the user's changes are not overwritten on
+            # the next global sync interval
+            if lists_changed:
+                await self._hass.async_add_executor_job(self._keep.sync)
+                _LOGGER.debug("Lists were sorted, forcing immediate resync...")
 
             return lists
 
         except gkeepapi.exception.SyncException as e:
             _LOGGER.error("Failed to sync with Google Keep: %s", e)
             return None
+
+    @staticmethod
+    def is_list_sorted(items: list[gkeepapi.node.ListItem]) -> bool:
+        """Check if a list is sorted, case-insensitive by default."""
+        return all(
+            items[i].text.lower() <= items[i + 1].text.lower()
+            for i in range(len(items) - 1)
+        )
