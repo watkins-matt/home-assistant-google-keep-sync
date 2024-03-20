@@ -81,6 +81,28 @@ use the built-in services to add, remove and update items from your synchronized
 - `todo.add_item`
 - `todo.remove_item`
 - `todo.update_item`
+- `google_keep_sync.request_sync`
+
+#### google_keep_sync.request_sync
+
+This service can be used to trigger a manual sync of all of your lists. This is
+helpful because you can use it from an automation or script. While you can use also
+use `homeassistant.update_entity` to trigger a sync, that service requires you
+to specify a certain entity id, while this service targets all of your lists.
+
+There is a built in cooldown to ensure that this service is not called
+too frequently. Instead, it will log a warning if you call it too quickly.
+
+Note that in some cases, the Google Keep Android app does not immediately send
+changes you have made to Google's servers. This means that if you call the service
+right after making the change on the Android app, it may not pick it up. It is
+recommended to add a delay before calling the service if you are trying to capture
+changes made on the Android app.
+
+If you are using the Google Keep website or webapp, you can see the sync progress
+icon in the top right corner of the screen. Once it has finished
+spinning and you see the cloud icon with a checkmark, you can
+safely call the service.
 
 ## Events
 
