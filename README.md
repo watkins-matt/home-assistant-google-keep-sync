@@ -253,7 +253,7 @@ If you're experiencing `Invalid authentication` errors, it could be due to incom
 
 #### Generating a Token Using the Docker Container
 
-You can use the [Docker container](https://github.com/leikoilja/ha-google-home/issues/599#issuecomment-1756207026) created by @Brephlas.
+You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
 
 To generate a token:
 
