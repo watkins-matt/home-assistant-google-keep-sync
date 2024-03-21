@@ -1,0 +1,2 @@
+request_sync:
+  description: Requests a sync of Google Keep notes. This will update Home Assistant with the latest notes from Google Keep. Note that calling this too frequently will result in a cooldown period, where further request_sync calls will be ignored until the cooldown period has expired.
