@@ -273,9 +273,30 @@ If you're experiencing `Invalid authentication` errors, it could be due to incom
 
 You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
 
-To generate a token:
+##### Requirements
 
-1. In a environment with Docker installed, enter the following commands.
+You need a computer that you can install Docker on. This can be any Linux computer,
+or you can even use a Windows machine by installing WSL. Note that you do not run these
+commands on your Home Assistant server itself, it must be a separate machine. Raspberry Pi
+machines will likely not work due to the ARM architecture.
+
+##### Windows with WSL
+
+If you want to use a Windows machine, you can install WSL2 and Docker. Follow the instructions [here to install WSL2](https://docs.microsoft.com/en-us/windows/wsl/install). Then, open Ubuntu
+and run the command `sudo apt-get install docker.io`.
+
+##### Linux
+
+If you are using a Linux machine, you can install Docker using the package manager of your choice. For Ubuntu, you can use the following commands:
+
+```bash
+sudo apt-get update
+sudo apt-get install docker.io
+```
+
+##### Steps
+
+1. After you have Docker installed, enter the following commands.
 
    ```bash
    docker pull breph/ha-google-home_get-token:latest
