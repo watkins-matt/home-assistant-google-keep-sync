@@ -74,6 +74,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 return self.async_abort(reason="reauth_required")
 
             lists = await api.fetch_all_lists()
+
         except Exception as e:
             _LOGGER.error("Error fetching lists: %s", e)
             errors["base"] = "list_fetch_error"
@@ -82,6 +83,23 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         existing_lists = self.config_entry.data.get("lists_to_sync", [])
         list_prefix = self.config_entry.data.get("list_prefix", "")
         auto_sort = self.config_entry.data.get("list_auto_sort", False)
+
+        # Create a set of existing_lists for quick lookup
+        existing_list_set = set(existing_lists)
+
+        # Select all lists that are not deleted, trashed or archived. Keep
+        # lists if we already had them selected previously
+        lists = [
+            list
+            for list in lists
+            if not list.deleted
+            and not list.trashed
+            and not list.archived
+            or list.id in existing_list_set
+        ]
+
+        # Sort the lists by name
+        lists.sort(key=lambda x: x.title)
 
         return self.async_show_form(
             step_id="init",
@@ -268,6 +286,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         # Fetch all lists from Google Keep to display as options
         lists = await self.api.fetch_all_lists()
+
+        # Select all lists that are not deleted, trashed or archived
+        lists = [
+            list
+            for list in lists
+            if not list.deleted and not list.trashed and not list.archived
+        ]
+
+        # Sort the lists by name
+        lists.sort(key=lambda x: x.title)
 
         options_schema = vol.Schema(
             {
