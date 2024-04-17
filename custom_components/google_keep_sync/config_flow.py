@@ -92,9 +92,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         lists = [
             list
             for list in lists
-            if not list.deleted
-            and not list.trashed
-            and not list.archived
+            if (not list.deleted and not list.trashed and not list.archived)
             or list.id in existing_list_set
         ]
 
@@ -287,11 +285,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # Fetch all lists from Google Keep to display as options
         lists = await self.api.fetch_all_lists()
 
+        # Create a set of existing_lists for quick lookup
+        existing_list_set = set(existing_lists)
+
         # Select all lists that are not deleted, trashed or archived
         lists = [
             list
             for list in lists
-            if not list.deleted and not list.trashed and not list.archived
+            if (not list.deleted and not list.trashed and not list.archived)
+            or list.id in existing_list_set
         ]
 
         # Sort the lists by name

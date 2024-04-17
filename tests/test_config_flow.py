@@ -27,7 +27,14 @@ def mock_google_keep_api():
         # Mock lists returned by fetch_all_lists
         # Note that fetch_all_lists returns a list of gkeepapi.node.List
         mock_lists = [
-            MagicMock(id=f"list_id_{i}", title=f"list{i}") for i in range(1, 4)
+            MagicMock(
+                id=f"list_id_{i}",
+                title=f"list{i}",
+                deleted=False,
+                archived=False,
+                trashed=False,
+            )
+            for i in range(1, 4)
         ]
         mock_instance = mock.return_value
         mock_instance.authenticate = AsyncMock(return_value=True)
