@@ -1,11 +1,10 @@
 """API for synchronization with Google Keep."""
 
-from enum import StrEnum
 import functools
 import logging
+from enum import StrEnum
 
 import gkeepapi
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import storage
 

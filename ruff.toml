@@ -1,4 +1,4 @@
-select = [
+lint.select = [
     "B",   # bugbear
     "C90", # mccabe
     "D",   # pydocstyle
@@ -19,11 +19,11 @@ line-length = 88
 # D203: 1 blank line required before class docstring (inconsistent with
 #       other docstrings)
 # D213: Multi-line docstring summary should start at the second line
-ignore = ["W293", "D203", "D213"]
+lint.ignore = ["W293", "D203", "D213"]
 
 exclude = [".venv"]
 
-[extend-per-file-ignores]
+[lint.extend-per-file-ignores]
 # S101: Allow assert statements in test
 # S105: Hardcoded fake passwords are okay in test modules
 "test_*.py" = ["S101", "S105"]
