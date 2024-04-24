@@ -27,7 +27,7 @@
       },
       "options": {
         "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
-        "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
+        "description": "Choose lists to synchronize and configure other options.",
         "data": {
           "lists_to_sync": "Lists to Sync",
           "list_prefix": "List Prefix",
@@ -35,6 +35,7 @@
           "list_item_case": "Change List Item Case"
         },
         "data_description": {
+          "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
           "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
           "list_auto_sort": "If checked, all of your selected lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted.",
           "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed."
@@ -50,7 +51,7 @@
     "step": {
       "init": {
         "title": "[%key:common::config_flow::title::oauth2_pick_implementation%]",
-        "description": "Choose which lists to synchronize and optionally add a prefix to the list names in Home Assistant.",
+        "description": "Choose lists to synchronize and configure other options.",
         "data": {
           "lists_to_sync": "Lists to Sync",
           "list_prefix": "List Prefix",
@@ -58,6 +59,7 @@
           "list_item_case": "Change List Item Case"
         },
         "data_description": {
+          "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
           "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
           "list_auto_sort": "If checked, all of your selected lists will be changed to be sorted alphabetically. This is bidirectional, so your lists in both Home Assistant and Google Keep will be sorted.",
           "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed."

@@ -27,7 +27,7 @@
             },
             "options": {
                 "title": "Konfigurera alternativ",
-                "description": "Välj vilka Google Keep-listor som ska synkroniseras.\n\n*Listprefix* (Valfritt): Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
+                "description": "Välj listor att synkronisera och konfigurera andra alternativ.",
                 "data": {
                     "lists_to_sync": "Listor att Synkronisera",
                     "list_prefix": "Listprefix",
@@ -35,6 +35,7 @@
                     "list_item_case": "Ändra versalisering för listobjekt"
                 },
                 "data_description": {
+                    "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
                     "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras."
@@ -50,7 +51,7 @@
         "step": {
             "init": {
                 "title": "Konfigurera alternativ",
-                "description": "Välj vilka listor som ska synkroniseras och lägg eventuellt till ett prefix till listnamnen i Home Assistant.",
+                "description": "Välj listor att synkronisera och konfigurera andra alternativ.",
                 "data": {
                     "lists_to_sync": "Listor att Synkronisera",
                     "list_prefix": "Listprefix",
@@ -58,6 +59,7 @@
                     "list_item_case": "Ändra versalisering för listobjekt"
                 },
                 "data_description": {
+                    "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
                     "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras."
