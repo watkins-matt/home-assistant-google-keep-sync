@@ -58,6 +58,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     if: github.ref == 'refs/heads/main'
+    outputs:
+      badge-success: ${{ steps.badge-output.outputs.success }}
 
     steps:
       - uses: actions/checkout@v4
@@ -77,11 +79,18 @@ jobs:
           pip install coverage-badge
 
       - name: Generate coverage badge
+        id: badge-output
+        continue-on-error: true
         run: |
           mkdir -p badges
-          coverage-badge -o badges/coverage.svg
+          if coverage-badge -o badges/coverage.svg; then
+            echo "::set-output name=success::true"
+          else
+            echo "::set-output name=success::false"
+            echo "::warning::Failed to generate coverage badge."
 
       - name: Upload coverage badge for gh-pages
+        if: steps.badge-output.outputs.success == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-badge
@@ -91,7 +100,7 @@ jobs:
     name: Commit Coverage Badge
     runs-on: ubuntu-latest
     needs: update-coverage-badge
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && needs.update-coverage-badge.outputs.badge-success == 'true'
     permissions:
       contents: write
 
