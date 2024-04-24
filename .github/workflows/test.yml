@@ -84,9 +84,9 @@ jobs:
         run: |
           mkdir -p badges
           if coverage-badge -o badges/coverage.svg; then
-            echo "::set-output name=success::true"
+            echo "success=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=success::false"
+            echo "success=false" >> $GITHUB_OUTPUT
             echo "::warning::Failed to generate coverage badge."
           fi
 
