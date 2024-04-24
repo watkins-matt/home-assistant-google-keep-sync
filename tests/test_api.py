@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import gkeepapi
 import pytest
 
-from custom_components.google_keep_sync.api import GoogleKeepAPI
+from custom_components.google_keep_sync.api import GoogleKeepAPI, ListCase
 
 # Constants for testing
 TEST_USERNAME = "testuser@example.com"
@@ -427,4 +427,55 @@ async def test_async_save_state_and_token(google_keep_api, mock_hass, mock_store
     google_keep_api._keep.getMasterToken.assert_not_called()
     mock_store.async_save.assert_called_once_with(
         {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
+    )
+
+
+async def test_change_list_case(google_keep_api, mock_hass):
+    """Test changing the case of list items."""
+    # Create a list with items
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = "todo_list_id"
+    mock_list.title = "Todo List"
+    mock_item1 = MagicMock(id="milk_item_id", text="Milk", checked=False)
+    mock_item2 = MagicMock(id="apple_item_id", text="apple", checked=False)
+    mock_list.items = [mock_item1, mock_item2]
+
+    # Check upper case
+    google_keep_api.change_list_case(mock_list.items, ListCase.UPPER)
+    assert mock_item1.text == "MILK"
+    assert mock_item2.text == "APPLE"
+
+    # Check lower case
+    google_keep_api.change_list_case(mock_list.items, ListCase.LOWER)
+    assert mock_item1.text == "milk"
+    assert mock_item2.text == "apple"
+
+    # Check no change
+    google_keep_api.change_list_case(mock_list.items, ListCase.NO_CHANGE)
+    assert mock_item1.text == "milk"
+    assert mock_item2.text == "apple"
+
+    # Check title case
+    google_keep_api.change_list_case(mock_list.items, ListCase.TITLE)
+    assert mock_item1.text == "Milk"
+    assert mock_item2.text == "Apple"
+
+    # Check sentence case
+    google_keep_api.change_list_case(mock_list.items, ListCase.SENTENCE)
+    assert mock_item1.text == "Milk"
+    assert mock_item2.text == "Apple"
+
+
+async def test_change_case(google_keep_api, mock_hass):
+    """Test changing the case of individual strings."""
+    assert google_keep_api.change_case("milk", ListCase.UPPER) == "MILK"
+    assert google_keep_api.change_case("milk", ListCase.LOWER) == "milk"
+    assert google_keep_api.change_case("milk", ListCase.NO_CHANGE) == "milk"
+    assert (
+        google_keep_api.change_case("chocolate milk", ListCase.TITLE)
+        == "Chocolate Milk"
+    )
+    assert (
+        google_keep_api.change_case("chocolate milk", ListCase.SENTENCE)
+        == "Chocolate milk"
     )
