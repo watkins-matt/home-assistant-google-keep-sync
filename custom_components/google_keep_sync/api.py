@@ -2,6 +2,7 @@
 
 import functools
 import logging
+from enum import StrEnum
 
 import gkeepapi
 from homeassistant.core import HomeAssistant
@@ -11,6 +12,16 @@ STORAGE_KEY = "google_keep_sync"
 STORAGE_VERSION = 1
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ListCase(StrEnum):
+    """Enumeration for different list case options."""
+
+    NO_CHANGE = "no_change"
+    UPPER = "upper"
+    LOWER = "lower"
+    SENTENCE = "sentence"
+    TITLE = "title"
 
 
 class GoogleKeepAPI:
@@ -217,7 +228,10 @@ class GoogleKeepAPI:
 
     @authenticated_required
     async def async_sync_data(
-        self, lists_to_sync: list[str], sort_lists=False
+        self,
+        lists_to_sync: list[str],
+        sort_lists=False,
+        change_case: ListCase = ListCase.NO_CHANGE,
     ) -> list[gkeepapi.node.List] | None:
         """Synchronize data only from configured lists with Google Keep."""
         lists_changed: bool = False
@@ -233,6 +247,16 @@ class GoogleKeepAPI:
                     self._keep.get, list_id
                 )
 
+                # Change the case of the list items if necessary
+                if change_case != ListCase.NO_CHANGE:
+                    list_changed = await self._hass.async_add_executor_job(
+                        self.change_list_case, keep_list.items, change_case
+                    )
+
+                    if list_changed:
+                        lists_changed = True
+
+                # Sort the lists if the option is enabled
                 if sort_lists:
                     unchecked: list[gkeepapi.node.ListItem] = keep_list.unchecked
 
@@ -251,7 +275,7 @@ class GoogleKeepAPI:
             # the next global sync interval
             if lists_changed:
                 await self._hass.async_add_executor_job(self._keep.sync)
-                _LOGGER.debug("Lists were sorted, forcing immediate resync...")
+                _LOGGER.debug("Lists were modified, forcing immediate resync...")
 
             return lists
 
@@ -266,3 +290,32 @@ class GoogleKeepAPI:
             items[i].text.lower() <= items[i + 1].text.lower()
             for i in range(len(items) - 1)
         )
+
+    @staticmethod
+    def change_list_case(
+        items: list[gkeepapi.node.ListItem], case_type: ListCase
+    ) -> bool:
+        """Change the case of all items in a list based on the specified case type."""
+        list_changed = False
+
+        for item in items:
+            original_text = item.text
+            item.text = GoogleKeepAPI.change_case(item.text, case_type)
+
+            if original_text != item.text:
+                list_changed = True
+
+        return list_changed
+
+    @staticmethod
+    def change_case(text: str, case_type: ListCase) -> str:
+        """Change the case of the given text based on the specified case type."""
+        if case_type == ListCase.UPPER:
+            return text.upper()
+        elif case_type == ListCase.LOWER:
+            return text.lower()
+        elif case_type == ListCase.SENTENCE:
+            return text.capitalize()
+        elif case_type == ListCase.TITLE:
+            return text.title()
+        return text

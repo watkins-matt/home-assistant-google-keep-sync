@@ -31,11 +31,13 @@
                 "data": {
                     "lists_to_sync": "Listas a Sincronizar",
                     "list_prefix": "Prefijo de Lista",
-                    "list_auto_sort": "Ordenar Listas Automáticamente"
+                    "list_auto_sort": "Ordenar Listas Automáticamente",
+                    "list_item_case": "Cambiar mayúsculas de los elementos de la lista"
                 },
                 "data_description": {
                     "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
-                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas."
+                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas.",
+                    "list_item_case": "Cambia todos los elementos de tu lista a la configuración de mayúsculas especificada. Por defecto no se cambia nada. Este cambio es bidireccional, por lo que los elementos de tu lista en Home Assistant y en Google Keep serán modificados."
                 }
             },
             "reauth_confirm": {
@@ -52,11 +54,13 @@
                 "data": {
                     "lists_to_sync": "Listas a Sincronizar",
                     "list_prefix": "Prefijo de Lista",
-                    "list_auto_sort": "Ordenar Listas Automáticamente"
+                    "list_auto_sort": "Ordenar Listas Automáticamente",
+                    "list_item_case": "Cambiar mayúsculas de los elementos de la lista"
                 },
                 "data_description": {
                     "list_prefix": "(Opcional, puede dejarse en blanco) Agrega un identificador único al principio de cada nombre de lista en Home Assistant. Por ejemplo, al introducir 'Google', tu lista de compras se mostrará como 'Google Lista de Compras'. Déjalo vacío para mantener los nombres de las listas tal como están en Google Keep.",
-                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas."
+                    "list_auto_sort": "Si se marca, todas tus listas seleccionadas se cambiarán para ser ordenadas alfabéticamente. Esto es bidireccional, por lo que tus listas en Home Assistant y Google Keep serán ordenadas.",
+                    "list_item_case": "Cambia todos los elementos de tu lista a la configuración de mayúsculas especificada. Por defecto no se cambia nada. Este cambio es bidireccional, por lo que los elementos de tu lista en Home Assistant y en Google Keep serán modificados."
                 }
             }
         },
