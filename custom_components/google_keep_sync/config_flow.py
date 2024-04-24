@@ -11,8 +11,9 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import selector
 
-from .api import GoogleKeepAPI
+from .api import GoogleKeepAPI, ListCase
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,6 +34,14 @@ SCHEMA_REAUTH = vol.Schema(
         vol.Optional("token"): str,
     }
 )
+
+CHOICES_LIST_CASE = {
+    "no_change": "Do not change",
+    "upper": "UPPERCASE",
+    "lower": "lowercase",
+    "sentence": "Sentence case",
+    "title": "Title Case",
+}
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
@@ -55,6 +64,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 **self.config_entry.data,
                 **user_input,
                 "list_auto_sort": user_input.get("list_auto_sort", False),
+                "list_item_case": user_input.get(
+                    "list_item_case", ListCase.NO_CHANGE.value
+                ),
             }
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=updated_data
@@ -83,6 +95,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         existing_lists = self.config_entry.data.get("lists_to_sync", [])
         list_prefix = self.config_entry.data.get("list_prefix", "")
         auto_sort = self.config_entry.data.get("list_auto_sort", False)
+        list_item_case = self.config_entry.data.get(
+            "list_item_case", ListCase.NO_CHANGE.value
+        )
 
         # Create a set of existing_lists for quick lookup
         existing_list_set = set(existing_lists)
@@ -106,6 +121,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required(
                         "lists_to_sync", default=existing_lists
                     ): cv.multi_select({list.id: list.title for list in lists}),
+                    vol.Optional(
+                        "list_item_case", default=list_item_case
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(value=key, label=value)
+                                for key, value in CHOICES_LIST_CASE.items()
+                            ],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                     vol.Optional("list_prefix", default=list_prefix): str,
                     vol.Optional("list_auto_sort", default=auto_sort): bool,
                 }
@@ -272,6 +298,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 "lists_to_sync": user_input.get("lists_to_sync", []),
                 "list_prefix": user_input.get("list_prefix", ""),
                 "list_auto_sort": user_input.get("list_auto_sort", False),
+                "list_item_case": user_input.get(
+                    "list_item_case", ListCase.NO_CHANGE.value
+                ),
             }
             return self.async_create_entry(
                 title=self.context["unique_id"], data=entry_data
@@ -281,6 +310,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         existing_lists = self.user_data.get("lists_to_sync", [])
         list_prefix = self.user_data.get("list_prefix", "")
         auto_sort = self.user_data.get("list_auto_sort", False)
+        list_item_case = self.user_data.get("list_item_case", ListCase.NO_CHANGE.value)
 
         # Fetch all lists from Google Keep to display as options
         lists = await self.api.fetch_all_lists()
@@ -303,6 +333,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             {
                 vol.Required("lists_to_sync", default=existing_lists): cv.multi_select(
                     {list.id: list.title for list in lists}
+                ),
+                vol.Optional(
+                    "list_item_case", default=list_item_case
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            selector.SelectOptionDict(value=key, label=value)
+                            for key, value in CHOICES_LIST_CASE.items()
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
                 ),
                 vol.Optional("list_prefix", default=list_prefix): str,
                 vol.Optional("list_auto_sort", default=auto_sort): bool,

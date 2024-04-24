@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
-from .api import GoogleKeepAPI
+from .api import GoogleKeepAPI, ListCase
 from .const import DOMAIN, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +51,13 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             # Sync data with Google Keep
             lists_to_sync = self.config_entry.data.get("lists_to_sync", [])
             auto_sort = self.config_entry.data.get("list_auto_sort", False)
-            result = await self.api.async_sync_data(lists_to_sync, auto_sort)
+            change_case = self.config_entry.data.get(
+                "list_item_case", ListCase.NO_CHANGE
+            )
+
+            result = await self.api.async_sync_data(
+                lists_to_sync, auto_sort, change_case
+            )
 
             # save lists after syncing
             updated_lists = await self._parse_gkeep_data_dict()
