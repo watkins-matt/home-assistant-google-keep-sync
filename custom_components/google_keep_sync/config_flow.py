@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow, FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 
 from .api import GoogleKeepAPI, ListCase
@@ -119,19 +120,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         "lists_to_sync", default=existing_lists
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                selector.SelectOptionDict(
-                                    value=list.id, label=list.title
-                                )
-                                for list in lists
-                            ],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                            custom_value=False,
-                        )
-                    ),
+                    ): cv.multi_select({list.id: list.title for list in lists}),
                     vol.Optional(
                         "list_item_case", default=list_item_case
                     ): selector.SelectSelector(
@@ -342,18 +331,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         options_schema = vol.Schema(
             {
-                vol.Required(
-                    "lists_to_sync", default=existing_lists
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            selector.SelectOptionDict(value=list.id, label=list.title)
-                            for list in lists
-                        ],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                        multiple=True,
-                        custom_value=False,
-                    )
+                vol.Required("lists_to_sync", default=existing_lists): cv.multi_select(
+                    {list.id: list.title for list in lists}
                 ),
                 vol.Optional(
                     "list_item_case", default=list_item_case
