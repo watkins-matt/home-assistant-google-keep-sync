@@ -303,9 +303,10 @@ class GoogleKeepAPI:
 
         for item in items:
             original_text = item.text
-            item.text = GoogleKeepAPI.change_case(item.text, case_type)
+            new_text = GoogleKeepAPI.change_case(item.text, case_type)
 
-            if original_text != item.text:
+            if original_text != new_text:
+                item.text = new_text
                 list_changed = True
 
         return list_changed
