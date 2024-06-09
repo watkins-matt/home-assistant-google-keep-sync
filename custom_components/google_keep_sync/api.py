@@ -65,6 +65,9 @@ class GoogleKeepAPI:
                     "Failed to resume Google Keep with token and state: %s", e
                 )
                 return False
+            except gkeepapi.exception.ResyncRequiredException as e:
+                _LOGGER.warning("Full resync required: %s", e)
+                return False
         else:
             return False
 
