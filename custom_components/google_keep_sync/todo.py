@@ -57,12 +57,24 @@ class GoogleKeepTodoListEntity(
         # can be filtered easily in developer tools.
         self.entity_id = self._get_default_entity_id(gkeep_list.title)
 
+        _LOGGER.debug(
+            "Initialized GoogleKeepTodoListEntity: name='%s', unique_id='%s', entity_id='%s'",
+            self._attr_name,
+            self._attr_unique_id,
+            self.entity_id,
+        )
+
     def _get_default_entity_id(self, title: str) -> str:
         """Return the entity ID for the given title."""
-        return f"todo.google_keep_{title.lower().replace(' ', '_')}"
+        entity_id = f"todo.google_keep_{title.lower().replace(' ', '_')}"
+        _LOGGER.debug("Generated entity ID: '%s' for title: '%s'", entity_id, title)
+        return entity_id
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete todo items from Google Keep."""
+        _LOGGER.debug(
+            "Deleting todo items: %s from list: %s", uids, self._gkeep_list_id
+        )
         list_id = self._gkeep_list_id
 
         # Perform deletion in Google Keep API for each item
@@ -77,10 +89,13 @@ class GoogleKeepTodoListEntity(
 
         # Resync data with Google Keep
         await self.coordinator.async_refresh()
-        _LOGGER.debug("Requested data refresh.")
+        _LOGGER.debug("Requested data refresh after deletions.")
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Update a todo item in Google Keep."""
+        _LOGGER.debug(
+            "Updating todo item: %s in list: %s", item.uid, self._gkeep_list_id
+        )
         try:
             list_id = self._gkeep_list_id
             item_id = item.uid
@@ -89,41 +104,39 @@ class GoogleKeepTodoListEntity(
 
             # Update Google Keep in the background
             await self.api.async_update_todo_item(list_id, item_id, new_text, checked)
-            _LOGGER.debug("Successfully updated item in Google Keep.")
+            _LOGGER.debug("Successfully updated item %s in Google Keep.", item_id)
 
         except Exception as e:
-            _LOGGER.error("Failed to update item in Google Keep: %s", e)
+            _LOGGER.error("Failed to update item %s in Google Keep: %s", item.uid, e)
 
         finally:
             # Resync data with Google Keep
             await self.coordinator.async_refresh()
-            _LOGGER.debug("Requested data refresh and updated Home Assistant UI.")
+            _LOGGER.debug("Requested data refresh after update.")
 
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Create a new todo item in Google Keep."""
+        _LOGGER.debug("Creating new todo item in list: %s", self._gkeep_list_id)
         list_id = self._gkeep_list_id
         text = item.summary
 
         try:
             # Create the new item in the specified list
             await self.api.async_create_todo_item(list_id, text)
-
-            _LOGGER.debug(
-                "Successfully created new item in Google Keep and updated locally."
-            )
+            _LOGGER.debug("Successfully created new item '%s' in Google Keep.", text)
 
         except Exception as e:
-            _LOGGER.error("Failed to create new item in Google Keep: %s", e)
+            _LOGGER.error("Failed to create new item '%s' in Google Keep: %s", text, e)
 
         finally:
             # Request refresh to synchronize with Google Keep
             await self.coordinator.async_refresh()
-            _LOGGER.debug("Requested data refresh and updated Home Assistant UI.")
+            _LOGGER.debug("Requested data refresh after item creation.")
 
     @property
     def todo_items(self) -> list[TodoItem]:
         """Get the current set of To-do items."""
-        return [
+        items = [
             TodoItem(
                 summary=item.text,
                 uid=item.id,
@@ -135,25 +148,40 @@ class GoogleKeepTodoListEntity(
             )
             for item in self._gkeep_list.items
         ]
+        _LOGGER.debug(
+            "Retrieved %d todo items for list: %s", len(items), self._gkeep_list_id
+        )
+        return items
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Google Keep todo platform."""
+    _LOGGER.debug("Setting up Google Keep todo platform for entry: %s", entry.entry_id)
     coordinator: GoogleKeepSyncCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     # Retrieve user-selected lists from the configuration
     selected_lists = entry.data.get("lists_to_sync", [])
     list_prefix = entry.data.get("list_prefix", "")
+    _LOGGER.debug(
+        "User selected %d lists to sync with prefix: '%s'",
+        len(selected_lists),
+        list_prefix,
+    )
 
     # Filter Google Keep lists based on user selection
     all_lists = await coordinator.api.fetch_all_lists()
-    lists_to_sync = [lst for lst in all_lists if lst.id in selected_lists]
+    _LOGGER.debug("Fetched %d total lists from Google Keep", len(all_lists))
 
-    async_add_entities(
-        [
-            GoogleKeepTodoListEntity(coordinator, list, list_prefix)
-            for list in lists_to_sync
-        ]
-    )
+    lists_to_sync = [lst for lst in all_lists if lst.id in selected_lists]
+    _LOGGER.debug("Filtered %d lists for syncing", len(lists_to_sync))
+
+    entities = [
+        GoogleKeepTodoListEntity(coordinator, list, list_prefix)
+        for list in lists_to_sync
+    ]
+    _LOGGER.debug("Created %d GoogleKeepTodoListEntity instances", len(entities))
+
+    async_add_entities(entities)
+    _LOGGER.debug("Added %d entities to Home Assistant", len(entities))
