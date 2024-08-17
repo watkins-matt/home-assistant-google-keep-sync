@@ -136,7 +136,7 @@ class GoogleKeepTodoListEntity(
 
     @property
     def todo_items(self) -> list[TodoItem]:
-        """Get the current set of To-do items."""
+        """Get the current set of To-do items, filtering out empty entries."""
         items = [
             TodoItem(
                 summary=item.text,
@@ -148,10 +148,23 @@ class GoogleKeepTodoListEntity(
                 ),
             )
             for item in self._gkeep_list.items
+            if item.text
+            and len(item.text.strip())
+            > 0  # Filter out empty or whitespace-only entries
         ]
+        total_items = len(self._gkeep_list.items)
+        filtered_items = len(items)
         _LOGGER.debug(
-            "Retrieved %d todo items for list: %s", len(items), self._gkeep_list_id
+            "Retrieved %d todo items for list: %s",
+            filtered_items,
+            self._gkeep_list_id,
         )
+        if filtered_items < total_items:
+            _LOGGER.warning(
+                "Filtered out %d empty items from list: %s",
+                total_items - filtered_items,
+                self._gkeep_list_id,
+            )
         return items
 
 
