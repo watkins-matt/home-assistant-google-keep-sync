@@ -430,7 +430,7 @@ async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api)
     # Create a mock entry to simulate existing config entry
     existing_entry = MockConfigEntry(
         domain=DOMAIN,
-        unique_id=user_name.lower(),
+        unique_id=unique_id,
         data={"username": user_name, "password": user_password},
     )
     existing_entry.add_to_hass(hass)
