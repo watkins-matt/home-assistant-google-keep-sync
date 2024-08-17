@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CALL_SERVICE, Platform
 from homeassistant.core import EventOrigin, HomeAssistant
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
     UpdateFailed,
@@ -42,9 +43,8 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
         self.config_entry = entry
         _LOGGER.debug("GoogleKeepSyncCoordinator initialized")
 
-    # Define the update method for the coordinator
     async def _async_update_data(self) -> list[GKeepList]:
-        """Fetch data from API."""
+        """Fetch data from API and handle deleted entities."""
         try:
             _LOGGER.debug("Starting data update process")
 
@@ -67,16 +67,39 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                 change_case,
             )
 
-            result = await self.api.async_sync_data(
+            synced_lists, deleted_list_ids = await self.api.async_sync_data(
                 lists_to_sync, auto_sort, change_case
             )
-            _LOGGER.debug("Data sync completed. Received %d lists", len(result))
+            _LOGGER.debug("Data sync completed. Received %d lists", len(synced_lists))
 
-            # save lists after syncing
+            if deleted_list_ids:
+                _LOGGER.warning(f"The following lists were deleted: {deleted_list_ids}")
+                # Remove entities for deleted lists
+                await self._remove_deleted_entities(deleted_list_ids)
+
+                # Update the configuration entry
+                updated_lists_to_sync = [
+                    list_id
+                    for list_id in lists_to_sync
+                    if list_id not in deleted_list_ids
+                ]
+                new_data = {
+                    **self.config_entry.data,
+                    "lists_to_sync": updated_lists_to_sync,
+                }
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=new_data
+                )
+                _LOGGER.info(
+                    "Updated configuration entry to remove deleted lists: "
+                    f"{deleted_list_ids}"
+                )
+
+            # Save lists after syncing
             updated_lists = await self._parse_gkeep_data_dict()
             _LOGGER.debug("Parsed updated lists: %d lists found", len(updated_lists))
 
-            # compare both list for changes, and fire event for changes
+            # Compare both list for changes, and fire event for changes
             new_items = await self._get_new_items_added(
                 original_lists,
                 updated_lists,
@@ -85,7 +108,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
 
             await self._notify_new_items(new_items)
 
-            return result
+            return synced_lists
         except Exception as error:
             _LOGGER.error("Error communicating with API: %s", error, exc_info=True)
             raise UpdateFailed(f"Error communicating with API: {error}") from error
@@ -188,3 +211,31 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             )
 
         _LOGGER.debug("Finished notifying about new items")
+
+    async def _remove_deleted_entities(self, deleted_list_ids: list[str]):
+        """Remove entities that correspond to deleted lists."""
+        _LOGGER.debug("Starting removal process for entities of deleted lists")
+        _LOGGER.debug(f"Deleted list IDs: {deleted_list_ids}")
+
+        entity_registry = async_get_entity_registry(self.hass)
+
+        removed_entities = 0
+        for deleted_list_id in deleted_list_ids:
+            entity_unique_id = f"{DOMAIN}.list.{deleted_list_id}"
+            entity_id = entity_registry.async_get_entity_id(
+                Platform.TODO, DOMAIN, entity_unique_id
+            )
+
+            if entity_id:
+                _LOGGER.info(
+                    f"Removing entity {entity_id} for deleted list {deleted_list_id}"
+                )
+                entity_registry.async_remove(entity_id)
+                removed_entities += 1
+            else:
+                _LOGGER.debug(f"No entity found for deleted list {deleted_list_id}")
+
+        _LOGGER.debug(
+            "Deleted entity removal process completed. Removed "
+            f"{removed_entities} entities."
+        )

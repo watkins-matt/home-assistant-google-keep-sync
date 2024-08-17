@@ -298,10 +298,12 @@ class GoogleKeepAPI:
         lists_to_sync: list[str],
         sort_lists=False,
         change_case: ListCase = ListCase.NO_CHANGE,
-    ) -> list[gkeepapi.node.List] | None:
+    ) -> tuple[list[gkeepapi.node.List], list[str]]:
         """Synchronize data only from configured lists with Google Keep."""
         _LOGGER.debug("Starting sync for %d lists", len(lists_to_sync))
         lists_changed: bool = False
+        deleted_list_ids: list[str] = []
+        synced_lists: list[gkeepapi.node.List] = []
 
         try:
             # Run the synchronous Keep sync method in the executor
@@ -309,11 +311,17 @@ class GoogleKeepAPI:
             _LOGGER.debug("Initial sync with Google Keep completed")
 
             # Only get the lists that are configured to sync
-            lists = []
             for list_id in lists_to_sync:
-                keep_list: gkeepapi.node.List = await self._hass.async_add_executor_job(
-                    self._keep.get, list_id
-                )
+                keep_list: (
+                    gkeepapi.node.List | None
+                ) = await self._hass.async_add_executor_job(self._keep.get, list_id)
+                if keep_list is None:
+                    _LOGGER.warning(
+                        f"List with ID {list_id} not found. It may have been deleted."
+                    )
+                    deleted_list_ids.append(list_id)
+                    continue
+
                 _LOGGER.debug("Processing list: %s", keep_list.title)
 
                 # Change the case of the list items if necessary
@@ -339,7 +347,7 @@ class GoogleKeepAPI:
                         lists_changed = True
                         _LOGGER.debug("List sorted: %s", keep_list.title)
 
-                lists.append(keep_list)
+                synced_lists.append(keep_list)
 
             # If we made changes, we need to force an immediate resync
             # to ensure that the user's changes are not overwritten on
@@ -348,12 +356,12 @@ class GoogleKeepAPI:
                 await self._hass.async_add_executor_job(self._keep.sync)
                 _LOGGER.debug("Lists were modified, forced immediate resync completed")
 
-            _LOGGER.debug("Sync completed, returning %d lists", len(lists))
-            return lists
+            _LOGGER.debug("Sync completed, returning %d lists", len(synced_lists))
+            return synced_lists, deleted_list_ids
 
         except gkeepapi.exception.SyncException as e:
             _LOGGER.error("Failed to sync with Google Keep: %s", e)
-            return None
+            return [], []
 
     @staticmethod
     def is_list_sorted(items: list[gkeepapi.node.ListItem]) -> bool:
