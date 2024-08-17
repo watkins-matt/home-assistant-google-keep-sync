@@ -39,6 +39,6 @@ def mock_config_entry():
             "lists_to_sync": [],
             "list_prefix": "",
         },
-        unique_id="testuser@example.com",
+        unique_id="google_keep_sync.testuser@example.com",
     )
     return entry

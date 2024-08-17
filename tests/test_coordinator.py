@@ -39,14 +39,14 @@ async def test_async_update_data(
 ):
     """Test update_data method."""
     with patch.object(mock_api, "async_sync_data", AsyncMock()):
-        mock_api.async_sync_data.return_value = ["list1", "list2"]
+        mock_api.async_sync_data.return_value = ["list1", "list2"], []
 
         coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
         coordinator.config_entry = mock_config_entry
 
         result = await coordinator._async_update_data()
 
-        assert result == ["list1", "list2"]
+        assert result == ["list1", "list2"], []
 
 
 async def test_parse_gkeep_data_dict_empty(

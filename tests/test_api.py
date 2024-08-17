@@ -249,7 +249,8 @@ async def test_async_sync_data(google_keep_api, mock_hass):
     google_keep_api._keep.get = AsyncMock(side_effect=get_side_effect)
 
     # Syncing data
-    lists = await google_keep_api.async_sync_data(["grocery_list_id"])
+    lists, _ = await google_keep_api.async_sync_data(["grocery_list_id"])
+    lists: list[gkeepapi.node.List]
 
     # Expected data structure
     expected_lists = [
@@ -294,7 +295,7 @@ async def test_async_sync_data_sort_unchecked(google_keep_api, mock_hass):
     google_keep_api.is_list_sorted = MagicMock(return_value=False)
 
     # Syncing data with sort_lists=True
-    lists = await google_keep_api.async_sync_data(["todo_list_id"], sort_lists=True)
+    lists, _ = await google_keep_api.async_sync_data(["todo_list_id"], sort_lists=True)
 
     # Assertions to ensure sorting logic was called correctly
     google_keep_api.is_list_sorted.assert_called_once_with([mock_item1, mock_item2])

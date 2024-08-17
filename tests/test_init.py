@@ -32,7 +32,7 @@ def mock_api(mock_store):
     ) as mock_api_class:
         mock_api_instance = mock_api_class.return_value
         mock_api_instance.authenticate = AsyncMock(return_value=True)
-        mock_api_instance.async_sync_data = AsyncMock(return_value=[])
+        mock_api_instance.async_sync_data = AsyncMock(return_value=([], []))
         mock_api_instance._store = mock_store
         yield mock_api_instance
 
