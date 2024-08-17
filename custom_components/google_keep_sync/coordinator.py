@@ -60,7 +60,8 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             )
 
             _LOGGER.debug(
-                "Syncing data with Google Keep. Lists to sync: %d, Auto sort: %s, Change case: %s",
+                "Syncing data with Google Keep. Lists to sync: %d, Auto sort: %s, "
+                "Change case: %s",
                 len(lists_to_sync),
                 auto_sort,
                 change_case,

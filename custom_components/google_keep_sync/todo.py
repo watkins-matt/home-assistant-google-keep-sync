@@ -58,7 +58,8 @@ class GoogleKeepTodoListEntity(
         self.entity_id = self._get_default_entity_id(gkeep_list.title)
 
         _LOGGER.debug(
-            "Initialized GoogleKeepTodoListEntity: name='%s', unique_id='%s', entity_id='%s'",
+            "Initialized GoogleKeepTodoListEntity: name='%s', unique_id='%s', "
+            "entity_id='%s'",
             self._attr_name,
             self._attr_unique_id,
             self.entity_id,
