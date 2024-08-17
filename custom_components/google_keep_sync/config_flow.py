@@ -258,7 +258,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if user_input:
             # Check to see if the same username has already been configured
             try:
-                unique_id = user_input["username"].lower()
+                unique_id = f"{DOMAIN}_{user_input["username"]}".lower()
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
 
