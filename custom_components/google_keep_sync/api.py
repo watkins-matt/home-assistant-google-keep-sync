@@ -44,9 +44,11 @@ class GoogleKeepAPI:
         )
         self._authenticated = False
         self._token = token if token else None
+        _LOGGER.debug("GoogleKeepAPI initialized for user: %s", username)
 
     async def async_login_with_saved_state(self) -> bool:
         """Log in to Google Keep using the saved state and token."""
+        _LOGGER.debug("Attempting login with saved state for user: %s", self._username)
         # Load the saved token and state
         (
             saved_token,
@@ -60,15 +62,24 @@ class GoogleKeepAPI:
                     self._keep.resume, self._username, saved_token, saved_state
                 )
                 self._token = saved_token  # Use the saved token
+                _LOGGER.debug(
+                    "Successfully logged in with saved state for user: %s",
+                    self._username,
+                )
             except gkeepapi.exception.LoginException as e:
                 _LOGGER.error(
-                    "Failed to resume Google Keep with token and state: %s", e
+                    "Failed to resume Google Keep with token and state for user %s: %s",
+                    self._username,
+                    e,
                 )
                 return False
             except gkeepapi.exception.ResyncRequiredException as e:
-                _LOGGER.warning("Full resync required: %s", e)
+                _LOGGER.warning(
+                    "Full resync required for user %s: %s", self._username, e
+                )
                 return False
         else:
+            _LOGGER.debug("No saved state found for user: %s", self._username)
             return False
 
         self._authenticated = True
@@ -76,6 +87,7 @@ class GoogleKeepAPI:
 
     async def async_login_with_saved_token(self) -> bool:
         """Log in to Google Keep using the saved token."""
+        _LOGGER.debug("Attempting login with saved token for user: %s", self._username)
         if self._username and self._token:
             try:
                 await self._hass.async_add_executor_job(
@@ -83,11 +95,19 @@ class GoogleKeepAPI:
                 )
                 self._token = self._keep.getMasterToken()  # Store the new token
                 await self._async_save_state_and_token()
-
+                _LOGGER.debug(
+                    "Successfully logged in with saved token for user: %s",
+                    self._username,
+                )
             except gkeepapi.exception.LoginException as e:
-                _LOGGER.error("Failed to resume Google Keep with token: %s", e)
+                _LOGGER.error(
+                    "Failed to resume Google Keep with token for user %s: %s",
+                    self._username,
+                    e,
+                )
                 return False
         else:
+            _LOGGER.debug("No saved token found for user: %s", self._username)
             return False
 
         self._authenticated = True
@@ -95,15 +115,22 @@ class GoogleKeepAPI:
 
     async def async_login_with_password(self) -> bool:
         """Login to Google Keep using the username and password."""
+        _LOGGER.debug("Attempting login with password for user: %s", self._username)
         try:
             await self._hass.async_add_executor_job(
                 self._keep.login, self._username, self._password
             )
             self._token = self._keep.getMasterToken()  # Store the new token
             await self._async_save_state_and_token()
+            _LOGGER.debug(
+                "Successfully logged in with password for user: %s", self._username
+            )
         except gkeepapi.exception.LoginException as e:
             _LOGGER.error(
-                "Failed to login to Google Keep with username and password: %s", e
+                "Failed to login to Google Keep with "
+                "username and password for user %s: %s",
+                self._username,
+                e,
             )
             return False
 
@@ -112,11 +139,16 @@ class GoogleKeepAPI:
 
     async def authenticate(self) -> bool:
         """Log in to Google Keep."""
+        _LOGGER.debug("Starting authentication process for user: %s", self._username)
         if not await self.async_login_with_saved_state():
             if not await self.async_login_with_saved_token():
                 if not await self.async_login_with_password():
+                    _LOGGER.error(
+                        "All authentication methods failed for user: %s", self._username
+                    )
                     return False
 
+        _LOGGER.debug("Authentication successful for user: %s", self._username)
         return True
 
     @property
@@ -136,6 +168,11 @@ class GoogleKeepAPI:
         @functools.wraps(func)
         async def wrapper(api_instance, *args, **kwargs):
             if not api_instance._authenticated:
+                _LOGGER.error(
+                    "Attempted to call %s without authentication for user: %s",
+                    func.__name__,
+                    api_instance._username,
+                )
                 raise Exception(
                     "Not authenticated with Google Keep. Please authenticate first."
                 )
@@ -146,14 +183,22 @@ class GoogleKeepAPI:
     @authenticated_required
     async def async_create_todo_item(self, list_id: str, text: str) -> None:
         """Create a new item in a specified list in Google Keep."""
+        _LOGGER.debug("Creating new todo item in list %s: %s", list_id, text)
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
             await self._hass.async_add_executor_job(keep_list.add, text, False)
+            _LOGGER.debug("Successfully created new todo item in list %s", list_id)
         else:
+            _LOGGER.error(
+                "List with ID %s not found in Google Keep for user: %s",
+                list_id,
+                self._username,
+            )
             raise Exception(f"List with ID {list_id} not found in Google Keep.")
 
     async def _async_save_state_and_token(self) -> None:
         """Save the current state, token, and username of Google Keep."""
+        _LOGGER.debug("Saving state and token for user: %s", self._username)
         state = await self._hass.async_add_executor_job(self._keep.dump)
 
         if not self._token:
@@ -162,27 +207,34 @@ class GoogleKeepAPI:
         await self._store.async_save(
             {"token": self._token, "state": state, "username": self._username}
         )
+        _LOGGER.debug("State and token saved for user: %s", self._username)
 
     async def _async_clear_token(self) -> None:
         """Clear the saved token."""
+        _LOGGER.debug("Clearing token for user: %s", self._username)
         await self._store.async_save({"token": None, "username": None})
+        _LOGGER.debug("Token cleared for user: %s", self._username)
 
     async def _async_load_state_and_token(
         self,
     ) -> tuple[str | None, str | None, str | None]:
         """Load the saved state and token of Google Keep."""
+        _LOGGER.debug("Loading state and token for user: %s", self._username)
         data = await self._store.async_load()
         if not data:
+            _LOGGER.debug("No saved state or token found for user: %s", self._username)
             return None, None, None
 
         state = data.get("state")
         token = data.get("token")
         saved_username = data.get("username")
+        _LOGGER.debug("Loaded state and token for user: %s", self._username)
         return token, state, saved_username
 
     @authenticated_required
     async def async_delete_todo_item(self, list_id: str, item_id: str) -> None:
         """Delete a specific item from a Google Keep list."""
+        _LOGGER.debug("Deleting todo item %s from list %s", item_id, list_id)
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
             item_to_delete = next(
@@ -208,6 +260,7 @@ class GoogleKeepAPI:
         checked: bool = False,
     ) -> None:
         """Update an existing item within a list in Google Keep."""
+        _LOGGER.debug("Updating todo item %s in list %s", item_id, list_id)
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
             for item in keep_list.items:
@@ -216,18 +269,28 @@ class GoogleKeepAPI:
                         item.text = new_text
                     if checked is not None:
                         item.checked = checked
+                    _LOGGER.debug(
+                        "Successfully updated item %s in list %s", item_id, list_id
+                    )
                     break
+            else:
+                _LOGGER.warning("Item %s not found in list %s", item_id, list_id)
+        else:
+            _LOGGER.error("List %s not found in Google Keep", list_id)
 
     @authenticated_required
     async def fetch_all_lists(self) -> list[gkeepapi.node.List]:
         """Fetch all lists from Google Keep."""
+        _LOGGER.debug("Fetching all lists from Google Keep")
         # Ensure the API is synced
         await self._hass.async_add_executor_job(self._keep.sync)
 
         # Retrieve all lists
-        return [
+        lists = [
             note for note in self._keep.all() if isinstance(note, gkeepapi.node.List)
         ]
+        _LOGGER.debug("Fetched %d lists from Google Keep", len(lists))
+        return lists
 
     @authenticated_required
     async def async_sync_data(
@@ -237,11 +300,13 @@ class GoogleKeepAPI:
         change_case: ListCase = ListCase.NO_CHANGE,
     ) -> list[gkeepapi.node.List] | None:
         """Synchronize data only from configured lists with Google Keep."""
+        _LOGGER.debug("Starting sync for %d lists", len(lists_to_sync))
         lists_changed: bool = False
 
         try:
             # Run the synchronous Keep sync method in the executor
             await self._hass.async_add_executor_job(self._keep.sync)
+            _LOGGER.debug("Initial sync with Google Keep completed")
 
             # Only get the lists that are configured to sync
             lists = []
@@ -249,6 +314,7 @@ class GoogleKeepAPI:
                 keep_list: gkeepapi.node.List = await self._hass.async_add_executor_job(
                     self._keep.get, list_id
                 )
+                _LOGGER.debug("Processing list: %s", keep_list.title)
 
                 # Change the case of the list items if necessary
                 if change_case != ListCase.NO_CHANGE:
@@ -258,6 +324,7 @@ class GoogleKeepAPI:
 
                     if list_changed:
                         lists_changed = True
+                        _LOGGER.debug("Case changed for list: %s", keep_list.title)
 
                 # Sort the lists if the option is enabled
                 if sort_lists:
@@ -270,6 +337,7 @@ class GoogleKeepAPI:
                             keep_list.sort_items, lambda item: item.text.lower()
                         )
                         lists_changed = True
+                        _LOGGER.debug("List sorted: %s", keep_list.title)
 
                 lists.append(keep_list)
 
@@ -278,8 +346,9 @@ class GoogleKeepAPI:
             # the next global sync interval
             if lists_changed:
                 await self._hass.async_add_executor_job(self._keep.sync)
-                _LOGGER.debug("Lists were modified, forcing immediate resync...")
+                _LOGGER.debug("Lists were modified, forced immediate resync completed")
 
+            _LOGGER.debug("Sync completed, returning %d lists", len(lists))
             return lists
 
         except gkeepapi.exception.SyncException as e:
