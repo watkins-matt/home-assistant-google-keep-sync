@@ -111,13 +111,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 if list.deleted or list.trashed or list.archived
             ]
 
-            _LOGGER.info(
-                "Showing %d lists that are not hidden, trashed, or archived. "
-                "%d lists are hidden/trashed/archived and not shown. "
-                "These must be untrashed/unhidden/unarchived to show.",
-                len(visible_lists),
-                len(hidden_lists),
-            )
+            if hidden_lists:
+                _LOGGER.info(
+                    "Showing %d lists that are not hidden, trashed, or archived. "
+                    "%d lists are hidden/trashed/archived and not shown. "
+                    "These must be untrashed/unhidden/unarchived to show.",
+                    len(visible_lists),
+                    len(hidden_lists),
+                )
+            else:
+                _LOGGER.info("Showing %d lists", len(visible_lists))
 
             lists = visible_lists
 
