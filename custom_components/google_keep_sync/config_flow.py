@@ -50,15 +50,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
+        _LOGGER.debug("Initializing OptionsFlowHandler for %s", config_entry.title)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
+        _LOGGER.debug("Starting async_step_init in OptionsFlowHandler")
         errors = {}
         lists = []
 
         if user_input is not None:
+            _LOGGER.debug("Processing user input in OptionsFlowHandler")
             # Update the config entry with new data
             updated_data = {
                 **self.config_entry.data,
@@ -71,11 +74,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=updated_data
             )
+            _LOGGER.debug("Updated config entry with new data")
             # Reload the integration to apply new settings
             await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            _LOGGER.debug("Reloaded integration with new settings")
             return self.async_create_entry(title="", data=user_input)
 
         try:
+            _LOGGER.debug("Authenticating with Google Keep API")
             api = GoogleKeepAPI(
                 self.hass,
                 self.config_entry.data["username"],
@@ -83,12 +89,40 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             )
 
             if not await api.authenticate():
+                _LOGGER.warning("Authentication failed, reauth required")
                 return self.async_abort(reason="reauth_required")
 
-            lists = await api.fetch_all_lists()
+            _LOGGER.debug("Fetching all lists from Google Keep API")
+            all_lists = await api.fetch_all_lists()
+            _LOGGER.info(
+                "Fetched %d lists for user %s",
+                len(all_lists),
+                self.config_entry.data["username"],
+            )
+
+            visible_lists = [
+                list
+                for list in all_lists
+                if not list.deleted and not list.trashed and not list.archived
+            ]
+            hidden_lists = [
+                list
+                for list in all_lists
+                if list.deleted or list.trashed or list.archived
+            ]
+
+            _LOGGER.info(
+                "Showing %d lists that are not hidden, trashed, or archived. "
+                "%d lists are hidden/trashed/archived and not shown. "
+                "These must be untrashed/unhidden/unarchived to show.",
+                len(visible_lists),
+                len(hidden_lists),
+            )
+
+            lists = visible_lists
 
         except Exception as e:
-            _LOGGER.error("Error fetching lists: %s", e)
+            _LOGGER.error("Error fetching lists: %s", e, exc_info=True)
             errors["base"] = "list_fetch_error"
 
         # Retrieve existing values
@@ -145,8 +179,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize the config flow."""
+        super().__init__()
+        self.api = None
+        self.user_data = {}
+        _LOGGER.debug("Initializing ConfigFlow for Google Keep Sync.")
+
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle reauth upon authentication error."""
+        _LOGGER.debug("Starting reauth process")
         self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         return await self.async_step_reauth_confirm()
 
@@ -154,6 +196,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Confirm re-authentication with Google Keep."""
+        _LOGGER.debug("Confirming reauth")
         errors = {}
 
         if user_input:
@@ -169,7 +212,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             # No errors, so update the entry and reload the integration
             if not errors:
-                self.hass.config_entries.async_update_entry(self.entry, data=user_input)
+                _LOGGER.debug("Reauth successful, updating entry")
+                unique_id = f"{DOMAIN}_{user_input['username']}".lower()
+                self.hass.config_entries.async_update_entry(
+                    self.entry,
+                    data=user_input,
+                    unique_id=unique_id,
+                    title=user_input["username"].lower(),
+                )
                 await self.hass.config_entries.async_reload(self.entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
@@ -185,14 +235,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Create the options flow."""
         return OptionsFlowHandler(config_entry)
 
-    def __init__(self):
-        """Initialize the config flow."""
-        super().__init__()
-        self.api = None
-        self.user_data = {}
-
     async def validate_input(self, hass: HomeAssistant, data: dict[str, Any]) -> None:
         """Validate the user input allows us to connect."""
+        _LOGGER.debug("Validating user input")
         username = data.get("username", "").strip()
         password = data.get("password", "").strip()
         token = data.get("token", "").strip()
@@ -228,22 +273,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def handle_user_input(self, user_input: dict[str, Any]) -> dict[str, str]:
         """Handle user input, checking for any errors."""
+        _LOGGER.debug("Checking user input for any errors")
         errors = {}
         try:
             await self.validate_input(self.hass, user_input)
         except InvalidAuthError:
+            _LOGGER.warning("Invalid authentication")
             errors["base"] = "invalid_auth"
         except CannotConnectError:
+            _LOGGER.warning("Cannot connect to Google Keep")
             errors["base"] = "cannot_connect"
         except BlankUsernameError:
+            _LOGGER.warning("Blank username provided")
             errors["base"] = "blank_username"
         except InvalidEmailError:
+            _LOGGER.warning("Invalid email format")
             errors["base"] = "invalid_email"
         except BothPasswordAndTokenError:
+            _LOGGER.warning("Both password and token provided")
             errors["base"] = "both_password_and_token"
         except NeitherPasswordNorTokenError:
+            _LOGGER.warning("Neither password nor token provided")
             errors["base"] = "neither_password_nor_token"
         except InvalidTokenFormatError:
+            _LOGGER.warning("Invalid token format")
             errors["base"] = "invalid_token_format"
         except Exception as exc:
             _LOGGER.exception("Unexpected exception: %s", exc)
@@ -254,16 +307,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step for the user to enter their credentials."""
+        _LOGGER.debug("Starting async_step_user")
         errors = {}
         if user_input:
             # Check to see if the same username has already been configured
             try:
+                _LOGGER.debug("Checking for existing configuration")
                 unique_id = f"{DOMAIN}.{user_input["username"]}".lower()
                 await self.async_set_unique_id(unique_id, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
             # Show an error if the same username has already been configured
             except AbortFlow as abort:
+                _LOGGER.warning("Configuration already exists for this username")
                 errors["base"] = abort.reason
                 return self.async_show_form(
                     step_id="user",
@@ -277,6 +333,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             # No errors, so proceed to the next step
             if not errors:
+                _LOGGER.debug("User input validated, proceeding to options step")
                 return await self.async_step_options()
 
         return self.async_show_form(
@@ -290,9 +347,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the options step."""
+        _LOGGER.debug("Starting async_step_options")
         errors: dict[str, str] = {}
 
         if user_input is not None:
+            _LOGGER.debug("Processing user input in async_step_options")
             entry_data = {
                 **self.user_data,
                 "lists_to_sync": user_input.get("lists_to_sync", []),
@@ -302,6 +361,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     "list_item_case", ListCase.NO_CHANGE.value
                 ),
             }
+            _LOGGER.info(
+                "Creating config entry for user %s", self.user_data["username"]
+            )
             return self.async_create_entry(
                 title=self.user_data["username"].lower(), data=entry_data
             )
@@ -312,49 +374,80 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         auto_sort = self.user_data.get("list_auto_sort", False)
         list_item_case = self.user_data.get("list_item_case", ListCase.NO_CHANGE.value)
 
-        # Fetch all lists from Google Keep to display as options
-        lists = await self.api.fetch_all_lists()
+        try:
+            # Fetch all lists from Google Keep to display as options
+            _LOGGER.debug("Fetching all lists from Google Keep API")
+            all_lists = await self.api.fetch_all_lists()
+            _LOGGER.info(
+                "Fetched %d lists for user %s",
+                len(all_lists),
+                self.user_data["username"],
+            )
 
-        # Create a set of existing_lists for quick lookup
-        existing_list_set = set(existing_lists)
+            # Create a set of existing_lists for quick lookup
+            existing_list_set = set(existing_lists)
 
-        # Select all lists that are not deleted, trashed or archived
-        lists = [
-            list
-            for list in lists
-            if (not list.deleted and not list.trashed and not list.archived)
-            or list.id in existing_list_set
-        ]
+            # Select all lists that are not deleted, trashed or archived
+            visible_lists = [
+                list
+                for list in all_lists
+                if (not list.deleted and not list.trashed and not list.archived)
+                or list.id in existing_list_set
+            ]
+            hidden_lists = [
+                list
+                for list in all_lists
+                if list.deleted or list.trashed or list.archived
+            ]
 
-        # Sort the lists by name
-        lists.sort(key=lambda x: x.title)
+            _LOGGER.info(
+                "Showing %d lists that are not hidden, trashed, or archived. "
+                "%d lists are hidden/trashed/archived and not shown. "
+                "These must be untrashed/unhidden/unarchived to show.",
+                len(visible_lists),
+                len(hidden_lists),
+            )
 
-        options_schema = vol.Schema(
-            {
-                vol.Required("lists_to_sync", default=existing_lists): cv.multi_select(
-                    {list.id: list.title for list in lists}
-                ),
-                vol.Optional(
-                    "list_item_case", default=list_item_case
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            selector.SelectOptionDict(value=key, label=value)
-                            for key, value in CHOICES_LIST_CASE.items()
-                        ],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-                vol.Optional("list_prefix", default=list_prefix): str,
-                vol.Optional("list_auto_sort", default=auto_sort): bool,
-            }
-        )
+            # Sort the lists by name
+            visible_lists.sort(key=lambda x: x.title)
 
-        return self.async_show_form(
-            step_id="options",
-            data_schema=options_schema,
-            errors=errors,
-        )
+            options_schema = vol.Schema(
+                {
+                    vol.Required(
+                        "lists_to_sync", default=existing_lists
+                    ): cv.multi_select({list.id: list.title for list in visible_lists}),
+                    vol.Optional(
+                        "list_item_case", default=list_item_case
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(value=key, label=value)
+                                for key, value in CHOICES_LIST_CASE.items()
+                            ],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Optional("list_prefix", default=list_prefix): str,
+                    vol.Optional("list_auto_sort", default=auto_sort): bool,
+                }
+            )
+
+            return self.async_show_form(
+                step_id="options",
+                data_schema=options_schema,
+                errors=errors,
+            )
+
+        except Exception as e:
+            _LOGGER.error("Error fetching lists: %s", e, exc_info=True)
+            errors["base"] = "list_fetch_error"
+            return self.async_show_form(
+                step_id="options",
+                data_schema=vol.Schema(
+                    {}
+                ),  # Empty schema as we couldn't fetch the lists
+                errors=errors,
+            )
 
 
 class CannotConnectError(HomeAssistantError):
