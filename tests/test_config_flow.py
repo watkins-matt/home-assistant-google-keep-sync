@@ -82,11 +82,9 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         credentials_form_result["flow_id"], user_input=options_input
     )
 
-    entry_title = f"{DOMAIN}_{user_name}"
-
     # Check the final result for entry creation
     assert final_form_result["type"] == "create_entry"
-    assert final_form_result["title"] == entry_title
+    assert final_form_result["title"] == user_name.lower()
     assert final_form_result["data"] == {
         "username": user_name,
         "password": user_password,
@@ -425,7 +423,7 @@ async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api)
     user_name = "duplicateuser@example.com"
     user_password = "testpass"
 
-    unique_id = f"{DOMAIN}_{user_name.lower()}"
+    unique_id = f"{DOMAIN}.{user_name.lower()}"
 
     # Create a mock entry to simulate existing config entry
     existing_entry = MockConfigEntry(

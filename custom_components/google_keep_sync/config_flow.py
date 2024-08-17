@@ -258,13 +258,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if user_input:
             # Check to see if the same username has already been configured
             try:
-                unique_id = f"{DOMAIN}_{user_input["username"]}".lower()
-                await self.async_set_unique_id(unique_id)
+                unique_id = f"{DOMAIN}.{user_input["username"]}".lower()
+                await self.async_set_unique_id(unique_id, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
             # Show an error if the same username has already been configured
-            except AbortFlow:
-                errors["base"] = "already_configured"
+            except AbortFlow as abort:
+                errors["base"] = abort.reason
                 return self.async_show_form(
                     step_id="user",
                     data_schema=SCHEMA_USER_DATA_STEP,
@@ -303,7 +303,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 ),
             }
             return self.async_create_entry(
-                title=self.context["unique_id"], data=entry_data
+                title=self.user_data["username"].lower(), data=entry_data
             )
 
         # Get existing configuration options
