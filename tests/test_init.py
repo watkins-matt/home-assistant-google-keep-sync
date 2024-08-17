@@ -32,7 +32,7 @@ def mock_api(mock_store):
     ) as mock_api_class:
         mock_api_instance = mock_api_class.return_value
         mock_api_instance.authenticate = AsyncMock(return_value=True)
-        mock_api_instance.async_sync_data = AsyncMock(return_value=True)
+        mock_api_instance.async_sync_data = AsyncMock(return_value=[])
         mock_api_instance._store = mock_store
         yield mock_api_instance
 
@@ -77,7 +77,6 @@ async def test_async_service_request_sync_refresh_called(hass: HomeAssistant, mo
         "custom_components.google_keep_sync.utcnow",
         return_value=coordinator.last_update_success_time + timedelta(seconds=60),
     ), patch("custom_components.google_keep_sync._LOGGER") as mock_logger:
-
         # Simulate the service call
         await async_service_request_sync(coordinator, None)
         assert coordinator.async_refresh.called
@@ -96,7 +95,6 @@ async def test_async_service_request_sync_too_soon_warning(
         "custom_components.google_keep_sync.utcnow",
         return_value=coordinator.last_update_success_time + timedelta(seconds=50),
     ), patch("custom_components.google_keep_sync._LOGGER") as mock_logger:
-
         # Simulate the service call
         await async_service_request_sync(coordinator, None)
         assert not coordinator.async_refresh.called
