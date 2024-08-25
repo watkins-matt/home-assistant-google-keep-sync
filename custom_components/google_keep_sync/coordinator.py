@@ -41,6 +41,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
         )
         self.api = api
         self.config_entry = entry
+        self._user_named_entities = set()
         _LOGGER.debug("GoogleKeepSyncCoordinator initialized")
 
     async def _async_update_data(self) -> list[GKeepList]:
@@ -71,6 +72,9 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                 lists_to_sync, auto_sort, change_case
             )
             _LOGGER.debug("Data sync completed. Received %d lists", len(synced_lists))
+
+            # Update entity names if list titles have changed
+            await self._update_entity_names(synced_lists)
 
             if deleted_list_ids:
                 _LOGGER.warning(f"The following lists were deleted: {deleted_list_ids}")
@@ -239,3 +243,50 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             "Deleted entity removal process completed. Removed "
             f"{removed_entities} entities."
         )
+
+    async def _update_entity_names(self, synced_lists: list[GKeepList]):
+        """Update entity names if list titles have changed."""
+        entity_registry = async_get_entity_registry(self.hass)
+        list_prefix = self.config_entry.data.get("list_prefix", "")
+
+        _LOGGER.debug(
+            "Starting entity name update process for %d lists", len(synced_lists)
+        )
+
+        for gkeep_list in synced_lists:
+            entity_unique_id = f"{DOMAIN}.list.{gkeep_list.id}"
+            entity_id = entity_registry.async_get_entity_id(
+                Platform.TODO, DOMAIN, entity_unique_id
+            )
+
+            if not entity_id:
+                _LOGGER.warning(
+                    "No entity_id found for unique_id: %s", entity_unique_id
+                )
+                continue
+
+            entity = entity_registry.async_get(entity_id)
+            if not entity:
+                _LOGGER.warning("Entity not found in registry for ID: %s", entity_id)
+                continue
+
+            new_name = f"{list_prefix} {gkeep_list.title}".strip()
+
+            if entity.name:
+                if entity_id not in self._user_named_entities:
+                    _LOGGER.info(
+                        "Entity %s has a user-defined name. It will not be automatically updated.",
+                        entity_id,
+                    )
+                    self._user_named_entities.add(entity_id)
+                continue
+
+            current_name = entity.original_name
+
+            if current_name != new_name:
+                _LOGGER.info(
+                    "Updating entity name from '%s' to '%s'", current_name, new_name
+                )
+                entity_registry.async_update_entity(entity_id, original_name=new_name)
+
+        _LOGGER.debug("Completed entity name update process")

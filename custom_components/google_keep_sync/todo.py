@@ -134,6 +134,18 @@ class GoogleKeepTodoListEntity(
             await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh after item creation.")
 
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        for gkeep_list in self.coordinator.data:
+            if gkeep_list.id == self._gkeep_list_id:
+                self._gkeep_list = gkeep_list
+                list_prefix = self.coordinator.config_entry.data.get("list_prefix", "")
+                new_name = f"{list_prefix} {gkeep_list.title}".strip()
+                if self._attr_name != new_name:
+                    self._attr_name = new_name
+                break
+        super()._handle_coordinator_update()
+
     @property
     def todo_items(self) -> list[TodoItem]:
         """Get the current set of To-do items, filtering out empty entries."""

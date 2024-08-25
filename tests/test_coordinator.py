@@ -1,5 +1,6 @@
 """Unit tests for the todo component."""
 
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -37,16 +38,62 @@ def mock_api():
 async def test_async_update_data(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
-    """Test update_data method."""
+    """Test update_data method with debugging."""
     with patch.object(mock_api, "async_sync_data", AsyncMock()):
-        mock_api.async_sync_data.return_value = ["list1", "list2"], []
+        # Create MagicMock objects for the lists
+        mock_list1 = MagicMock()
+        mock_list1.id = "1"
+        mock_list1.title = "list1"
+        mock_list2 = MagicMock()
+        mock_list2.id = "2"
+        mock_list2.title = "list2"
+
+        mock_lists = [mock_list1, mock_list2]
+        mock_api.async_sync_data.return_value = (mock_lists, [])
 
         coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
         coordinator.config_entry = mock_config_entry
+        coordinator.config_entry.data = {
+            "list_prefix": "Test",
+            "lists_to_sync": ["1", "2"],
+        }
 
-        result = await coordinator._async_update_data()
+        # Mock the entity registry
+        mock_entity_registry = MagicMock()
+        mock_entity_registry.async_get_entity_id.return_value = "todo.test_entity"
 
-        assert result == ["list1", "list2"], []
+        # Use spec_set to define allowed attributes
+        mock_entity = MagicMock(spec_set=["entity_id", "name", "original_name"])
+        mock_entity.entity_id = "todo.test_entity"
+        mock_entity.name = None  # Explicitly set to None
+        mock_entity.original_name = "Old Name"
+        mock_entity_registry.async_get.return_value = mock_entity
+
+        # Add debug logging
+        logging.getLogger().setLevel(logging.DEBUG)
+
+        with patch(
+            "homeassistant.helpers.entity_registry.async_get",
+            return_value=mock_entity_registry,
+        ), patch.object(
+            coordinator, "_update_entity_names", wraps=coordinator._update_entity_names
+        ) as mock_update_names:
+            result = await coordinator._async_update_data()
+
+        assert result == mock_lists
+        mock_api.async_sync_data.assert_called_once()
+
+        # Debug output
+        print(f"mock_entity.name: {mock_entity.name}")
+        print(f"mock_entity.original_name: {mock_entity.original_name}")
+        print(f"_update_entity_names called: {mock_update_names.called}")
+        if mock_update_names.called:
+            print(f"_update_entity_names args: {mock_update_names.call_args}")
+
+        # Check if async_update_entity was called
+        mock_entity_registry.async_update_entity.assert_called_once_with(
+            "todo.test_entity", original_name="Test list1"
+        )
 
 
 async def test_parse_gkeep_data_dict_empty(
