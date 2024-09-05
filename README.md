@@ -13,18 +13,15 @@ entities in your Home Assistant instance.
 
 ## Requirements
 
-As a result of the fact that we are using the new todo entities that were introduced in Home Assistant 2023.11, you must be running that version or later.
+The integration requires Home Assistant 2023.11 or later, due to the fact that todo entities were introduced in that version. 
 
 ## Installation
 
-Google Keep Sync can be installed either manually or via HACS, although using
-HACS is strongly recommended.
-
-### Installation via HACS
+1. **Ensure that you have [HACS](https://www.hacs.xyz/) installed.**
 
 1. **Add Integration via HACS**:
 
-    If you already have HACS installed, you can simply click this button:
+    After you have HACS installed, you can simply click this button:
 
     [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=watkins-matt&repository=home-assistant-google-keep-sync&category=integration)
     - Click `Download`.
@@ -39,33 +36,68 @@ HACS is strongly recommended.
         - Add the URL `https://github.com/watkins-matt/home-assistant-google-keep-sync`
         - Set the category to `Integration` and click `Add`.
 
-    1. **Install the Integration**:
+    2. **Install the Integration**:
         - Search for `Google Keep Sync` in the HACS Integrations.
         - Click `Download`.
         - Restart Home Assistant.
 
-1. **Configure Integration**:
+2. **Configure Integration**:
     - Go to `Settings` -> `Devices & Services`.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
-    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>).
+    - Generate a token using the instructions below and enter the token. 
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
+  
+## Generating a Token Using the Docker Container
 
-### Manual Installation
+You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
 
-1. **Copy Integration Files**: Download the `google_keep_sync` folder and place it into the `custom_components` directory of your Home Assistant installation. If `custom_components` doesn't exist, create it in the same directory as your `configuration.yaml`.
+#### Requirements
 
-2. **Restart Home Assistant**: Restart your Home Assistant to load the new integration.
+You need a computer that you can install Docker on. This can be any Linux computer,
+or you can even use a Windows machine by installing WSL. Note that you do not run these
+commands on your Home Assistant server itself, it must be a separate machine. Raspberry Pi
+machines will likely not work due to the ARM architecture.
 
-3. **Configuration**:
-    - Go to `Settings` -> `Devices & Services`.
-    - Click `Add Integration`.
-    - Search for and select `Google Keep Sync`.
-    - Enter your Google account username.
-    - Generate and use an **App Password** for your Google account (see <https://myaccount.google.com/apppasswords>) OR a [Token](#generating-a-token-using-the-docker-container)
-    - Add an optional list prefix that will be prepended to all lists added to Home Assistant.
-    - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
+#### Windows with WSL
+
+If you want to use a Windows machine, you can install WSL2 and Docker. Follow the instructions [here to install WSL2](https://docs.microsoft.com/en-us/windows/wsl/install). Then, open Ubuntu
+and run the command `sudo apt-get install docker.io`.
+
+#### Linux
+
+If you are using a Linux machine, you can install Docker using the package manager of your choice. For Ubuntu, you can use the following commands:
+
+```bash
+sudo apt-get update
+sudo apt-get install docker.io
+```
+
+#### Steps
+
+1. After you have Docker installed, enter the following commands.
+
+   ```bash
+   docker pull breph/ha-google-home_get-token:latest
+   docker run -it -d breph/ha-google-home_get-token
+   ```
+
+2. Copy the returned container ID to use in the following command.
+
+   ```bash
+   docker exec -it <ID> bash
+   ```
+
+3. Inside the container, enter the following command and answer the prompts to generate a master token. For the password, you should preferably use an app password,
+
+   ```bash
+   python3 get_tokens.py
+   ```
+
+4. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
+
+5. Use this token in the integration's configuration process by entering it into the token field (make sure you leave the password field blank).
 
 ## Usage
 
@@ -251,7 +283,7 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 - **Polling Interval**: While changes made in Home Assistant are instantly reflected in Google Keep, changes made in Google Keep are not instantly reflected in Home Assistant. The integration polls Google Keep for updates every 15 minutes. Therefore, any changes made directly in Google Keep will be visible in Home Assistant after the next polling interval.
 
-- **Authentication**: Use of an app password is strongly recommended, as there is no way for accounts with 2-Factor-Authentication to be connected otherwise. This will also allow you to easily revoke access to the integration without affecting your Google account and requiring you to change your password.
+- **Authentication**: Using a token is strongly encouraged. Password login usually doesn't work and is deprecated by the underlying library this integration uses.
 
 - **Checkboxes in Keep**: Only Google Keep notes with `Show checkboxes` selected will appear as options to sync with Home Assistant using this integration.
 
@@ -259,7 +291,7 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 As an additional security precaution, you can sign up for a new Google account to use exclusively with this integration. Afterward, on your primary account, add this new Google account as a collaborator on any lists you wish to synchronize.
 
-Then provide the credentials for this new account (preferably still using an app password) to the integration. This will allow the integration limited access your Google Keep lists without having access to your entire primary Google account.
+Then provide the credentials for this new account (using a token) to the integration. This will allow the integration limited access your Google Keep lists without having access to your entire primary Google account.
 
 ## Troubleshooting
 
@@ -267,57 +299,7 @@ Encountering issues? Here are some common problems and their potential solutions
 
 ### Invalid Authentication Errors
 
-If you're experiencing `Invalid authentication` errors, it could be due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, consider using a manually-retrieved token for authentication instead of a password.
-
-#### Generating a Token Using the Docker Container
-
-You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
-
-##### Requirements
-
-You need a computer that you can install Docker on. This can be any Linux computer,
-or you can even use a Windows machine by installing WSL. Note that you do not run these
-commands on your Home Assistant server itself, it must be a separate machine. Raspberry Pi
-machines will likely not work due to the ARM architecture.
-
-##### Windows with WSL
-
-If you want to use a Windows machine, you can install WSL2 and Docker. Follow the instructions [here to install WSL2](https://docs.microsoft.com/en-us/windows/wsl/install). Then, open Ubuntu
-and run the command `sudo apt-get install docker.io`.
-
-##### Linux
-
-If you are using a Linux machine, you can install Docker using the package manager of your choice. For Ubuntu, you can use the following commands:
-
-```bash
-sudo apt-get update
-sudo apt-get install docker.io
-```
-
-##### Steps
-
-1. After you have Docker installed, enter the following commands.
-
-   ```bash
-   docker pull breph/ha-google-home_get-token:latest
-   docker run -it -d breph/ha-google-home_get-token
-   ```
-
-2. Copy the returned container ID to use in the following command.
-
-   ```bash
-   docker exec -it <ID> bash
-   ```
-
-3. Inside the container, enter the following command and answer the prompts to generate a master token. For the password, you can use either your regular password or an app password,
-
-   ```bash
-   python3 get_tokens.py
-   ```
-
-4. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
-
-5. Use this token in the integration's configuration process by entering it into the token field (make sure you leave the password field blank).
+If you're experiencing `Invalid authentication` errors, these are due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, make sure you are using a manually-generated token for authentication instead of a password.
 
 ### Sync Delays
 
