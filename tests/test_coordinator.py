@@ -60,40 +60,74 @@ async def test_async_update_data(
 
         # Mock the entity registry
         mock_entity_registry = MagicMock()
-        mock_entity_registry.async_get_entity_id.return_value = "todo.test_entity"
 
         # Use spec_set to define allowed attributes
-        mock_entity = MagicMock(spec_set=["entity_id", "name", "original_name"])
-        mock_entity.entity_id = "todo.test_entity"
-        mock_entity.name = None  # Explicitly set to None
-        mock_entity.original_name = "Old Name"
-        mock_entity_registry.async_get.return_value = mock_entity
+        # Entities will be returned based on entity_id in side_effect
+        mock_entity_registry.async_update_entity = AsyncMock()
 
         # Add debug logging
         logging.getLogger().setLevel(logging.DEBUG)
 
         with patch(
-            "homeassistant.helpers.entity_registry.async_get",
+            "google_keep_sync.coordinator.async_get_entity_registry",
             return_value=mock_entity_registry,
         ), patch.object(
             coordinator, "_update_entity_names", wraps=coordinator._update_entity_names
         ) as mock_update_names:
+
+            # Define side_effect for async_get_entity_id
+            def get_entity_id(platform, domain, unique_id):
+                if unique_id == "google_keep_sync.list.1":
+                    return "todo.test_entity1"
+                elif unique_id == "google_keep_sync.list.2":
+                    return "todo.test_entity2"
+                return None
+
+            mock_entity_registry.async_get_entity_id.side_effect = get_entity_id
+
+            # Define side_effect for async_get
+            def get_entity(entity_id):
+                if entity_id == "todo.test_entity1":
+                    mock_entity1 = MagicMock(spec_set=["entity_id", "name", "original_name"])
+                    mock_entity1.entity_id = "todo.test_entity1"
+                    mock_entity1.name = None  # Indicates no user-defined name
+                    mock_entity1.original_name = "Old Name 1"
+                    return mock_entity1
+                elif entity_id == "todo.test_entity2":
+                    mock_entity2 = MagicMock(spec_set=["entity_id", "name", "original_name"])
+                    mock_entity2.entity_id = "todo.test_entity2"
+                    mock_entity2.name = None
+                    mock_entity2.original_name = "Old Name 2"
+                    return mock_entity2
+                return None
+
+            mock_entity_registry.async_get.side_effect = get_entity
+
+            # Execute the method under test
             result = await coordinator._async_update_data()
 
+        # Assertions
         assert result == mock_lists
         mock_api.async_sync_data.assert_called_once()
 
         # Debug output
-        print(f"mock_entity.name: {mock_entity.name}")
-        print(f"mock_entity.original_name: {mock_entity.original_name}")
+        print(f"mock_entity1.name: {get_entity('todo.test_entity1').name}")
+        print(f"mock_entity1.original_name: {get_entity('todo.test_entity1').original_name}")
+        print(f"mock_entity2.name: {get_entity('todo.test_entity2').name}")
+        print(f"mock_entity2.original_name: {get_entity('todo.test_entity2').original_name}")
         print(f"_update_entity_names called: {mock_update_names.called}")
         if mock_update_names.called:
             print(f"_update_entity_names args: {mock_update_names.call_args}")
 
-        # Check if async_update_entity was called
-        mock_entity_registry.async_update_entity.assert_called_once_with(
-            "todo.test_entity", original_name="Test list1"
+        # Check if async_update_entity was called for each entity
+        mock_entity_registry.async_update_entity.assert_any_call(
+            "todo.test_entity1", original_name="Test list1"
         )
+        mock_entity_registry.async_update_entity.assert_any_call(
+            "todo.test_entity2", original_name="Test list2"
+        )
+        assert mock_entity_registry.async_update_entity.call_count == 2
+
 
 
 async def test_parse_gkeep_data_dict_empty(
