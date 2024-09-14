@@ -275,7 +275,8 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             if entity.name:
                 if entity_id not in self._user_named_entities:
                     _LOGGER.info(
-                        "Entity %s has a user-defined name. It will not be automatically updated.",
+                        "Entity %s has a user-defined name. "
+                        "It will not update automatically.",
                         entity_id,
                     )
                     self._user_named_entities.add(entity_id)
