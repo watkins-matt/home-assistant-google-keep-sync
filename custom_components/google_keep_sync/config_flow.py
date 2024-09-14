@@ -316,7 +316,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             # Check to see if the same username has already been configured
             try:
                 _LOGGER.debug("Checking for existing configuration")
-                unique_id = f"{DOMAIN}.{user_input["username"]}".lower()
+                unique_id = f"{DOMAIN}.{user_input['username']}".lower()
                 await self.async_set_unique_id(unique_id, raise_on_progress=False)
                 self._abort_if_unique_id_configured()
 
