@@ -5,6 +5,7 @@ import sys
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_socket import enable_socket, socket_allow_hosts
 
 from custom_components.google_keep_sync.const import DOMAIN
 
@@ -21,11 +22,12 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
-# Workaround for pytest-socket issues on Windows
-if sys.platform == "win32":
-    import pytest_socket
-
-    pytest_socket.disable_socket = lambda *args, **kwargs: None
+@pytest.fixture(scope="function", autouse=True)
+def workaround_for_windows_socket_issues():
+    """Workaround to allow testing on Windows with VS Code."""
+    enable_socket()
+    socket_allow_hosts(["127.0.0.1", "localhost", "::1"], allow_unix_socket=True)
+    yield
 
 
 @pytest.fixture
