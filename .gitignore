@@ -5,6 +5,7 @@
 .ruff_cache
 .vscode
 .coverage
+.dmypy.json
 htmlcov
 coverage.json
 coverage.svg
