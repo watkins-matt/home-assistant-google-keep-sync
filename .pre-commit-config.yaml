@@ -5,7 +5,6 @@ repos:
       - id: ruff
         args:
           - --fix
-      - id: ruff-format
 
   # Use mypyc-compiled black, see https://black.readthedocs.io/en/stable/integrations/source_version_control.html
   - repo: https://github.com/psf/black-pre-commit-mirror
