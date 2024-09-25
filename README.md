@@ -13,7 +13,7 @@ entities in your Home Assistant instance.
 
 ## Requirements
 
-The integration requires Home Assistant 2023.11 or later, due to the fact that todo entities were introduced in that version. 
+The integration requires Home Assistant 2023.11 or later, due to the fact that todo entities were introduced in that version.
 
 ## Installation
 
@@ -46,9 +46,9 @@ The integration requires Home Assistant 2023.11 or later, due to the fact that t
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
     - Enter your Google account username.
-    - Generate a token using the instructions below and enter the token. 
+    - Generate a token using the instructions below and enter the token.
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
-  
+
 ## Generating a Token Using the Docker Container
 
 You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
