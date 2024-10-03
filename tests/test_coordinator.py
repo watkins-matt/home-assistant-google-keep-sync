@@ -1,12 +1,13 @@
 """Unit tests for the todo component."""
 
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 from homeassistant.const import EVENT_CALL_SERVICE
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.google_keep_sync.api import GoogleKeepAPI
@@ -369,6 +370,14 @@ async def test_all_deleted_lists(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
     """Test that all entities are removed and config is cleared when all lists are deleted."""
+    # Initialize mock_config_entry.data
+    mock_config_entry.data = {
+        "list_prefix": "Test",
+        "lists_to_sync": ["list1", "list2", "list3"],
+        "list_auto_sort": False,
+        "list_item_case": "NO_CHANGE",
+    }
+
     # Setup mock lists
     mock_synced_lists = []
     deleted_list_ids = ["list1", "list2", "list3"]
@@ -421,14 +430,12 @@ async def test_all_deleted_lists(
 
             # Ensure async_remove was called for all deleted lists
             expected_calls = [
-                patch.call("todo.list.list1"),
-                patch.call("todo.list.list2"),
-                patch.call("todo.list.list3"),
+                call("todo.list.list1"),
+                call("todo.list.list2"),
+                call("todo.list.list3"),
             ]
             actual_calls = mock_entity_registry.async_remove.call_args_list
-            assert len(actual_calls) == 3
-            for call in expected_calls:
-                mock_entity_registry.async_remove.assert_any_call(call.args[0])
+            assert actual_calls == expected_calls
 
             # Ensure configuration was updated to remove all lists
             updated_lists = []
@@ -442,9 +449,20 @@ async def test_deleted_lists_without_entities(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
     """Test that coordinator handles deletions when some deleted lists lack corresponding entities."""
+    # Initialize mock_config_entry.data
+    mock_config_entry.data = {
+        "list_prefix": "Test",
+        "lists_to_sync": ["list1", "list2", "list3"],
+        "list_auto_sort": False,
+        "list_item_case": "NO_CHANGE",
+    }
+
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
-    mock_synced_lists = [mock_list1]
+    mock_list3 = MagicMock(
+        id="list3", title="List 3"
+    )  # Assuming list3 is part of the data
+    mock_synced_lists = [mock_list1, mock_list3]
     deleted_list_ids = ["list2"]  # Assume list2 exists but has no entity
 
     # Mock the API to return some deleted lists
@@ -457,6 +475,7 @@ async def test_deleted_lists_without_entities(
     coordinator.data = [
         mock_list1,
         MagicMock(id="list2", title="List 2"),
+        mock_list3,
     ]
 
     # Mock parsing of Google Keep data
@@ -467,16 +486,24 @@ async def test_deleted_lists_without_entities(
             {
                 "list1": TodoList(name="List 1", items={}),
                 "list2": TodoList(name="List 2", items={}),
+                "list3": TodoList(name="List 3", items={}),
             },
             {
                 "list1": TodoList(name="List 1", items={}),
+                "list3": TodoList(name="List 3", items={}),
             },
         ]
 
         # Mock entity registry
         mock_entity_registry = MagicMock(spec=entity_registry.EntityRegistry)
+
         # Assume list2 does not have an entity
-        mock_entity_registry.async_get_entity_id.return_value = None
+        def get_entity_id(platform, domain, unique_id):
+            if unique_id.endswith("list2"):
+                return None
+            return f"todo.list.{unique_id.split('.')[-1]}"
+
+        mock_entity_registry.async_get_entity_id.side_effect = get_entity_id
         mock_entity_registry.async_remove = AsyncMock()
         with patch(
             "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
@@ -493,7 +520,7 @@ async def test_deleted_lists_without_entities(
             mock_entity_registry.async_remove.assert_not_called()
 
             # Ensure configuration was updated to remove list2
-            updated_lists = ["list1"]
+            updated_lists = ["list1", "list3"]
             mock_hass.config_entries.async_update_entry.assert_called_once_with(
                 mock_config_entry,
                 data={**mock_config_entry.data, "lists_to_sync": updated_lists},
@@ -542,9 +569,12 @@ async def test_exception_during_entity_removal(
             "custom_components.google_keep_sync.coordinator._LOGGER",
             new_callable=MagicMock,
         ) as mock_logger:
-            # Execute the update and expect an exception
-            with pytest.raises(Exception, match="Removal failed"):
-                await coordinator.async_refresh()
+            # Execute the update and expect an UpdateFailed exception
+            with pytest.raises(
+                UpdateFailed,
+                match="Error communicating with API: Removal failed",
+            ):
+                await coordinator._async_update_data()
 
             # Assertions
             mock_api.async_sync_data.assert_called_once()
@@ -556,7 +586,11 @@ async def test_exception_during_entity_removal(
             mock_hass.config_entries.async_update_entry.assert_not_called()
 
             # Ensure the error was logged
-            mock_logger.error.assert_called()
+            mock_logger.error.assert_called_with(
+                "Error communicating with API: %s",
+                mock_entity_registry.async_remove.side_effect,
+                exc_info=True,
+            )
 
 
 async def test_notify_new_items_deleted_lists(
