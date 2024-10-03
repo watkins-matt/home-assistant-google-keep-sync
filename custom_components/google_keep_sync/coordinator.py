@@ -41,7 +41,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
         )
         self.api = api
         self.config_entry = entry
-        self._user_named_entities = set()
+        self._user_named_entities: set[str] = set()
         _LOGGER.debug("GoogleKeepSyncCoordinator initialized")
 
     async def _async_update_data(self) -> list[GKeepList]:

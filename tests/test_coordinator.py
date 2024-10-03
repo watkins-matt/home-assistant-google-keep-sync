@@ -1,6 +1,7 @@
 """Unit tests for the todo component."""
 
 import logging
+from typing import List
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -262,7 +263,7 @@ async def test_notify_new_items(
 async def test_no_deleted_lists(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
-    """Test that no entities are removed and config is unchanged when no lists are deleted."""
+    """Test that entities and config remain the same when lists are not deleted."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
     mock_list2 = MagicMock(id="list2", title="List 2")
@@ -307,7 +308,7 @@ async def test_no_deleted_lists(
 async def test_some_deleted_lists(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
-    """Test that specified entities are removed and config is updated when some lists are deleted."""
+    """Test that list deletion results in entity removal and config change."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
     mock_list3 = MagicMock(id="list3", title="List 3")
@@ -369,7 +370,7 @@ async def test_some_deleted_lists(
 async def test_all_deleted_lists(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
-    """Test that all entities are removed and config is cleared when all lists are deleted."""
+    """Test that all entities and config are removed when all lists are deleted."""
     # Initialize mock_config_entry.data
     mock_config_entry.data = {
         "list_prefix": "Test",
@@ -379,7 +380,7 @@ async def test_all_deleted_lists(
     }
 
     # Setup mock lists
-    mock_synced_lists = []
+    mock_synced_lists: List[MagicMock] = []
     deleted_list_ids = ["list1", "list2", "list3"]
 
     # Mock the API to return all lists as deleted
@@ -438,7 +439,7 @@ async def test_all_deleted_lists(
             assert actual_calls == expected_calls
 
             # Ensure configuration was updated to remove all lists
-            updated_lists = []
+            updated_lists: List[str] = []
             mock_hass.config_entries.async_update_entry.assert_called_once_with(
                 mock_config_entry,
                 data={**mock_config_entry.data, "lists_to_sync": updated_lists},
@@ -448,7 +449,7 @@ async def test_all_deleted_lists(
 async def test_deleted_lists_without_entities(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
-    """Test that coordinator handles deletions when some deleted lists lack corresponding entities."""
+    """Test that coordinator deletes lists without corresponding entities."""
     # Initialize mock_config_entry.data
     mock_config_entry.data = {
         "list_prefix": "Test",
@@ -533,7 +534,7 @@ async def test_exception_during_entity_removal(
     """Test coordinator's behavior when an exception occurs during entity removal."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
-    mock_synced_lists = []
+    mock_synced_lists: List[MagicMock] = []
     deleted_list_ids = ["list1"]
 
     # Mock the API to return some deleted lists
@@ -597,7 +598,8 @@ async def test_notify_new_items_deleted_lists(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
     """Test that notifications are not sent when handling deleted lists."""
-    # This test ensures that when lists are deleted, no new item notifications are triggered.
+    # This test ensures that when lists are deleted,
+    # no new item notifications are triggered.
 
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
@@ -648,7 +650,7 @@ async def test_handle_deleted_lists_logging(
     """Test that appropriate logs are generated when handling deleted lists."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
-    mock_synced_lists = []
+    mock_synced_lists: List[MagicMock] = []
     deleted_list_ids = ["list1"]
 
     # Mock the API to return some deleted lists
