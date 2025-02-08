@@ -225,9 +225,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 await self.hass.config_entries.async_reload(self.entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
-        return self.async_show_form(
-            step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
-        )
+        try:
+            return self.async_show_form(
+                step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
+            )
+        except config_entries.UnknownEntry:
+            _LOGGER.error("Configuration entry not found")
+            return self.async_abort(reason="config_entry_not_found")
 
     @staticmethod
     @callback

@@ -91,7 +91,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                     **self.config_entry.data,
                     "lists_to_sync": updated_lists_to_sync,
                 }
-                self.hass.config_entries.async_update_entry(
+                await self.hass.config_entries.async_update_entry(
                     self.config_entry, data=new_data
                 )
                 _LOGGER.info(
@@ -234,7 +234,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                 _LOGGER.info(
                     f"Removing entity {entity_id} for deleted list {deleted_list_id}"
                 )
-                entity_registry.async_remove(entity_id)
+                await entity_registry.async_remove(entity_id)
                 removed_entities += 1
             else:
                 _LOGGER.debug(f"No entity found for deleted list {deleted_list_id}")

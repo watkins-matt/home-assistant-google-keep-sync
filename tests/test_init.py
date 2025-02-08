@@ -4,6 +4,7 @@ from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
@@ -42,6 +43,7 @@ async def test_async_setup_entry_successful(
 ):
     """Test a successful setup entry."""
     mock_config_entry.add_to_hass(hass)
+    mock_config_entry.state = ConfigEntryState.LOADED
     assert await async_setup_entry(hass, mock_config_entry)
     assert hass.data[GOOGLE_KEEP_DOMAIN]
     await hass.async_block_till_done()
@@ -61,6 +63,7 @@ async def test_async_setup_entry_failed(
 async def test_async_unload_entry(hass: HomeAssistant, mock_api, mock_config_entry):
     """Test unloading a Google Keep Sync config entry."""
     mock_config_entry.add_to_hass(hass)
+    mock_config_entry.state = ConfigEntryState.LOADED
     await async_setup_entry(hass, mock_config_entry)
     assert await async_unload_entry(hass, mock_config_entry)
     assert not hass.data[GOOGLE_KEEP_DOMAIN].get(mock_config_entry.entry_id)
@@ -73,10 +76,13 @@ async def test_async_service_request_sync_refresh_called(hass: HomeAssistant, mo
     coordinator.last_update_success_time = utcnow()
     coordinator.async_refresh = AsyncMock()
 
-    with patch(
-        "custom_components.google_keep_sync.utcnow",
-        return_value=coordinator.last_update_success_time + timedelta(seconds=60),
-    ), patch("custom_components.google_keep_sync._LOGGER") as mock_logger:
+    with (
+        patch(
+            "custom_components.google_keep_sync.utcnow",
+            return_value=coordinator.last_update_success_time + timedelta(seconds=60),
+        ),
+        patch("custom_components.google_keep_sync._LOGGER") as mock_logger,
+    ):
         # Simulate the service call
         await async_service_request_sync(coordinator, None)
         assert coordinator.async_refresh.called
@@ -91,10 +97,13 @@ async def test_async_service_request_sync_too_soon_warning(
     coordinator.last_update_success_time = utcnow()
     coordinator.async_refresh = AsyncMock()
 
-    with patch(
-        "custom_components.google_keep_sync.utcnow",
-        return_value=coordinator.last_update_success_time + timedelta(seconds=50),
-    ), patch("custom_components.google_keep_sync._LOGGER") as mock_logger:
+    with (
+        patch(
+            "custom_components.google_keep_sync.utcnow",
+            return_value=coordinator.last_update_success_time + timedelta(seconds=50),
+        ),
+        patch("custom_components.google_keep_sync._LOGGER") as mock_logger,
+    ):
         # Simulate the service call
         await async_service_request_sync(coordinator, None)
         assert not coordinator.async_refresh.called

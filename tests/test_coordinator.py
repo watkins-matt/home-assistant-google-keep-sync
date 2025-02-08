@@ -9,7 +9,6 @@ from homeassistant.const import EVENT_CALL_SERVICE
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.google_keep_sync.api import GoogleKeepAPI
 from custom_components.google_keep_sync.const import DOMAIN
@@ -19,6 +18,7 @@ from custom_components.google_keep_sync.coordinator import (
     TodoItemData,
     TodoList,
 )
+from tests.conftest import MockConfigEntry
 
 
 @pytest.fixture
@@ -85,11 +85,14 @@ async def test_async_update_data(
     # Add debug logging
     logging.getLogger().setLevel(logging.DEBUG)
 
-    with patch(
-        "google_keep_sync.coordinator.async_get_entity_registry",
-        return_value=mock_entity_registry,
-    ), patch.object(
-        coordinator, "_update_entity_names", wraps=coordinator._update_entity_names
+    with (
+        patch(
+            "google_keep_sync.coordinator.async_get_entity_registry",
+            return_value=mock_entity_registry,
+        ),
+        patch.object(
+            coordinator, "_update_entity_names", wraps=coordinator._update_entity_names
+        ),
     ):
         # Define side_effect for async_get_entity_id
         def get_entity_id(platform, domain, unique_id):
@@ -563,13 +566,16 @@ async def test_exception_during_entity_removal(
         mock_entity_registry.async_get_entity_id.return_value = "todo.list.list1"
         # Mock async_remove to raise an exception
         mock_entity_registry.async_remove.side_effect = Exception("Removal failed")
-        with patch(
-            "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
-            return_value=mock_entity_registry,
-        ), patch(
-            "custom_components.google_keep_sync.coordinator._LOGGER",
-            new_callable=MagicMock,
-        ) as mock_logger:
+        with (
+            patch(
+                "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+                return_value=mock_entity_registry,
+            ),
+            patch(
+                "custom_components.google_keep_sync.coordinator._LOGGER",
+                new_callable=MagicMock,
+            ) as mock_logger,
+        ):
             # Execute the update and expect an UpdateFailed exception
             with pytest.raises(
                 UpdateFailed,
@@ -677,13 +683,16 @@ async def test_handle_deleted_lists_logging(
         mock_entity_registry = MagicMock(spec=entity_registry.EntityRegistry)
         mock_entity_registry.async_get_entity_id.return_value = "todo.list.list1"
         mock_entity_registry.async_remove = AsyncMock()
-        with patch(
-            "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
-            return_value=mock_entity_registry,
-        ), patch(
-            "custom_components.google_keep_sync.coordinator._LOGGER",
-            new_callable=MagicMock,
-        ) as mock_logger:
+        with (
+            patch(
+                "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+                return_value=mock_entity_registry,
+            ),
+            patch(
+                "custom_components.google_keep_sync.coordinator._LOGGER",
+                new_callable=MagicMock,
+            ) as mock_logger,
+        ):
             # Execute the update
             await coordinator.async_refresh()
 

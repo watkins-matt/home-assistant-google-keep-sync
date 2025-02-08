@@ -5,10 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.data_entry_flow import UnknownFlow
 
 from custom_components.google_keep_sync.config_flow import CannotConnectError
 from custom_components.google_keep_sync.const import DOMAIN
+from tests.conftest import MockConfigEntry
 
 
 class MockList:
@@ -622,12 +623,14 @@ async def test_reauth_confirm_entry_not_found(
         DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
     )
 
+    # Assert that the flow is aborted due to the missing config entry
+    assert init_flow_result["type"] == "abort"
+    assert init_flow_result["reason"] == "config_entry_not_found"
+
     # Provide the new password input
     new_password_input = {"password": "new_password"}
-    config_flow_result = await hass.config_entries.flow.async_configure(
-        init_flow_result["flow_id"], user_input=new_password_input
-    )
 
-    # Assert that the flow is aborted due to the missing config entry
-    assert config_flow_result["type"] == "abort"
-    assert config_flow_result["reason"] == "config_entry_not_found"
+    with pytest.raises(UnknownFlow):
+        await hass.config_entries.flow.async_configure(
+            init_flow_result["flow_id"], user_input=new_password_input
+        )

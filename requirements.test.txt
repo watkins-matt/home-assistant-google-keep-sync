@@ -2,7 +2,6 @@ aiohttp-cors==0.7.0
 gkeepapi==0.15.1
 gpsoauth==1.1.1
 pre-commit==3.8.0
-pytest-homeassistant-custom-component==0.13.211
 pytest-socket==0.7.0
 tzdata
 urllib3==1.26.18
