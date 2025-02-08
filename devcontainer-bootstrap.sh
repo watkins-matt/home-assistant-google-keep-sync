@@ -104,6 +104,9 @@ cat <<EOL > "$VS_CODE_WORKSPACE"
             "**/__pycache__": true,
             "**/*.pyc": true
         },
+        "python.analysis.ignore": [
+            "/workspaces/home-assistant-core/**"
+        ],
         "python.analysis.extraPaths": [
             "/workspaces/home-assistant-core/homeassistant"
         ]
