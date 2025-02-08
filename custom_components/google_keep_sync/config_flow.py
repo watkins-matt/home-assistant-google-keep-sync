@@ -47,10 +47,9 @@ CHOICES_LIST_CASE = {
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options for the Google Keep Sync integration."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self, entry_id: str) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
-        _LOGGER.debug("Initializing OptionsFlowHandler for %s", config_entry.title)
+        _LOGGER.debug("Initializing OptionsFlowHandler for %s", entry_id)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -236,7 +235,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler(config_entry.entry_id)
 
     async def validate_input(self, hass: HomeAssistant, data: dict[str, Any]) -> None:
         """Validate the user input allows us to connect."""
