@@ -100,14 +100,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             )
 
             visible_lists = [
-                list
-                for list in all_lists
-                if not list.deleted and not list.trashed and not list.archived
+                keep_list
+                for keep_list in all_lists
+                if not keep_list.deleted
+                and not keep_list.trashed
+                and not keep_list.archived
             ]
             hidden_lists = [
-                list
-                for list in all_lists
-                if list.deleted or list.trashed or list.archived
+                keep_list
+                for keep_list in all_lists
+                if keep_list.deleted or keep_list.trashed or keep_list.archived
             ]
 
             if hidden_lists:
@@ -123,8 +125,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
             lists = visible_lists
 
-        except Exception as e:
-            _LOGGER.error("Error fetching lists: %s", e, exc_info=True)
+        except Exception:
+            _LOGGER.exception("Error fetching lists: %s")
             errors["base"] = "list_fetch_error"
 
         # Retrieve existing values
@@ -141,10 +143,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         # Select all lists that are not deleted, trashed or archived. Keep
         # lists if we already had them selected previously
         lists = [
-            list
-            for list in lists
-            if (not list.deleted and not list.trashed and not list.archived)
-            or list.id in existing_list_set
+            keep_list
+            for keep_list in lists
+            if (
+                not keep_list.deleted
+                and not keep_list.trashed
+                and not keep_list.archived
+            )
+            or keep_list.id in existing_list_set
         ]
 
         # Sort the lists by name
@@ -156,7 +162,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         "lists_to_sync", default=existing_lists
-                    ): cv.multi_select({list.id: list.title for list in lists}),
+                    ): cv.multi_select(
+                        {keep_list.id: keep_list.title for keep_list in lists}
+                    ),
                     vol.Optional(
                         "list_item_case", default=list_item_case
                     ): selector.SelectSelector(
@@ -304,8 +312,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except InvalidTokenFormatError:
             _LOGGER.warning("Invalid token format")
             errors["base"] = "invalid_token_format"
-        except Exception as exc:
-            _LOGGER.exception("Unexpected exception: %s", exc)
+        except Exception:
+            _LOGGER.exception("Unexpected exception: %s")
             errors["base"] = "unknown"
         return errors
 
@@ -395,15 +403,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             # Select all lists that are not deleted, trashed or archived
             visible_lists = [
-                list
-                for list in all_lists
-                if (not list.deleted and not list.trashed and not list.archived)
-                or list.id in existing_list_set
+                keep_list
+                for keep_list in all_lists
+                if (
+                    not keep_list.deleted
+                    and not keep_list.trashed
+                    and not keep_list.archived
+                )
+                or keep_list.id in existing_list_set
             ]
             hidden_lists = [
-                list
-                for list in all_lists
-                if list.deleted or list.trashed or list.archived
+                keep_list
+                for keep_list in all_lists
+                if keep_list.deleted or keep_list.trashed or keep_list.archived
             ]
 
             _LOGGER.info(
@@ -421,7 +433,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 {
                     vol.Required(
                         "lists_to_sync", default=existing_lists
-                    ): cv.multi_select({list.id: list.title for list in visible_lists}),
+                    ): cv.multi_select(
+                        {keep_list.id: keep_list.title for keep_list in visible_lists}
+                    ),
                     vol.Optional(
                         "list_item_case", default=list_item_case
                     ): selector.SelectSelector(
@@ -444,8 +458,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 errors=errors,
             )
 
-        except Exception as e:
-            _LOGGER.error("Error fetching lists: %s", e, exc_info=True)
+        except Exception:
+            _LOGGER.exception("Error fetching lists: %s")
             errors["base"] = "list_fetch_error"
             return self.async_show_form(
                 step_id="options",
