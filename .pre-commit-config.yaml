@@ -8,10 +8,10 @@ repos:
 
   # Use mypyc-compiled black, see https://black.readthedocs.io/en/stable/integrations/source_version_control.html
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.1.1
+    rev: 24.8.0
     hooks:
       - id: black
-        language_version: python3.12
+        language_version: python3.13
         args:
           - --quiet
 
@@ -32,7 +32,7 @@ repos:
         args: [--py37-plus]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-executables-have-shebangs
         stages: [manual]
@@ -52,3 +52,11 @@ repos:
           - --show-error-codes
           - --show-error-context
           - --ignore-missing-imports
+
+  - repo: local
+    hooks:
+      - id: pytest-coverage
+        name: all tests pass and coverage is at least 95%
+        entry: pytest --cov=. --cov-fail-under=95
+        language: system
+        pass_filenames: false
