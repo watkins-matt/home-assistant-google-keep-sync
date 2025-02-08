@@ -38,17 +38,37 @@ class GoogleKeepAPI:
         self._keep = gkeepapi.Keep()
         self._hass = hass
         self._username = username
+        self._username_redacted = self._redact_username(username)
         self._password = password
         self._store = storage.Store(
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
         )
         self._authenticated = False
         self._token = token if token else None
-        _LOGGER.debug("GoogleKeepAPI initialized for user: %s", username)
+        _LOGGER.debug("GoogleKeepAPI initialized for user: %s", self._username_redacted)
+
+    def _redact_username(self, username: str) -> str:
+        """Return a redacted version of the username for logging."""
+        if not username:
+            return "Unknown"
+
+        if "@" in username:
+            local, domain = username.split("@", 1)
+            # Redact the local part: keep only the first character
+            redacted_local = local[0] + "*" * (len(local) - 1) if local else ""
+            # Extract the TLD from the domain if possible
+            if "." in domain:
+                tld = domain.split(".")[-1]
+                return f"{redacted_local}@.{tld}"
+            return f"{redacted_local}@"
+
+        return username[0] + "*" * (len(username) - 1)
 
     async def async_login_with_saved_state(self) -> bool:
         """Log in to Google Keep using the saved state and token."""
-        _LOGGER.debug("Attempting login with saved state for user: %s", self._username)
+        _LOGGER.debug(
+            "Attempting login with saved state for user: %s", self._username_redacted
+        )
         # Load the saved token and state
         (
             saved_token,
@@ -64,22 +84,22 @@ class GoogleKeepAPI:
                 self._token = saved_token  # Use the saved token
                 _LOGGER.debug(
                     "Successfully logged in with saved state for user: %s",
-                    self._username,
+                    self._username_redacted,
                 )
             except gkeepapi.exception.LoginException as e:
                 _LOGGER.error(
                     "Failed to resume Google Keep with token and state for user %s: %s",
-                    self._username,
+                    self._username_redacted,
                     e,
                 )
                 return False
             except gkeepapi.exception.ResyncRequiredException as e:
                 _LOGGER.warning(
-                    "Full resync required for user %s: %s", self._username, e
+                    "Full resync required for user %s: %s", self._username_redacted, e
                 )
                 return False
         else:
-            _LOGGER.debug("No saved state found for user: %s", self._username)
+            _LOGGER.debug("No saved state found for user: %s", self._username_redacted)
             return False
 
         self._authenticated = True
@@ -87,7 +107,9 @@ class GoogleKeepAPI:
 
     async def async_login_with_saved_token(self) -> bool:
         """Log in to Google Keep using the saved token."""
-        _LOGGER.debug("Attempting login with saved token for user: %s", self._username)
+        _LOGGER.debug(
+            "Attempting login with saved token for user: %s", self._username_redacted
+        )
         if self._username and self._token:
             try:
                 await self._hass.async_add_executor_job(
@@ -97,17 +119,17 @@ class GoogleKeepAPI:
                 await self._async_save_state_and_token()
                 _LOGGER.debug(
                     "Successfully logged in with saved token for user: %s",
-                    self._username,
+                    self._username_redacted,
                 )
             except gkeepapi.exception.LoginException as e:
                 _LOGGER.error(
                     "Failed to resume Google Keep with token for user %s: %s",
-                    self._username,
+                    self._username_redacted,
                     e,
                 )
                 return False
         else:
-            _LOGGER.debug("No saved token found for user: %s", self._username)
+            _LOGGER.debug("No saved token found for user: %s", self._username_redacted)
             return False
 
         self._authenticated = True
@@ -115,7 +137,9 @@ class GoogleKeepAPI:
 
     async def async_login_with_password(self) -> bool:
         """Login to Google Keep using the username and password."""
-        _LOGGER.debug("Attempting login with password for user: %s", self._username)
+        _LOGGER.debug(
+            "Attempting login with password for user: %s", self._username_redacted
+        )
         try:
             await self._hass.async_add_executor_job(
                 self._keep.login, self._username, self._password
@@ -129,7 +153,7 @@ class GoogleKeepAPI:
             _LOGGER.error(
                 "Failed to login to Google Keep with "
                 "username and password for user %s: %s",
-                self._username,
+                self._username_redacted,
                 e,
             )
             return False
@@ -139,7 +163,9 @@ class GoogleKeepAPI:
 
     async def authenticate(self) -> bool:
         """Log in to Google Keep."""
-        _LOGGER.debug("Starting authentication process for user: %s", self._username)
+        _LOGGER.debug(
+            "Starting authentication process for user: %s", self._username_redacted
+        )
         if not await self.async_login_with_saved_state():
             if not await self.async_login_with_saved_token():
                 if not await self.async_login_with_password():
@@ -148,7 +174,7 @@ class GoogleKeepAPI:
                     )
                     return False
 
-        _LOGGER.debug("Authentication successful for user: %s", self._username)
+        _LOGGER.debug("Authentication successful for user: %s", self._username_redacted)
         return True
 
     @property
@@ -192,13 +218,13 @@ class GoogleKeepAPI:
             _LOGGER.error(
                 "List with ID %s not found in Google Keep for user: %s",
                 list_id,
-                self._username,
+                self._username_redacted,
             )
             raise Exception(f"List with ID {list_id} not found in Google Keep.")
 
     async def _async_save_state_and_token(self) -> None:
         """Save the current state, token, and username of Google Keep."""
-        _LOGGER.debug("Saving state and token for user: %s", self._username)
+        _LOGGER.debug("Saving state and token for user: %s", self._username_redacted)
         state = await self._hass.async_add_executor_job(self._keep.dump)
 
         if not self._token:
@@ -207,28 +233,30 @@ class GoogleKeepAPI:
         await self._store.async_save(
             {"token": self._token, "state": state, "username": self._username}
         )
-        _LOGGER.debug("State and token saved for user: %s", self._username)
+        _LOGGER.debug("State and token saved for user: %s", self._username_redacted)
 
     async def _async_clear_token(self) -> None:
         """Clear the saved token."""
-        _LOGGER.debug("Clearing token for user: %s", self._username)
+        _LOGGER.debug("Clearing token for user: %s", self._username_redacted)
         await self._store.async_save({"token": None, "username": None})
-        _LOGGER.debug("Token cleared for user: %s", self._username)
+        _LOGGER.debug("Token cleared for user: %s", self._username_redacted)
 
     async def _async_load_state_and_token(
         self,
     ) -> tuple[str | None, str | None, str | None]:
         """Load the saved state and token of Google Keep."""
-        _LOGGER.debug("Loading state and token for user: %s", self._username)
+        _LOGGER.debug("Loading state and token for user: %s", self._username_redacted)
         data = await self._store.async_load()
         if not data:
-            _LOGGER.debug("No saved state or token found for user: %s", self._username)
+            _LOGGER.debug(
+                "No saved state or token found for user: %s", self._username_redacted
+            )
             return None, None, None
 
         state = data.get("state")
         token = data.get("token")
         saved_username = data.get("username")
-        _LOGGER.debug("Loaded state and token for user: %s", self._username)
+        _LOGGER.debug("Loaded state and token for user: %s", self._username_redacted)
         return token, state, saved_username
 
     @authenticated_required

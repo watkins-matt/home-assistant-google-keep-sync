@@ -480,3 +480,20 @@ async def test_change_case(google_keep_api, mock_hass):
         google_keep_api.change_case("chocolate milk", ListCase.SENTENCE)
         == "Chocolate milk"
     )
+
+
+@pytest.mark.parametrize(
+    "input_username,expected",
+    [
+        ("", "Unknown"),
+        ("username", "u*******"),
+        ("username@example.com", "u*******@.com"),
+        ("username@localhost", "u*******@"),
+        ("username@sub.example.com", "u*******@.com"),
+        ("username@example.net", "u*******@.net"),
+    ],
+)
+def test_redact_username(google_keep_api, input_username: str, expected) -> None:
+    """Test _redact_username returns correct redaction."""
+    result = google_keep_api._redact_username(input_username)
+    assert result == expected
