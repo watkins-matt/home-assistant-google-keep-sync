@@ -353,9 +353,9 @@ class GoogleKeepAPI:
 
             # Only get the lists that are configured to sync
             for list_id in lists_to_sync:
-                keep_list: (
-                    gkeepapi.node.List | None
-                ) = await self._hass.async_add_executor_job(self._keep.get, list_id)
+                keep_list: gkeepapi.node.List | None = (
+                    await self._hass.async_add_executor_job(self._keep.get, list_id)
+                )
                 if keep_list is None:
                     _LOGGER.warning(
                         f"List with ID {list_id} not found. It may have been deleted."
