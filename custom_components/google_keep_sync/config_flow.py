@@ -96,7 +96,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.info(
                 "Fetched %d lists for user %s",
                 len(all_lists),
-                self.config_entry.data["username"],
+                api.redact_username(self.config_entry.data["username"]),
             )
 
             visible_lists = [

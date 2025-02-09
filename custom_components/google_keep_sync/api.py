@@ -41,7 +41,7 @@ class GoogleKeepAPI:
 
         self._hass = hass
         self._username = username
-        self._username_redacted = self._redact_username(username)
+        self._username_redacted = self.redact_username(username)
         self._password = password
         self._store = storage.Store(
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
@@ -51,7 +51,7 @@ class GoogleKeepAPI:
         self._last_synced: list[gkeepapi.node.List] = []
         _LOGGER.debug("GoogleKeepAPI initialized for user: %s", self._username_redacted)
 
-    def _redact_username(self, username: str) -> str:
+    def redact_username(self, username: str) -> str:
         """Return a redacted version of the username for logging."""
         if not username:
             return "Unknown"
@@ -353,9 +353,9 @@ class GoogleKeepAPI:
 
             # Only get the lists that are configured to sync
             for list_id in lists_to_sync:
-                keep_list: gkeepapi.node.List | None = (
-                    await self._hass.async_add_executor_job(self._keep.get, list_id)
-                )
+                keep_list: (
+                    gkeepapi.node.List | None
+                ) = await self._hass.async_add_executor_job(self._keep.get, list_id)
                 if keep_list is None:
                     _LOGGER.warning(
                         f"List with ID {list_id} not found. It may have been deleted."
