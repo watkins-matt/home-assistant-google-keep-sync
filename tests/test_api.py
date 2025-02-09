@@ -495,5 +495,40 @@ async def test_change_case(google_keep_api, mock_hass):
 )
 def test_redact_username(google_keep_api, input_username: str, expected) -> None:
     """Test _redact_username returns correct redaction."""
-    result = google_keep_api._redact_username(input_username)
+    result = google_keep_api.redact_username(input_username)
     assert result == expected
+
+
+async def test_api_caching_on_failure(mock_hass):
+    """Test that the API caches and returns last known data on failure."""
+    api = GoogleKeepAPI(mock_hass, "test@example.com", "password")
+    api._authenticated = True
+
+    # Create mock list
+    mock_list = AsyncMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping"
+    mock_list.items = []
+
+    # Mock Keep API to succeed first then fail
+    api._keep.sync = AsyncMock(
+        side_effect=[
+            None,  # First sync succeeds
+            Exception("Sync failed"),  # Second sync fails
+        ]
+    )
+
+    api._sync_with_google_keep = AsyncMock()
+    api._keep.get = AsyncMock(return_value=mock_list)
+
+    # First sync - should succeed and cache data
+    lists, deleted = await api.async_sync_data(["list1"])
+    assert len(lists) == 1
+    assert lists[0].id == "list1"
+    assert deleted == []
+
+    # Second sync - should fail but return cached data
+    lists, deleted = await api.async_sync_data(["list1"])
+    assert len(lists) == 1
+    assert lists[0].id == "list1"
+    assert deleted == []

@@ -8,6 +8,8 @@ import gkeepapi
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import storage
 
+from .exponential_backoff import exponential_backoff
+
 STORAGE_KEY = "google_keep_sync"
 STORAGE_VERSION = 1
 
@@ -36,18 +38,20 @@ class GoogleKeepAPI:
     ):
         """Initialize the API."""
         self._keep = gkeepapi.Keep()
+
         self._hass = hass
         self._username = username
-        self._username_redacted = self._redact_username(username)
+        self._username_redacted = self.redact_username(username)
         self._password = password
         self._store = storage.Store(
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
         )
         self._authenticated = False
         self._token = token if token else None
+        self._last_synced: list[gkeepapi.node.List] = []
         _LOGGER.debug("GoogleKeepAPI initialized for user: %s", self._username_redacted)
 
-    def _redact_username(self, username: str) -> str:
+    def redact_username(self, username: str) -> str:
         """Return a redacted version of the username for logging."""
         if not username:
             return "Unknown"
@@ -320,6 +324,17 @@ class GoogleKeepAPI:
         _LOGGER.debug("Fetched %d lists from Google Keep", len(lists))
         return lists
 
+    @exponential_backoff(
+        max_retries=5,
+        base_delay=1.0,
+        backoff_factor=3.0,
+        exceptions=(Exception,),
+    )
+    async def _sync_with_google_keep(self):
+        """Sync with Google Keep using exponential backoff for retry."""
+        await self._hass.async_add_executor_job(self._keep.sync)
+        _LOGGER.debug("Successfully synced with Google Keep")
+
     @authenticated_required
     async def async_sync_data(
         self,
@@ -334,9 +349,7 @@ class GoogleKeepAPI:
         synced_lists: list[gkeepapi.node.List] = []
 
         try:
-            # Run the synchronous Keep sync method in the executor
-            await self._hass.async_add_executor_job(self._keep.sync)
-            _LOGGER.debug("Initial sync with Google Keep completed")
+            await self._sync_with_google_keep()
 
             # Only get the lists that are configured to sync
             for list_id in lists_to_sync:
@@ -385,11 +398,13 @@ class GoogleKeepAPI:
                 _LOGGER.debug("Lists were modified, forced immediate resync completed")
 
             _LOGGER.debug("Sync completed, returning %d lists", len(synced_lists))
+
+            self._last_synced = synced_lists
             return synced_lists, deleted_list_ids
 
-        except gkeepapi.exception.SyncException as e:
+        except Exception as e:
             _LOGGER.error("Failed to sync with Google Keep: %s", e)
-            return [], []
+            return (self._last_synced, [])
 
     @staticmethod
     def is_list_sorted(items: list[gkeepapi.node.ListItem]) -> bool:

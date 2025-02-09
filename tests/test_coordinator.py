@@ -8,7 +8,6 @@ import pytest
 from homeassistant.const import EVENT_CALL_SERVICE
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.google_keep_sync.api import GoogleKeepAPI
 from custom_components.google_keep_sync.const import DOMAIN
@@ -576,12 +575,7 @@ async def test_exception_during_entity_removal(
                 new_callable=MagicMock,
             ) as mock_logger,
         ):
-            # Execute the update and expect an UpdateFailed exception
-            with pytest.raises(
-                UpdateFailed,
-                match="Error communicating with API: Removal failed",
-            ):
-                await coordinator._async_update_data()
+            await coordinator._async_update_data()
 
             # Assertions
             mock_api.async_sync_data.assert_called_once()
@@ -706,3 +700,35 @@ async def test_handle_deleted_lists_logging(
                 "Updated configuration entry to remove deleted lists: "
                 f"{deleted_list_ids}"
             )
+
+
+async def test_coordinator_network_error_handling(
+    mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
+):
+    """Test coordinator handles network errors gracefully."""
+    from requests.exceptions import ConnectionError
+
+    # Create initial successful data
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping"
+    mock_list.items = []
+    initial_data = [mock_list]
+
+    # Setup API to succeed first then have network error
+    mock_api.async_sync_data = AsyncMock(
+        side_effect=[
+            (initial_data, []),  # First call succeeds
+            ConnectionError("Connection reset by peer"),  # Network error
+        ]
+    )
+
+    coordinator = GoogleKeepSyncCoordinator(mock_hass, mock_api, mock_config_entry)
+
+    # First update - should succeed
+    await coordinator.async_refresh()
+    assert coordinator.data == initial_data
+
+    # Second update - should handle network error gracefully
+    await coordinator.async_refresh()
+    assert coordinator.data == initial_data  # Data should remain unchanged

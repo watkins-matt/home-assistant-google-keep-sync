@@ -11,7 +11,6 @@ from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.update_coordinator import (
     TimestampDataUpdateCoordinator,
-    UpdateFailed,
 )
 
 from .api import GoogleKeepAPI, ListCase
@@ -115,7 +114,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             return synced_lists
         except Exception as error:
             _LOGGER.error("Error communicating with API: %s", error, exc_info=True)
-            raise UpdateFailed(f"Error communicating with API: {error}") from error
+            return self.data
 
     async def _parse_gkeep_data_dict(self) -> dict[str, TodoList]:
         """Parse unchecked gkeep data to a dictionary, with the list id as the key."""
