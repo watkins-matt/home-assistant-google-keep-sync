@@ -212,3 +212,115 @@ async def test_custom_list_prefix(hass, mock_api, mock_coordinator):
     # Test custom prefix
     entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
     assert entity.name == "Foo Grocery List"
+
+
+async def test_handle_coordinator_update(hass, mock_api, mock_coordinator):
+    """Test that _handle_coordinator_update updates entity name and list data."""
+    # Create a dummy list with an initial title and no items
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Original Title"
+    dummy_list.items = []
+
+    # Set a list prefix in the coordinator configuration and assign hass to the entity
+    mock_coordinator.config_entry = MagicMock()
+    mock_coordinator.config_entry.data = {"list_prefix": "Prefix"}
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "Prefix")
+    entity.hass = hass
+
+    # Simulate a coordinator update with an updated list title
+    updated_list = MagicMock()
+    updated_list.id = "test_list"
+    updated_list.title = "Updated Title"
+    updated_list.items = dummy_list.items
+    mock_coordinator.data = [updated_list]
+
+    # Process the coordinator update
+    entity._handle_coordinator_update()
+
+    # Verify that the entity's name is updated to include the new title
+    assert entity._attr_name == "Prefix Updated Title"
+
+
+async def test_todo_items_filtering(mock_api, mock_coordinator):
+    """Test that todo_items property filters out empty or whitespace-only entries."""
+    # Create items: one valid, one empty, and one with only whitespace
+    valid_item = MagicMock(id="1", text="Buy Milk", checked=False)
+    empty_item = MagicMock(id="2", text="", checked=False)
+    whitespace_item = MagicMock(id="3", text="   ", checked=True)
+
+    # Set up a dummy list containing all items
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [valid_item, empty_item, whitespace_item]
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+    items = entity.todo_items
+
+    # Only the valid item should be returned
+    assert len(items) == 1
+    assert items[0].summary == "Buy Milk"
+
+
+async def test_async_create_todo_item_exception(mock_api, mock_coordinator):
+    """Test async_create_todo_item calls async_refresh even if creation fails."""
+    # Create a dummy list with no items
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+    # Force an exception when creating a new todo item
+    entity.api.async_create_todo_item = AsyncMock(side_effect=Exception("Error"))
+    mock_coordinator.async_refresh = AsyncMock()
+
+    item = TodoItem(
+        summary="New Task", uid="new_item", status=TodoItemStatus.NEEDS_ACTION
+    )
+    await entity.async_create_todo_item(item)
+
+    # Verify that a refresh is requested despite the error
+    mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_async_update_todo_item_exception(mock_api, mock_coordinator):
+    """Test async_update_todo_item calls async_refresh even if update fails."""
+    # Create a dummy list with an initial item
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [{"id": "item1", "text": "Old Task", "checked": False}]
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+    # Force an exception during the update operation
+    entity.api.async_update_todo_item = AsyncMock(side_effect=Exception("Update Error"))
+    mock_coordinator.async_refresh = AsyncMock()
+
+    item = TodoItem(
+        summary="Updated Task", uid="item1", status=TodoItemStatus.COMPLETED
+    )
+    await entity.async_update_todo_item(item)
+
+    # Confirm that a data refresh is still requested
+    mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_async_delete_todo_items_exception(mock_api, mock_coordinator):
+    """Test async_delete_todo_items calls async_refresh even if deletion fails."""
+    # Create a dummy list with a single item
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [{"id": "item1", "text": "Task", "checked": False}]
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+    # Force an exception during the deletion process
+    entity.api.async_delete_todo_item = AsyncMock(side_effect=Exception("Delete Error"))
+    mock_coordinator.async_refresh = AsyncMock()
+
+    await entity.async_delete_todo_items(["item1"])
+
+    # Verify that async_refresh is called despite the deletion error
+    mock_coordinator.async_refresh.assert_called_once()
