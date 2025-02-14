@@ -109,7 +109,8 @@ cat <<EOL > "$VS_CODE_WORKSPACE"
         ],
         "python.analysis.extraPaths": [
             "/workspaces/home-assistant-core/homeassistant"
-        ]
+        ],
+        "ruff.configuration": "/workspaces/home-assistant-google-keep-sync/ruff.toml",
     }
 }
 EOL
