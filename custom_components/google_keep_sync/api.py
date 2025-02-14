@@ -113,7 +113,7 @@ class GoogleKeepAPI:
                         None,
                         True,
                     )
-
+                    self._authenticated = True
                     return True
                 except gkeepapi.exception.LoginException as e:
                     _LOGGER.error(
