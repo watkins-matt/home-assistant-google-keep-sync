@@ -5,6 +5,7 @@ import logging
 from enum import StrEnum
 
 import gkeepapi
+from gkeepapi.exception import ResyncRequiredException
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import storage
 
@@ -83,7 +84,7 @@ class GoogleKeepAPI:
         if saved_token and saved_state and saved_username:
             try:
                 await self._hass.async_add_executor_job(
-                    self._keep.resume, self._username, saved_token, saved_state
+                    self._keep.authenticate, self._username, saved_token, saved_state
                 )
                 self._token = saved_token  # Use the saved token
                 _LOGGER.debug(
@@ -97,11 +98,30 @@ class GoogleKeepAPI:
                     e,
                 )
                 return False
-            except gkeepapi.exception.ResyncRequiredException as e:
+            except gkeepapi.exception.ResyncRequiredException:
                 _LOGGER.warning(
-                    "Full resync required for user %s: %s", self._username_redacted, e
+                    "Full resync required for user %s", self._username_redacted
                 )
-                return False
+                try:
+                    await self._hass.async_add_executor_job(self._keep.sync, True)
+                    await self._async_save_state_and_token()
+
+                    await self._hass.async_add_executor_job(
+                        self._keep.authenticate,
+                        self._username,
+                        saved_token,
+                        None,
+                        True,
+                    )
+
+                    return True
+                except gkeepapi.exception.LoginException as e:
+                    _LOGGER.error(
+                        "Failed to login to Google Keep with token for user %s: %s",
+                        self._username_redacted,
+                        e,
+                    )
+                    return False
         else:
             _LOGGER.debug("No saved state found for user: %s", self._username_redacted)
             return False
@@ -151,7 +171,8 @@ class GoogleKeepAPI:
             self._token = self._keep.getMasterToken()  # Store the new token
             await self._async_save_state_and_token()
             _LOGGER.debug(
-                "Successfully logged in with password for user: %s", self._username
+                "Successfully logged in with password for user: %s",
+                self._username_redacted,
             )
         except gkeepapi.exception.LoginException as e:
             _LOGGER.error(
@@ -174,7 +195,8 @@ class GoogleKeepAPI:
             if not await self.async_login_with_saved_token():
                 if not await self.async_login_with_password():
                     _LOGGER.error(
-                        "All authentication methods failed for user: %s", self._username
+                        "All authentication methods failed for user: %s",
+                        self._username_redacted,
                     )
                     return False
 
@@ -201,7 +223,7 @@ class GoogleKeepAPI:
                 _LOGGER.error(
                     "Attempted to call %s without authentication for user: %s",
                     func.__name__,
-                    api_instance._username,
+                    api_instance._username_redacted,
                 )
                 raise Exception(
                     "Not authenticated with Google Keep. Please authenticate first."
@@ -314,8 +336,13 @@ class GoogleKeepAPI:
     async def fetch_all_lists(self) -> list[gkeepapi.node.List]:
         """Fetch all lists from Google Keep."""
         _LOGGER.debug("Fetching all lists from Google Keep")
+
         # Ensure the API is synced
-        await self._hass.async_add_executor_job(self._keep.sync)
+        try:
+            await self._hass.async_add_executor_job(self._keep.sync)
+        except ResyncRequiredException as e:
+            _LOGGER.exception("Resync required, performing full resync: %s", e)
+            await self._hass.async_add_executor_job(self._keep.sync, True)
 
         # Retrieve all lists
         lists = [
@@ -332,8 +359,12 @@ class GoogleKeepAPI:
     )
     async def _sync_with_google_keep(self):
         """Sync with Google Keep using exponential backoff for retry."""
-        await self._hass.async_add_executor_job(self._keep.sync)
-        _LOGGER.debug("Successfully synced with Google Keep")
+        try:
+            await self._hass.async_add_executor_job(self._keep.sync)
+            _LOGGER.debug("Successfully synced with Google Keep")
+        except ResyncRequiredException as e:
+            _LOGGER.exception("Resync required, performing full resync: %s", e)
+            await self._hass.async_add_executor_job(self._keep.sync, True)
 
     @authenticated_required
     async def async_sync_data(
@@ -436,10 +467,10 @@ class GoogleKeepAPI:
         """Change the case of the given text based on the specified case type."""
         if case_type == ListCase.UPPER:
             return text.upper()
-        elif case_type == ListCase.LOWER:
+        if case_type == ListCase.LOWER:
             return text.lower()
-        elif case_type == ListCase.SENTENCE:
+        if case_type == ListCase.SENTENCE:
             return text.capitalize()
-        elif case_type == ListCase.TITLE:
+        if case_type == ListCase.TITLE:
             return text.title()
         return text

@@ -35,6 +35,7 @@ def google_keep_api(mock_hass):
         api._keep = mock_keep.return_value
         api._keep.login = AsyncMock()
         api._keep.resume = AsyncMock()
+        api._keep.authenticate = AsyncMock()
         api._keep.sync = AsyncMock()
         api._keep.dump = AsyncMock(return_value=TEST_STATE)
         api._keep.getMasterToken = MagicMock(return_value=TEST_TOKEN)
@@ -131,7 +132,7 @@ async def test_authenticate_failed_resume(google_keep_api, mock_hass, mock_store
         "username": TEST_USERNAME,
     }
     google_keep_api._store = mock_store
-    google_keep_api._keep.resume = AsyncMock(
+    google_keep_api._keep.authenticate = AsyncMock(
         side_effect=gkeepapi.exception.LoginException
     )
     google_keep_api._keep.login = AsyncMock(
