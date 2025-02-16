@@ -28,7 +28,7 @@ def mock_hass():
         *args, **kwargs
     )
     mock_hass.config_entries = MagicMock()
-    mock_hass.config_entries.async_update_entry = AsyncMock()
+    mock_hass.config_entries.async_update_entry = MagicMock()
     return mock_hass
 
 
@@ -346,7 +346,7 @@ async def test_some_deleted_lists(
         mock_entity_registry = MagicMock(spec=entity_registry.EntityRegistry)
         # Assume list2 has an entity
         mock_entity_registry.async_get_entity_id.return_value = "todo.list.list2"
-        mock_entity_registry.async_remove = AsyncMock()
+        mock_entity_registry.async_remove = MagicMock()
         with patch(
             "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
             return_value=mock_entity_registry,
@@ -419,7 +419,7 @@ async def test_all_deleted_lists(
             return f"todo.list.{unique_id.split('.')[-1]}"
 
         mock_entity_registry.async_get_entity_id.side_effect = get_entity_id
-        mock_entity_registry.async_remove = AsyncMock()
+        mock_entity_registry.async_remove = MagicMock()
         with patch(
             "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
             return_value=mock_entity_registry,
@@ -507,7 +507,7 @@ async def test_deleted_lists_without_entities(
             return f"todo.list.{unique_id.split('.')[-1]}"
 
         mock_entity_registry.async_get_entity_id.side_effect = get_entity_id
-        mock_entity_registry.async_remove = AsyncMock()
+        mock_entity_registry.async_remove = MagicMock()
         with patch(
             "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
             return_value=mock_entity_registry,
@@ -632,7 +632,7 @@ async def test_notify_new_items_deleted_lists(
         # Mock entity registry
         mock_entity_registry = MagicMock(spec=entity_registry.EntityRegistry)
         mock_entity_registry.async_get_entity_id.return_value = "todo.list.list2"
-        mock_entity_registry.async_remove = AsyncMock()
+        mock_entity_registry.async_remove = MagicMock()
         with patch(
             "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
             return_value=mock_entity_registry,
@@ -676,7 +676,7 @@ async def test_handle_deleted_lists_logging(
         # Mock entity registry
         mock_entity_registry = MagicMock(spec=entity_registry.EntityRegistry)
         mock_entity_registry.async_get_entity_id.return_value = "todo.list.list1"
-        mock_entity_registry.async_remove = AsyncMock()
+        mock_entity_registry.async_remove = MagicMock()
         with (
             patch(
                 "custom_components.google_keep_sync.coordinator.async_get_entity_registry",

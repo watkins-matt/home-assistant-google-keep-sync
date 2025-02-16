@@ -9,9 +9,7 @@ from homeassistant.const import EVENT_CALL_SERVICE, Platform
 from homeassistant.core import EventOrigin, HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from homeassistant.helpers.update_coordinator import (
-    TimestampDataUpdateCoordinator,
-)
+from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
 
 from .api import GoogleKeepAPI, ListCase
 from .const import DOMAIN, SCAN_INTERVAL
@@ -90,7 +88,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                     **self.config_entry.data,
                     "lists_to_sync": updated_lists_to_sync,
                 }
-                await self.hass.config_entries.async_update_entry(
+                self.hass.config_entries.async_update_entry(
                     self.config_entry, data=new_data
                 )
                 _LOGGER.info(
@@ -233,7 +231,7 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
                 _LOGGER.info(
                     f"Removing entity {entity_id} for deleted list {deleted_list_id}"
                 )
-                await entity_registry.async_remove(entity_id)
+                entity_registry.async_remove(entity_id)
                 removed_entities += 1
             else:
                 _LOGGER.debug(f"No entity found for deleted list {deleted_list_id}")
