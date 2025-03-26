@@ -8,7 +8,7 @@ repos:
 
   # Use mypyc-compiled black, see https://black.readthedocs.io/en/stable/integrations/source_version_control.html
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
+    rev: 24.10.0
     hooks:
       - id: black
         language_version: python3.13
