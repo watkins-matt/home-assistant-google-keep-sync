@@ -326,15 +326,15 @@ async def test_is_list_sorted(google_keep_api, mock_hass):
 
     # List is sorted
     sorted_list = [item1, item2, item3]
-    assert google_keep_api.is_list_sorted(sorted_list) is True, (
-        "The list should be identified as sorted"
-    )
+    assert (
+        google_keep_api.is_list_sorted(sorted_list) is True
+    ), "The list should be identified as sorted"
 
     # List is not sorted
     not_sorted_list = [item3, item1, item2]
-    assert google_keep_api.is_list_sorted(not_sorted_list) is False, (
-        "The list should be identified as not sorted"
-    )
+    assert (
+        google_keep_api.is_list_sorted(not_sorted_list) is False
+    ), "The list should be identified as not sorted"
 
 
 async def test_async_login_with_saved_token(google_keep_api, mock_hass):
