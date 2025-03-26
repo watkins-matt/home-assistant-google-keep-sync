@@ -17,12 +17,14 @@ def exponential_backoff(
     """Return a decorator that applies exponential backoff to an async function.
 
     Args:
+    ----
       max_retries: Maximum number of retries before failing
       base_delay: Starting delay in seconds before retrying
       backoff_factor: Factor by which the delay is multiplied
       exceptions: Tuple of exceptions that trigger a retry
 
     Returns:
+    -------
       A decorator for an async function, implementing exponential backoff
 
     """

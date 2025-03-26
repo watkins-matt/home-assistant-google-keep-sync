@@ -20,7 +20,11 @@ async def test_success_on_first_try():
     duration = time.time() - start
 
     assert result == "Success"
-    assert duration < 1.0  # Should not wait if it succeeds immediately
+
+    maximum_expected_function_duration = 1.0
+    assert (
+        duration < maximum_expected_function_duration
+    )  # Should not wait if it succeeds immediately
 
 
 @pytest.mark.asyncio
