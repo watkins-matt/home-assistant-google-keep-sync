@@ -238,8 +238,23 @@ class GoogleKeepAPI:
         _LOGGER.debug("Creating new todo item in list %s: %s", list_id, text)
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
-            await self._hass.async_add_executor_job(keep_list.add, text, False)
+            await self._hass.async_add_executor_job(
+                keep_list.add,
+                text,
+                False,
+                gkeepapi.node.NewListItemPlacementValue.Bottom,
+            )
             _LOGGER.debug("Successfully created new todo item in list %s", list_id)
+            _LOGGER.debug(
+                "Last item: %s, Sort Value: %s",
+                keep_list.children[-1].text,
+                keep_list.items[-1].sort,
+            )
+            _LOGGER.debug(
+                "First item: %s, Sort Value: %s",
+                keep_list.children[0],
+                keep_list.items[0].sort,
+            )
         else:
             _LOGGER.error(
                 "List with ID %s not found in Google Keep for user: %s",
@@ -384,9 +399,9 @@ class GoogleKeepAPI:
 
             # Only get the lists that are configured to sync
             for list_id in lists_to_sync:
-                keep_list: gkeepapi.node.List | None = (
-                    await self._hass.async_add_executor_job(self._keep.get, list_id)
-                )
+                keep_list: (
+                    gkeepapi.node.List | None
+                ) = await self._hass.async_add_executor_job(self._keep.get, list_id)
                 if keep_list is None:
                     _LOGGER.warning(
                         f"List with ID {list_id} not found. It may have been deleted."
