@@ -39,7 +39,12 @@ async def async_service_request_sync(coordinator: GoogleKeepSyncCoordinator, cal
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Google Keep Sync from a config entry."""
     # Create API instance
-    api = GoogleKeepAPI(hass, entry.data["username"], entry.data["password"])
+    api = GoogleKeepAPI(
+        hass,
+        entry.data["username"],
+        entry.data.get("password", ""),
+        entry.data.get("token"),
+    )
 
     # Authenticate with the API
     if not await api.authenticate():
