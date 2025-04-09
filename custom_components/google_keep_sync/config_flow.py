@@ -84,7 +84,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             api = GoogleKeepAPI(
                 self.hass,
                 self.config_entry.data["username"],
-                self.config_entry.data["password"],
+                self.config_entry.data.get("password", ""),
+                self.config_entry.data.get("token"),
             )
 
             if not await api.authenticate():
