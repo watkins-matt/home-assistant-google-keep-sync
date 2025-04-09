@@ -23,15 +23,13 @@ INVALID_AUTH_URL = "https://github.com/watkins-matt/home-assistant-google-keep-s
 SCHEMA_USER_DATA_STEP = vol.Schema(
     {
         vol.Required("username"): str,
-        vol.Optional("password"): str,
-        vol.Optional("token"): str,
+        vol.Required("token"): str,
     }
 )
 
 SCHEMA_REAUTH = vol.Schema(
     {
-        vol.Optional("password"): str,
-        vol.Optional("token"): str,
+        vol.Required("token"): str,
     }
 )
 
@@ -254,7 +252,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Validate the user input allows us to connect."""
         _LOGGER.debug("Validating user input")
         username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
         token = data.get("token", "").strip()
 
         # Check for blank username
@@ -265,26 +262,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not re.match(r"[^@]+@[^@]+\.[^@]+", username):
             raise InvalidEmailError
 
-        # Check password and token conditions
-        if password and token:
-            raise BothPasswordAndTokenError
-        if not (password or token):
-            raise NeitherPasswordNorTokenError
+        # Check if token is provided
+        if not token:
+            raise MissingTokenError
 
         # Validate token format
         valid_token_length = 223
-        if token and (
-            not token.startswith("aas_et/") or len(token) != valid_token_length
-        ):
+        if not token.startswith("aas_et/") or len(token) != valid_token_length:
             raise InvalidTokenFormatError
 
-        self.api = GoogleKeepAPI(hass, username, password, token)
+        self.api = GoogleKeepAPI(hass, username, "", token)
         success = await self.api.authenticate()
 
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {"username": username, "password": password, "token": token}
+        self.user_data = {"username": username, "token": token}
 
     async def handle_user_input(self, user_input: dict[str, Any]) -> dict[str, str]:
         """Handle user input, checking for any errors."""
@@ -304,12 +297,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except InvalidEmailError:
             _LOGGER.warning("Invalid email format")
             errors["base"] = "invalid_email"
-        except BothPasswordAndTokenError:
-            _LOGGER.warning("Both password and token provided")
-            errors["base"] = "both_password_and_token"
-        except NeitherPasswordNorTokenError:
-            _LOGGER.warning("Neither password nor token provided")
-            errors["base"] = "neither_password_nor_token"
+        except MissingTokenError:
+            _LOGGER.warning("Token not provided")
+            errors["base"] = "missing_token"
         except InvalidTokenFormatError:
             _LOGGER.warning("Invalid token format")
             errors["base"] = "invalid_token_format"
@@ -487,13 +477,9 @@ class InvalidEmailError(HomeAssistantError):
     """Exception raised when the username is not a valid email."""
 
 
-class BothPasswordAndTokenError(HomeAssistantError):
-    """Exception raised when both password and token are provided."""
-
-
-class NeitherPasswordNorTokenError(HomeAssistantError):
-    """Exception raised when neither password nor token are provided."""
-
-
 class InvalidTokenFormatError(HomeAssistantError):
     """Exception raised when the token format is invalid."""
+
+
+class MissingTokenError(HomeAssistantError):
+    """Exception raised when the token is missing."""

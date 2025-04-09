@@ -11,17 +11,15 @@
             "already_configured": "Integrationen är redan konfigurerad för denna användare.",
             "blank_username": "Användarnamnet får inte vara tomt.",
             "invalid_email": "Ogiltig e-postadress.",
-            "both_password_and_token": "Ange antingen lösenord eller token, inte båda.",
-            "neither_password_nor_token": "Antingen lösenord eller token måste anges.",
+            "missing_token": "Token måste anges.",
             "invalid_token_format": "Ogiltig token angiven. Token måste börja med aas_et/ och vara 223 tecken lång."
         },
         "step": {
             "user": {
                 "title": "Ange inloggningsuppgifter",
-                "description": "Ange ditt användarnamn och lösenord för ditt Google-konto (lämna token-fältet tomt). Vänligen se till att du använder ett applösenord; du kan skapa ett på https://myaccount.google.com/apppasswords.\n\nAtt logga in med användarnamn och lösenord kan misslyckas med vissa versioner av biblioteket. Om detta händer kan du logga in med ditt användarnamn och token som du manuellt har hämtat istället (lämna lösenordsfältet tomt). Se [Readme]({invalid_auth_url}) för detaljer.",
+                "description": "Ange ditt användarnamn och token för ditt Google-konto. Se [Readme]({invalid_auth_url}) för instruktioner om hur du får en token.",
                 "data": {
                     "username": "Användarnamn",
-                    "password": "Lösenord",
                     "token": "Token"
                 }
             },
