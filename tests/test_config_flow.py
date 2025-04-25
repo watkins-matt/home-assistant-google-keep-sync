@@ -7,7 +7,10 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import UnknownFlow
 
-from custom_components.google_keep_sync.config_flow import CannotConnectError
+from custom_components.google_keep_sync.config_flow import (
+    CannotConnectError,
+    ConfigFlow,
+)
 from custom_components.google_keep_sync.const import DOMAIN
 from tests.conftest import MockConfigEntry
 
@@ -728,3 +731,125 @@ async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api
         # Verify the entry data is updated with the new token
         updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
         assert updated_entry.data["token"] == new_oauth_token
+
+
+async def test_options_flow_authentication_failure(hass, mock_api_instance):
+    """Test options flow handling authentication failure."""
+    # Mock API to fail authentication
+    mock_api_instance.authenticate = AsyncMock(return_value=False)
+
+    # Create a config entry
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "user@example.com", "token": "token123"},
+        entry_id="test_entry",
+    )
+    config_entry.add_to_hass(hass)
+
+    # Initialize options flow
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+
+    # Verify we abort with reauth_required
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_required"
+
+
+async def test_options_flow_fetch_lists_error(hass, mock_api_instance):
+    """Test options flow handling API errors when fetching lists."""
+    # Mock API authentication to succeed but list fetch to fail
+    mock_api_instance.authenticate = AsyncMock(return_value=True)
+    mock_api_instance.fetch_all_lists = AsyncMock(side_effect=Exception("API Error"))
+
+    # Create a config entry
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "user@example.com", "token": "token123"},
+        entry_id="test_entry",
+    )
+    config_entry.add_to_hass(hass)
+
+    # Initialize options flow
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+
+    # Verify we show form with error
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "list_fetch_error"
+
+
+async def test_reauth_confirm_with_invalid_token(hass, mock_api_instance):
+    """Test reauth confirm step with invalid token."""
+    # Set up the API to fail authentication
+    mock_api_instance.authenticate = AsyncMock(return_value=False)
+
+    # Create a config entry
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"username": "user@example.com", "token": "old_token"},
+        entry_id="test",
+    )
+    config_entry.add_to_hass(hass)
+
+    # Start reauth flow
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": config_entry.entry_id,
+        },
+        data=config_entry.data,
+    )
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth_confirm"
+
+    # Submit invalid token
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"token": "invalid_token"}
+    )
+
+    # Check that we're shown the form again with error
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "invalid_auth"
+
+
+async def test_reauth_entry_not_found(hass, mock_api_instance):
+    """Test reauth flow when entry is not found."""
+    # Start reauth flow with an entry_id that doesn't exist
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_REAUTH, "entry_id": "non_existent_id"},
+    )
+
+    # Should abort with config_entry_not_found
+    assert result["type"] == "abort"
+    assert result["reason"] == "config_entry_not_found"
+
+
+async def test_step_options_with_user_input(hass, mock_api_instance, mock_keep_list):
+    """Test options flow with user input."""
+    # Mock API to succeed and return lists
+    mock_api_instance.authenticate = AsyncMock(return_value=True)
+    mock_api_instance.fetch_all_lists = AsyncMock(return_value=[mock_keep_list])
+
+    # Create a config flow
+    flow = ConfigFlow()
+    flow.hass = hass
+    flow.api = mock_api_instance
+    flow.user_data = {"username": "user@example.com", "token": "token123"}
+
+    # Call async_step_options with user input
+    user_input = {
+        "lists_to_sync": ["list1"],
+        "list_prefix": "Test: ",
+        "list_auto_sort": True,
+        "list_item_case": "upper",
+    }
+
+    result = await flow.async_step_options(user_input)
+
+    # Verify result creates entry with correct data
+    assert result["type"] == "create_entry"
+    assert result["data"]["lists_to_sync"] == ["list1"]
+    assert result["data"]["list_prefix"] == "Test: "
+    assert result["data"]["list_auto_sort"] is True
+    assert result["data"]["list_item_case"] == "upper"

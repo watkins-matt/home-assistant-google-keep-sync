@@ -535,3 +535,179 @@ async def test_api_caching_on_failure(mock_hass):
     assert len(lists) == 1
     assert lists[0].id == "list1"
     assert deleted == []
+
+
+async def test_is_oauth_token(google_keep_api):
+    """Test the is_oauth_token method correctly identifies different token types."""
+    # Test empty token
+    assert google_keep_api.is_oauth_token("") is False
+    assert google_keep_api.is_oauth_token(None) is False
+
+    # Test master token (starts with "aas_et/" and is 223 chars)
+    master_token = "aas_et/" + "x" * 216  # 223 chars total
+    assert google_keep_api.is_oauth_token(master_token) is False
+
+    # Test OAuth token (doesn't start with "aas_et/" or not 223 chars)
+    oauth_token = "ya29.some_oauth_token"
+    assert google_keep_api.is_oauth_token(oauth_token) is True
+
+    # Test token with "aas_et/" prefix but wrong length
+    wrong_length_token = "aas_et/too_short"
+    assert google_keep_api.is_oauth_token(wrong_length_token) is True
+
+
+async def test_async_login_with_oauth_token_success(google_keep_api, mock_hass):
+    """Test successful OAuth token login."""
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = "ya29.oauth_token"
+
+    # Need to properly mock the executor job to return a master token
+    def executor_mock(*args, **kwargs):
+        # This is the function that gets called when self._hass.async_add_executor_job is executed
+        # It should return a master token
+        return "master_token_123"
+
+    # Replace the entire mock_hass.async_add_executor_job with our own mock
+    mock_hass.async_add_executor_job = AsyncMock(side_effect=executor_mock)
+
+    # Patch _async_save_state_and_token method and ensure resume is properly mocked
+    with patch.object(google_keep_api, "_async_save_state_and_token", AsyncMock()):
+        # Call the method we're testing
+        result = await google_keep_api.async_login_with_oauth_token()
+
+        # Assertions
+        assert result is True
+        assert google_keep_api._authenticated is True
+        assert google_keep_api._token == "master_token_123"
+        google_keep_api._keep.resume.assert_called_once_with(
+            TEST_USERNAME, "master_token_123", None
+        )
+
+
+async def test_async_login_with_oauth_token_no_credentials(google_keep_api):
+    """Test OAuth token login with no credentials."""
+    google_keep_api._username = ""
+    google_keep_api._token = None
+
+    result = await google_keep_api.async_login_with_oauth_token()
+
+    assert result is False
+    assert google_keep_api._authenticated is False
+
+
+async def test_async_login_with_oauth_token_exchange_failed(google_keep_api, mock_hass):
+    """Test OAuth token login with failed token exchange."""
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = "ya29.oauth_token"
+
+    # Mock gpsoauth.exchange_token to return error
+    with patch("gpsoauth.exchange_token", return_value={"Error": "Invalid token"}):
+        result = await google_keep_api.async_login_with_oauth_token()
+
+        assert result is False
+        assert google_keep_api._authenticated is False
+
+
+async def test_async_login_with_oauth_token_exception(google_keep_api, mock_hass):
+    """Test OAuth token login handling exceptions."""
+    google_keep_api._username = TEST_USERNAME
+    google_keep_api._token = "ya29.oauth_token"
+
+    # Mock gpsoauth.exchange_token to raise exception
+    with patch("gpsoauth.exchange_token", side_effect=Exception("Connection error")):
+        result = await google_keep_api.async_login_with_oauth_token()
+
+        assert result is False
+        assert google_keep_api._authenticated is False
+
+
+async def test_sync_with_google_keep_retry(google_keep_api, mock_hass):
+    """Test the _sync_with_google_keep method with retries."""
+    # Set up mocks
+    google_keep_api._authenticated = True
+
+    # First call raises exception, second succeeds
+    google_keep_api._keep.sync.side_effect = [
+        Exception("Network error"),
+        None,  # Success on retry
+    ]
+
+    # Call the method
+    await google_keep_api._sync_with_google_keep()
+
+    # Verify sync was called twice (initial attempt + retry)
+    assert google_keep_api._keep.sync.call_count == 2
+
+
+async def test_sync_with_google_keep_resync_required(google_keep_api, mock_hass):
+    """Test the _sync_with_google_keep method with ResyncRequiredException."""
+    google_keep_api._authenticated = True
+
+    # First call raises ResyncRequiredException
+    google_keep_api._keep.sync.side_effect = [
+        gkeepapi.exception.ResyncRequiredException(),
+        None,  # Success on full resync
+    ]
+
+    # Call the method
+    await google_keep_api._sync_with_google_keep()
+
+    # Verify sync was called twice (first attempt + full resync)
+    assert google_keep_api._keep.sync.call_count == 2
+    # Verify the second call was a full resync
+    google_keep_api._keep.sync.assert_called_with(True)
+
+
+async def test_async_sync_data_with_deleted_lists(google_keep_api, mock_hass):
+    """Test synchronizing data with deleted lists."""
+    google_keep_api._authenticated = True
+
+    # First list exists
+    mock_list1 = MagicMock(spec=gkeepapi.node.List)
+    mock_list1.id = "list1_id"
+    mock_list1.title = "List 1"
+
+    # Define a get_side_effect that returns None for list2_id (deleted list)
+    def get_side_effect(list_id):
+        if list_id == "list1_id":
+            return mock_list1
+        return None  # list2_id not found
+
+    # Mock _sync_with_google_keep properly
+    with patch.object(google_keep_api, "_sync_with_google_keep", AsyncMock()):
+        # Mock the _keep.get method
+        def async_get(list_id):
+            return get_side_effect(list_id)
+
+        # We need to properly configure the side effect as an async method
+        google_keep_api._keep.get = AsyncMock(side_effect=async_get)
+
+        # Set the last_synced property so we have something to return on error
+        google_keep_api._last_synced = [mock_list1]
+
+        # Call with both lists
+        lists, deleted = await google_keep_api.async_sync_data(["list1_id", "list2_id"])
+
+        # Verify results
+        assert len(lists) == 1
+        assert lists[0].id == "list1_id"
+        assert "list2_id" in deleted
+
+
+async def test_async_clear_token(google_keep_api, mock_hass, mock_store):
+    """Test clearing the saved token."""
+    google_keep_api._store = mock_store
+    google_keep_api._username = TEST_USERNAME
+
+    await google_keep_api._async_clear_token()
+
+    mock_store.async_save.assert_called_once_with({"token": None, "username": None})
+
+
+async def test_authenticated_required_decorator(google_keep_api, mock_hass):
+    """Test the authenticated_required decorator."""
+    google_keep_api._authenticated = False
+
+    # Try to call a method with the decorator when not authenticated
+    with pytest.raises(Exception, match="Not authenticated with Google Keep"):
+        await google_keep_api.async_create_todo_item("list_id", "test item")

@@ -732,3 +732,227 @@ async def test_coordinator_network_error_handling(
     # Second update - should handle network error gracefully
     await coordinator.async_refresh()
     assert coordinator.data == initial_data  # Data should remain unchanged
+
+
+async def test_async_update_data_exception(hass, mock_api, mock_config_entry):
+    """Test that _async_update_data handles exceptions gracefully."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Mock the API to raise an exception
+    mock_api.async_sync_data.side_effect = Exception("Test exception")
+
+    # Initialize some data
+    coordinator.data = [MagicMock()]
+
+    # Call the update method
+    result = await coordinator._async_update_data()
+
+    # Verify the update handled the exception and returned the previous data
+    assert result == coordinator.data
+    mock_api.async_sync_data.assert_called_once()
+
+
+async def test_update_entity_names_missing_entity(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names handles missing entities gracefully."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create a mock list
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping List"
+
+    # Set up entity registry to return None
+    mock_entity_registry.async_get_entity_id.return_value = None
+
+    # Call the update entity names method
+    await coordinator._update_entity_names([mock_list])
+
+    # Verify entity registry was checked
+    mock_entity_registry.async_get_entity_id.assert_called_once()
+    # No exceptions should be raised
+
+
+async def test_update_entity_names_entity_not_in_registry(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names handles entities not found in registry."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create a mock list
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping List"
+
+    # Set up entity registry to return an entity ID but no entity
+    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+    mock_entity_registry.async_get.return_value = None
+
+    # Call the update entity names method
+    await coordinator._update_entity_names([mock_list])
+
+    # Verify entity registry was checked
+    mock_entity_registry.async_get_entity_id.assert_called_once()
+    mock_entity_registry.async_get.assert_called_once_with("todo.list1")
+    # No exceptions should be raised
+
+
+async def test_update_entity_names_user_named_entity(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names respects user-named entities."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create a mock list
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping List"
+
+    # Set up entity registry to return an entity with a user-defined name
+    mock_entity = MagicMock()
+    mock_entity.entity_id = "todo.list1"
+    mock_entity.name = "Custom Named List"  # User-defined name
+    mock_entity.original_name = "Old Shopping List"
+
+    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+    mock_entity_registry.async_get.return_value = mock_entity
+
+    # Call the update entity names method
+    await coordinator._update_entity_names([mock_list])
+
+    # Verify entity registry was checked
+    mock_entity_registry.async_get_entity_id.assert_called_once()
+    mock_entity_registry.async_get.assert_called_once()
+
+    # Entity should be added to user_named_entities list
+    assert "todo.list1" in coordinator._user_named_entities
+
+    # Entity name should not be updated
+    mock_entity_registry.async_update_entity.assert_not_called()
+
+
+async def test_update_entity_names_with_prefix(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names applies list prefix correctly."""
+    # Set up coordinator with a config entry that includes a prefix
+    mock_config_entry.data["list_prefix"] = "TEST: "
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create a mock list
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping List"
+
+    # Set up entity registry to return an entity without a user-defined name
+    mock_entity = MagicMock()
+    mock_entity.entity_id = "todo.list1"
+    mock_entity.name = None  # No user-defined name
+    mock_entity.original_name = "Old Shopping List"
+
+    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+    mock_entity_registry.async_get.return_value = mock_entity
+
+    # Call the update entity names method
+    await coordinator._update_entity_names([mock_list])
+
+    # Verify entity registry was updated with the prefixed name
+    mock_entity_registry.async_update_entity.assert_called_once_with(
+        "todo.list1", original_name="TEST: Shopping List"
+    )
+
+
+async def test_remove_deleted_entities(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _remove_deleted_entities removes entities for deleted lists."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Set up entity registry to return an entity ID for the first list but not the second
+    mock_entity_registry.async_get_entity_id.side_effect = [
+        "todo.list1",  # First list (found)
+        None,  # Second list (not found)
+    ]
+
+    # Call the remove deleted entities method
+    await coordinator._remove_deleted_entities(["list1", "list2"])
+
+    # Verify the first entity was removed
+    mock_entity_registry.async_remove.assert_called_once_with("todo.list1")
+
+
+async def test_notify_new_items(hass, mock_api, mock_config_entry):
+    """Test _notify_new_items fires events for new items."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create test items
+    new_items = [
+        TodoItemData(item="Buy milk", entity_id="todo.list1"),
+        TodoItemData(item="Buy eggs", entity_id="todo.list1"),
+    ]
+
+    # Track bus calls by patching the async_fire method instead of replacing it
+    with patch.object(hass.bus, "async_fire") as mock_async_fire:
+        # Call the notify method
+        await coordinator._notify_new_items(new_items)
+
+        # Verify events were fired for each item
+        assert mock_async_fire.call_count == 2
+
+        # Check first call
+        first_call_args = mock_async_fire.call_args_list[0]
+        assert first_call_args[0][0] == EVENT_CALL_SERVICE
+        assert first_call_args[1]["origin"] == EventOrigin.remote
+        assert first_call_args[1]["service_data"]["item"] == "Buy milk"
+        assert first_call_args[1]["service_data"]["entity_id"] == ["todo.list1"]
+
+        # Check second call
+        second_call_args = mock_async_fire.call_args_list[1]
+        assert second_call_args[0][0] == EVENT_CALL_SERVICE
+        assert second_call_args[1]["origin"] == EventOrigin.remote
+        assert second_call_args[1]["service_data"]["item"] == "Buy eggs"
+        assert second_call_args[1]["service_data"]["entity_id"] == ["todo.list1"]
+
+
+async def test_get_new_items_added_with_new_list(hass, mock_api, mock_config_entry):
+    """Test _get_new_items_added handles new lists in updated data."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create original and updated lists
+    original_lists = {
+        "list1": TodoList(
+            name="List 1",
+            items={
+                "item1": TodoItem(summary="Item 1", checked=False),
+            },
+        ),
+    }
+
+    updated_lists = {
+        "list1": TodoList(
+            name="List 1",
+            items={
+                "item1": TodoItem(summary="Item 1", checked=False),
+            },
+        ),
+        "list2": TodoList(
+            name="List 2",
+            items={
+                "item2": TodoItem(summary="Item 2", checked=False),
+            },
+        ),
+    }
+
+    # Call the method to find new items
+    new_items = await coordinator._get_new_items_added(original_lists, updated_lists)
+
+    # No new items should be found for list2 since it's a new list not in original_lists
+    assert len(new_items) == 0
