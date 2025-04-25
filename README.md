@@ -49,7 +49,25 @@ The integration requires Home Assistant 2023.11 or later, due to the fact that t
     - Generate a token using the instructions below and enter the token.
     - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
 
-## Generating a Token Using the Docker Container
+## Authentication Options
+
+The Google Keep Sync integration supports two types of authentication tokens:
+
+### 1. Master Token
+
+This is the traditional token that starts with "aas_et/" and is 223 characters long. This token provides direct access to Google Keep.
+
+### 2. OAuth Token
+
+OAuth tokens offer an alternative authentication method if you have issues getting the master token. OAuth tokens are automatically exchanged for master tokens during the authentication process.
+
+Choose the authentication method that works best for you - both are fully supported by the integration.
+
+## Generating a Token
+
+You have two options to generate authentication tokens:
+
+### Option 1: Master Token Using the Docker Container
 
 You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
 
@@ -97,7 +115,15 @@ sudo apt-get install docker.io
 
 4. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
 
-5. Use this token in the integration's configuration process by entering it into the token field (make sure you leave the password field blank).
+5. Use this token in the integration's configuration process by entering it into the token field.
+
+### Option 2: OAuth Token
+
+If you're experiencing issues with the master token approach, you can use an OAuth token instead:
+
+1. Follow the instructions at [gpsoauth-java documentation](https://github.com/rukins/gpsoauth-java/blob/master/README.md#receiving-an-authentication-token) to obtain an OAuth token.
+
+2. Enter the resulting token during the configuration process.
 
 ## Usage
 

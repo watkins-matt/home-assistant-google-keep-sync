@@ -5,6 +5,7 @@ import logging
 from enum import StrEnum
 
 import gkeepapi
+import gpsoauth
 from gkeepapi.exception import ResyncRequiredException
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import storage
@@ -13,6 +14,7 @@ from .exponential_backoff import exponential_backoff
 
 STORAGE_KEY = "google_keep_sync"
 STORAGE_VERSION = 1
+ANDROID_ID = "0123456789abcdef"  # Default Android ID, used for OAuth token exchange
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +70,82 @@ class GoogleKeepAPI:
             return f"{redacted_local}@"
 
         return username[0] + "*" * (len(username) - 1)
+
+    @staticmethod
+    def is_oauth_token(token: str) -> bool:
+        """Determine if the token is an OAuth token rather than a master token.
+
+        OAuth tokens don't start with "aas_et/" and aren't 223 characters long.
+        """
+        if not token:
+            return False
+
+        # Master tokens start with "aas_et/" and are 223 characters
+        master_token_length = 223
+        is_master_token = (
+            token.startswith("aas_et/") and len(token) == master_token_length
+        )
+
+        return not is_master_token
+
+    async def async_login_with_oauth_token(self) -> bool:
+        """Log in to Google Keep using an OAuth token.
+
+        This method exchanges the OAuth token for a master token using gpsoauth.
+        """
+        _LOGGER.debug(
+            "Attempting login with OAuth token for user: %s", self._username_redacted
+        )
+
+        if not self._username or not self._token:
+            _LOGGER.debug("No username or token provided for OAuth token exchange")
+            return False
+
+        try:
+            # Exchange OAuth token for a master token
+            def exchange_token():
+                master_response = gpsoauth.exchange_token(
+                    self._username, self._token, ANDROID_ID
+                )
+
+                if "Token" not in master_response:
+                    _LOGGER.error(
+                        "Failed to exchange OAuth token: %s",
+                        master_response.get("Error", "Unknown error"),
+                    )
+                    return None
+
+                return master_response["Token"]
+
+            master_token = await self._hass.async_add_executor_job(exchange_token)
+
+            if not master_token:
+                return False
+
+            # Save the master token and use it for authentication
+            self._token = master_token
+
+            # Now use the master token to resume the session
+            await self._hass.async_add_executor_job(
+                self._keep.resume, self._username, self._token, None
+            )
+
+            await self._async_save_state_and_token()
+            _LOGGER.debug(
+                "Successfully logged in with OAuth token for user: %s",
+                self._username_redacted,
+            )
+
+            self._authenticated = True
+            return True
+
+        except Exception as e:
+            _LOGGER.exception(
+                "Failed to authenticate with OAuth token for user %s: %s",
+                self._username_redacted,
+                e,
+            )
+            return False
 
     async def async_login_with_saved_state(self) -> bool:
         """Log in to Google Keep using the saved state and token."""
@@ -193,7 +271,16 @@ class GoogleKeepAPI:
         )
         if not await self.async_login_with_saved_state():
             if not await self.async_login_with_saved_token():
-                if not await self.async_login_with_password():
+                # Check if token is OAuth token and try that authentication method
+                if self._token and self.is_oauth_token(self._token):
+                    if not await self.async_login_with_oauth_token():
+                        if not await self.async_login_with_password():
+                            _LOGGER.error(
+                                "All authentication methods failed for user: %s",
+                                self._username_redacted,
+                            )
+                            return False
+                elif not await self.async_login_with_password():
                     _LOGGER.error(
                         "All authentication methods failed for user: %s",
                         self._username_redacted,
@@ -399,9 +486,9 @@ class GoogleKeepAPI:
 
             # Only get the lists that are configured to sync
             for list_id in lists_to_sync:
-                keep_list: gkeepapi.node.List | None = (
-                    await self._hass.async_add_executor_job(self._keep.get, list_id)
-                )
+                keep_list: (
+                    gkeepapi.node.List | None
+                ) = await self._hass.async_add_executor_job(self._keep.get, list_id)
                 if keep_list is None:
                     _LOGGER.warning(
                         f"List with ID {list_id} not found. It may have been deleted."

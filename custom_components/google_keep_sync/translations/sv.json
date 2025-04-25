@@ -12,12 +12,12 @@
             "blank_username": "Användarnamnet får inte vara tomt.",
             "invalid_email": "Ogiltig e-postadress.",
             "missing_token": "Token måste anges.",
-            "invalid_token_format": "Ogiltig token angiven. Token måste börja med aas_et/ och vara 223 tecken lång."
+            "invalid_token_format": "Ogiltig token angiven. Token måste antingen vara en master token som börjar med aas_et/ eller en giltig OAuth token."
         },
         "step": {
             "user": {
                 "title": "Ange inloggningsuppgifter",
-                "description": "Ange ditt användarnamn och token för ditt Google-konto. Se [Readme]({invalid_auth_url}) för instruktioner om hur du får en token.",
+                "description": "Ange ditt användarnamn och token för ditt Google-konto. Du kan använda antingen en master token eller en OAuth token. Se [Readme]({invalid_auth_url}) för instruktioner om hur du får en token.",
                 "data": {
                     "username": "Användarnamn",
                     "token": "Token"
@@ -41,7 +41,7 @@
             },
             "reauth_confirm": {
                 "title": "Autentisera igen",
-                "description": "Google Keep Sync-integrationen behöver autentisera ditt konto igen"
+                "description": "Google Keep Sync-integrationen behöver autentisera ditt konto igen. Du kan ange antingen en master token eller en OAuth token."
             }
         }
     },

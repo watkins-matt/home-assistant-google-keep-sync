@@ -12,12 +12,12 @@
             "blank_username": "El nombre de usuario no puede estar en blanco.",
             "invalid_email": "Dirección de correo electrónico inválida.",
             "missing_token": "Se debe proporcionar un token.",
-            "invalid_token_format": "Token inválido proporcionado. El token debe comenzar con aas_et/ y tener 223 caracteres."
+            "invalid_token_format": "Token inválido proporcionado. El token debe ser un token maestro que comience con aas_et/ o un token OAuth válido."
         },
         "step": {
             "user": {
                 "title": "Introduce las credenciales",
-                "description": "Introduce tu nombre de usuario y token de tu cuenta de Google. Consulta [Léame]({invalid_auth_url}) para obtener instrucciones sobre cómo obtener un token.",
+                "description": "Introduce tu nombre de usuario y token de tu cuenta de Google. Puedes usar un token maestro o un token OAuth. Consulta [Léame]({invalid_auth_url}) para obtener instrucciones sobre cómo obtener un token.",
                 "data": {
                     "username": "Nombre de usuario",
                     "token": "Token"
@@ -41,7 +41,7 @@
             },
             "reauth_confirm": {
                 "title": "Reautenticar",
-                "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta"
+                "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta. Puedes introducir un token maestro o un token OAuth."
             }
         }
     },

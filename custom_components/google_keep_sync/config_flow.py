@@ -266,12 +266,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not token:
             raise MissingTokenError
 
-        # Validate token format
-        valid_token_length = 223
-        if not token.startswith("aas_et/") or len(token) != valid_token_length:
-            raise InvalidTokenFormatError
-
+        # Create API instance with the provided credentials
         self.api = GoogleKeepAPI(hass, username, "", token)
+
+        # Both master tokens and OAuth tokens are handled by the API here
         success = await self.api.authenticate()
 
         if not success:

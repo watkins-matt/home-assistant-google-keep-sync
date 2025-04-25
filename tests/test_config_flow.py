@@ -46,10 +46,9 @@ def mock_google_keep_api():
 
 
 async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
-    """Test the initial user setup form, with only a username and password."""
+    """Test the initial user setup form, with a username and token."""
     user_name = "testuser@example.com"
-    user_password = "testpass"
-    user_token = ""
+    user_token = "oauth_token_example"
 
     # Initiate the config flow
     initial_form_result = await hass.config_entries.flow.async_init(
@@ -61,7 +60,6 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     # Submit user credentials
     user_input = {
         "username": user_name,
-        "password": user_password,
         "token": user_token,
     }
     credentials_form_result = await hass.config_entries.flow.async_configure(
@@ -88,7 +86,6 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     assert final_form_result["title"] == user_name.lower()
     assert final_form_result["data"] == {
         "username": user_name,
-        "password": user_password,
         "token": user_token,
         "lists_to_sync": ["list_id_1", "list_id_2"],
         "list_prefix": "testprefix",
@@ -99,7 +96,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
 
 async def test_user_form_blank_username(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of a blank username."""
-    user_input = {"username": " ", "password": "wrongpass"}
+    user_input = {"username": " ", "token": "sometoken"}
 
     # Get the mock instance and set authenticate to return False
     mock_instance = mock_google_keep_api.return_value
@@ -117,12 +114,11 @@ async def test_user_form_blank_username(hass: HomeAssistant, mock_google_keep_ap
     assert auth_fail_result["errors"] == {"base": "blank_username"}
 
 
-async def test_user_form_password_and_token(hass: HomeAssistant, mock_google_keep_api):
-    """Test handling of a blank username."""
+async def test_user_form_missing_token(hass: HomeAssistant, mock_google_keep_api):
+    """Test handling of a missing token."""
     user_input = {
         "username": "test@example.com",
-        "password": "password",
-        "token": "token",
+        "token": "",  # Empty token
     }
 
     # Get the mock instance and set authenticate to return False
@@ -138,12 +134,12 @@ async def test_user_form_password_and_token(hass: HomeAssistant, mock_google_kee
     )
 
     assert auth_fail_result["type"] == "form"
-    assert auth_fail_result["errors"] == {"base": "both_password_and_token"}
+    assert auth_fail_result["errors"] == {"base": "missing_token"}
 
 
 async def test_user_form_invalid_email(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of an invalid email address."""
-    user_input = {"username": "testuser", "password": "wrongpass"}
+    user_input = {"username": "testuser", "token": "sometoken"}
 
     # Get the mock instance and set authenticate to return False
     mock_instance = mock_google_keep_api.return_value
@@ -164,8 +160,8 @@ async def test_user_form_invalid_email(hass: HomeAssistant, mock_google_keep_api
 async def test_user_form_neither_password_nor_token(
     hass: HomeAssistant, mock_google_keep_api
 ):
-    """Test handling of a missing password and token."""
-    user_input = {"username": "test@example.com", "password": "", "token": ""}
+    """Test handling of a missing token."""
+    user_input = {"username": "test@example.com", "token": ""}
 
     # Get the mock instance and set authenticate to return False
     mock_instance = mock_google_keep_api.return_value
@@ -180,12 +176,12 @@ async def test_user_form_neither_password_nor_token(
     )
 
     assert auth_fail_result["type"] == "form"
-    assert auth_fail_result["errors"] == {"base": "neither_password_nor_token"}
+    assert auth_fail_result["errors"] == {"base": "missing_token"}
 
 
 async def test_invalid_auth_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of invalid authentication."""
-    user_input = {"username": "testuser@example.com", "password": "wrongpass"}
+    user_input = {"username": "testuser@example.com", "token": "wrongtoken"}
 
     # Get the mock instance and set authenticate to return False
     mock_instance = mock_google_keep_api.return_value
@@ -207,8 +203,7 @@ async def test_invalid_token(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of an invalid token."""
     user_input = {
         "username": "testuser@example.com",
-        "password": "",
-        "token": "invalidtoken",
+        "token": "",  # Empty token
     }
 
     # Get the mock instance and set authenticate to return False
@@ -224,12 +219,12 @@ async def test_invalid_token(hass: HomeAssistant, mock_google_keep_api):
     )
 
     assert auth_fail_result["type"] == "form"
-    assert auth_fail_result["errors"] == {"base": "invalid_token_format"}
+    assert auth_fail_result["errors"] == {"base": "missing_token"}
 
 
 async def test_user_input_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test user input handling."""
-    user_input = {"username": "validuser@example.com", "password": "validpassword"}
+    user_input = {"username": "validuser@example.com", "token": "validtoken"}
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
@@ -249,7 +244,7 @@ async def test_unexpected_exception_handling(hass: HomeAssistant, mock_google_ke
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
         context={"source": config_entries.SOURCE_USER},
-        data={"username": "user@example.com", "password": "pass"},
+        data={"username": "user@example.com", "token": "some_token"},
     )
 
     # Assert that an unknown error is handled
@@ -263,7 +258,7 @@ async def test_reauth_flow(hass: HomeAssistant, mock_google_keep_api):
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user@example.com",
-        data={"username": "user@example.com", "password": "old_password"},
+        data={"username": "user@example.com", "token": "old_token"},
     )
     mock_entry.add_to_hass(hass)
 
@@ -280,18 +275,18 @@ async def test_reauth_flow(hass: HomeAssistant, mock_google_keep_api):
     assert init_flow_result["type"] == "form"
     assert init_flow_result["step_id"] == "reauth_confirm"
 
-    # Provide the new password
-    new_password_input = {"password": "new_password"}
+    # Provide the new token
+    new_token_input = {"token": "new_token"}
     config_flow_result = await hass.config_entries.flow.async_configure(
-        init_flow_result["flow_id"], new_password_input
+        init_flow_result["flow_id"], new_token_input
     )
 
     # Assert that reauthentication is successful and the flow is aborted
     assert config_flow_result["type"] == "abort"
 
-    # Verify the entry data is updated with the new password
+    # Verify the entry data is updated with the new token
     updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
-    assert updated_entry.data["password"] == "new_password"
+    assert updated_entry.data["token"] == "new_token"
 
 
 async def test_options_flow(
@@ -343,7 +338,7 @@ async def test_reauth_flow_invalid_credentials(
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user@example.com",
-        data={"username": "user@example.com", "password": "old_password"},
+        data={"username": "user@example.com", "token": "old_token"},
     )
     mock_entry.add_to_hass(hass)
 
@@ -356,10 +351,10 @@ async def test_reauth_flow_invalid_credentials(
         DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
     )
 
-    # Provide the incorrect new password
-    incorrect_password_input = {"password": "wrong_password"}
+    # Provide the incorrect new token
+    incorrect_token_input = {"token": "wrong_token"}
     config_flow_result = await hass.config_entries.flow.async_configure(
-        init_flow_result["flow_id"], incorrect_password_input
+        init_flow_result["flow_id"], incorrect_token_input
     )
 
     # Assert that reauthentication fails
@@ -387,26 +382,26 @@ async def test_options_flow_fetch_list_failure(
     assert init_form_response["errors"] == {"base": "list_fetch_error"}
 
 
-async def test_empty_username_or_password(hass: HomeAssistant):
-    """Test that empty username or password is handled."""
+async def test_empty_username_or_token(hass: HomeAssistant):
+    """Test that empty username or token is handled."""
     # Test with empty username
-    user_input = {"username": "", "password": "password"}
+    user_input = {"username": "", "token": "sometoken"}
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
     )
     assert result["errors"] == {"base": "blank_username"}
 
-    # Test with empty password
-    user_input = {"username": "username@example.com", "password": ""}
+    # Test with empty token
+    user_input = {"username": "username@example.com", "token": ""}
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
     )
-    assert result["errors"] == {"base": "neither_password_nor_token"}
+    assert result["errors"] == {"base": "missing_token"}
 
 
 async def test_authentication_network_issue(hass: HomeAssistant, mock_google_keep_api):
     """Test network issues during authentication."""
-    user_input = {"username": "testuser@example.com", "password": "testpass"}
+    user_input = {"username": "testuser@example.com", "token": "testtoken"}
 
     # Simulate network issue
     mock_instance = mock_google_keep_api.return_value
@@ -422,7 +417,7 @@ async def test_authentication_network_issue(hass: HomeAssistant, mock_google_kee
 async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api):
     """Test that creating a duplicate configuration entry is handled."""
     user_name = "duplicateuser@example.com"
-    user_password = "testpass"
+    user_token = "testtoken"
 
     unique_id = f"{DOMAIN}.{user_name.lower()}"
 
@@ -430,12 +425,12 @@ async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api)
     existing_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=unique_id,
-        data={"username": user_name, "password": user_password},
+        data={"username": user_name, "token": user_token},
     )
     existing_entry.add_to_hass(hass)
 
     # Attempt to create a new entry with the same unique_id
-    user_input = {"username": user_name, "password": "newpass"}
+    user_input = {"username": user_name, "token": "newtoken"}
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}, data=user_input
     )
@@ -446,14 +441,14 @@ async def test_duplicate_config_entry(hass: HomeAssistant, mock_google_keep_api)
 async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
     """Test reauthentication flow is aborted on success."""
     user_name = "testuser@example.com"
-    old_password = "old_password"
-    new_password = "new_password"
+    old_token = "old_token"
+    new_token = "new_token"
 
     # Create a mock entry to simulate existing config entry
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id=user_name.lower(),
-        data={"username": user_name, "password": old_password},
+        data={"username": user_name, "token": old_token},
     )
     mock_entry.add_to_hass(hass)
 
@@ -466,10 +461,10 @@ async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
         DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
     )
 
-    # Provide the new password
-    new_password_input = {"password": new_password}
+    # Provide the new token
+    new_token_input = {"token": new_token}
     config_flow_result = await hass.config_entries.flow.async_configure(
-        init_flow_result["flow_id"], new_password_input
+        init_flow_result["flow_id"], new_token_input
     )
 
     # Assert that reauthentication is successful and the flow is aborted
@@ -567,7 +562,7 @@ async def test_user_form_cannot_connect(hass: HomeAssistant, mock_google_keep_ap
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    user_input = {"username": "testuser@example.com", "password": "testpass"}
+    user_input = {"username": "testuser@example.com", "token": "testtoken"}
     result = await hass.config_entries.flow.async_configure(
         initial_form_result["flow_id"], user_input=user_input
     )
@@ -582,7 +577,7 @@ async def test_reauth_confirm_cannot_connect(hass: HomeAssistant, mock_google_ke
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user@example.com",
-        data={"username": "user@example.com", "password": "old_password"},
+        data={"username": "user@example.com", "token": "old_token"},
     )
     mock_entry.add_to_hass(hass)
 
@@ -595,10 +590,10 @@ async def test_reauth_confirm_cannot_connect(hass: HomeAssistant, mock_google_ke
         DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
     )
 
-    # Provide the new password input
-    new_password_input = {"password": "new_password"}
+    # Provide the new token input
+    new_token_input = {"token": "new_token"}
     config_flow_result = await hass.config_entries.flow.async_configure(
-        init_flow_result["flow_id"], new_password_input
+        init_flow_result["flow_id"], new_token_input
     )
 
     # Assert that a network issue error is returned
@@ -615,7 +610,7 @@ async def test_reauth_confirm_entry_not_found(
     mock_entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="user@example.com",
-        data={"username": "user@example.com", "password": "old_password"},
+        data={"username": "user@example.com", "token": "old_token"},
     )
 
     # Initiate the reauthentication flow with the non-existent entry's ID
@@ -627,10 +622,109 @@ async def test_reauth_confirm_entry_not_found(
     assert init_flow_result["type"] == "abort"
     assert init_flow_result["reason"] == "config_entry_not_found"
 
-    # Provide the new password input
-    new_password_input = {"password": "new_password"}
+    # Provide the new token input
+    new_token_input = {"token": "new_token"}
 
     with pytest.raises(UnknownFlow):
         await hass.config_entries.flow.async_configure(
-            init_flow_result["flow_id"], user_input=new_password_input
+            init_flow_result["flow_id"], user_input=new_token_input
         )
+
+
+async def test_user_form_setup_with_oauth_token(
+    hass: HomeAssistant, mock_google_keep_api
+):
+    """Test the initial user setup form with an OAuth token."""
+    user_name = "testuser@example.com"
+    user_token = "oauth_token_example"  # Example OAuth token (not a master token)
+
+    # Configure the mock to support OAuth tokens
+    with patch(
+        "custom_components.google_keep_sync.api.GoogleKeepAPI.is_oauth_token"
+    ) as mock_is_oauth:
+        mock_is_oauth.return_value = True  # Simulate an OAuth token
+
+        # Initiate the config flow
+        initial_form_result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        assert initial_form_result["type"] == "form"
+        assert initial_form_result["errors"] == {}
+
+        # Submit user credentials with OAuth token
+        user_input = {
+            "username": user_name,
+            "token": user_token,
+        }
+        credentials_form_result = await hass.config_entries.flow.async_configure(
+            initial_form_result["flow_id"], user_input=user_input
+        )
+
+        # Check if the next step is the options step
+        assert credentials_form_result["type"] == "form"
+        assert credentials_form_result["step_id"] == "options"
+
+        # Simulate options selection
+        options_input = {
+            "lists_to_sync": ["list_id_1", "list_id_2"],
+            "list_prefix": "testprefix",
+            "list_auto_sort": False,
+            "list_item_case": "no_change",
+        }
+        final_form_result = await hass.config_entries.flow.async_configure(
+            credentials_form_result["flow_id"], user_input=options_input
+        )
+
+        # Check the final result for entry creation
+        assert final_form_result["type"] == "create_entry"
+        assert final_form_result["title"] == user_name.lower()
+        assert final_form_result["data"] == {
+            "username": user_name,
+            "token": user_token,
+            "lists_to_sync": ["list_id_1", "list_id_2"],
+            "list_prefix": "testprefix",
+            "list_auto_sort": False,
+            "list_item_case": "no_change",
+        }
+
+
+async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api):
+    """Test reauthentication flow with an OAuth token."""
+    user_name = "testuser@example.com"
+    old_token = "old_token"
+    new_oauth_token = "oauth_token_example"  # Example OAuth token
+
+    # Create a mock entry to simulate existing config entry
+    mock_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=user_name.lower(),
+        data={"username": user_name, "token": old_token},
+    )
+    mock_entry.add_to_hass(hass)
+
+    # Configure the mock to support OAuth tokens
+    mock_instance = mock_google_keep_api.return_value
+    with patch(
+        "custom_components.google_keep_sync.api.GoogleKeepAPI.is_oauth_token"
+    ) as mock_is_oauth:
+        mock_is_oauth.return_value = True  # Simulate an OAuth token
+        mock_instance.authenticate.return_value = True  # Successful authentication
+
+        # Initiate the reauthentication flow
+        init_flow_result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
+        )
+
+        # Provide the new OAuth token
+        new_token_input = {"token": new_oauth_token}
+        config_flow_result = await hass.config_entries.flow.async_configure(
+            init_flow_result["flow_id"], new_token_input
+        )
+
+        # Assert that reauthentication is successful and the flow is aborted
+        assert config_flow_result["type"] == "abort"
+        assert config_flow_result["reason"] == "reauth_successful"
+
+        # Verify the entry data is updated with the new token
+        updated_entry = hass.config_entries.async_get_entry(mock_entry.entry_id)
+        assert updated_entry.data["token"] == new_oauth_token
