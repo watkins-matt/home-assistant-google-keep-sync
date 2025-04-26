@@ -735,23 +735,27 @@ async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api
 
 async def test_options_flow_authentication_failure(hass, mock_api_instance):
     """Test options flow handling authentication failure."""
-    # Mock API to fail authentication
-    mock_api_instance.authenticate = AsyncMock(return_value=False)
+    # Patch GoogleKeepAPI in config_flow to use our mock
+    with patch(
+        "custom_components.google_keep_sync.config_flow.GoogleKeepAPI",
+        return_value=mock_api_instance,
+    ):
+        mock_api_instance.authenticate = AsyncMock(return_value=False)
 
-    # Create a config entry
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={"username": "user@example.com", "token": "token123"},
-        entry_id="test_entry",
-    )
-    config_entry.add_to_hass(hass)
+        # Create a config entry
+        config_entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={"username": "user@example.com", "token": "token123"},
+            entry_id="test_entry",
+        )
+        config_entry.add_to_hass(hass)
 
-    # Initialize options flow
-    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+        # Initialize options flow
+        result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
-    # Verify we abort with reauth_required
-    assert result["type"] == "abort"
-    assert result["reason"] == "reauth_required"
+        # Should abort due to reauthentication required
+        assert result["type"] == "abort"
+        assert result["reason"] == "reauth_required"
 
 
 async def test_options_flow_fetch_lists_error(hass, mock_api_instance):
@@ -778,38 +782,42 @@ async def test_options_flow_fetch_lists_error(hass, mock_api_instance):
 
 async def test_reauth_confirm_with_invalid_token(hass, mock_api_instance):
     """Test reauth confirm step with invalid token."""
-    # Set up the API to fail authentication
-    mock_api_instance.authenticate = AsyncMock(return_value=False)
+    # Patch GoogleKeepAPI in config_flow
+    with patch(
+        "custom_components.google_keep_sync.config_flow.GoogleKeepAPI",
+        return_value=mock_api_instance,
+    ):
+        mock_api_instance.authenticate = AsyncMock(return_value=False)
 
-    # Create a config entry
-    config_entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={"username": "user@example.com", "token": "old_token"},
-        entry_id="test",
-    )
-    config_entry.add_to_hass(hass)
+        # Create a config entry
+        config_entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={"username": "user@example.com", "token": "old_token"},
+            entry_id="test",
+        )
+        config_entry.add_to_hass(hass)
 
-    # Start reauth flow
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={
-            "source": config_entries.SOURCE_REAUTH,
-            "entry_id": config_entry.entry_id,
-        },
-        data=config_entry.data,
-    )
+        # Start reauth flow
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": config_entry.entry_id,
+            },
+            data=config_entry.data,
+        )
 
-    assert result["type"] == "form"
-    assert result["step_id"] == "reauth_confirm"
+        assert result["type"] == "form"
+        assert result["step_id"] == "reauth_confirm"
 
-    # Submit invalid token
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"token": "invalid_token"}
-    )
+        # Submit invalid token
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"token": "invalid_token"}
+        )
 
-    # Check that we're shown the form again with error
-    assert result["type"] == "form"
-    assert result["errors"]["base"] == "invalid_auth"
+        # Check that we're shown the form again with invalid_auth error
+        assert result["type"] == "form"
+        assert result["errors"]["base"] == "invalid_auth"
 
 
 async def test_reauth_entry_not_found(hass, mock_api_instance):

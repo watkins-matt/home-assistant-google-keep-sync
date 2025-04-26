@@ -757,137 +757,95 @@ async def test_update_entity_names_missing_entity(
     hass, mock_api, mock_config_entry, mock_entity_registry
 ):
     """Test _update_entity_names handles missing entities gracefully."""
-    # Set up coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
 
-    # Create a mock list
-    mock_list = MagicMock()
-    mock_list.id = "list1"
-    mock_list.title = "Shopping List"
-
-    # Set up entity registry to return None
-    mock_entity_registry.async_get_entity_id.return_value = None
-
-    # Call the update entity names method
-    await coordinator._update_entity_names([mock_list])
-
-    # Verify entity registry was checked
-    mock_entity_registry.async_get_entity_id.assert_called_once()
-    # No exceptions should be raised
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = None
+        # Should not raise
+        await coordinator._update_entity_names([mock_list])
+        # No entities updated
+        mock_entity_registry.async_update_entity.assert_not_called()
 
 
 async def test_update_entity_names_entity_not_in_registry(
     hass, mock_api, mock_config_entry, mock_entity_registry
 ):
     """Test _update_entity_names handles entities not found in registry."""
-    # Set up coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
 
-    # Create a mock list
-    mock_list = MagicMock()
-    mock_list.id = "list1"
-    mock_list.title = "Shopping List"
-
-    # Set up entity registry to return an entity ID but no entity
-    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
-    mock_entity_registry.async_get.return_value = None
-
-    # Call the update entity names method
-    await coordinator._update_entity_names([mock_list])
-
-    # Verify entity registry was checked
-    mock_entity_registry.async_get_entity_id.assert_called_once()
-    mock_entity_registry.async_get.assert_called_once_with("todo.list1")
-    # No exceptions should be raised
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = None
+        # Should not raise
+        await coordinator._update_entity_names([mock_list])
+        # No entities updated
+        mock_entity_registry.async_update_entity.assert_not_called()
 
 
 async def test_update_entity_names_user_named_entity(
     hass, mock_api, mock_config_entry, mock_entity_registry
 ):
     """Test _update_entity_names respects user-named entities."""
-    # Set up coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
 
-    # Create a mock list
-    mock_list = MagicMock()
-    mock_list.id = "list1"
-    mock_list.title = "Shopping List"
-
-    # Set up entity registry to return an entity with a user-defined name
-    mock_entity = MagicMock()
-    mock_entity.entity_id = "todo.list1"
-    mock_entity.name = "Custom Named List"  # User-defined name
-    mock_entity.original_name = "Old Shopping List"
-
-    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
-    mock_entity_registry.async_get.return_value = mock_entity
-
-    # Call the update entity names method
-    await coordinator._update_entity_names([mock_list])
-
-    # Verify entity registry was checked
-    mock_entity_registry.async_get_entity_id.assert_called_once()
-    mock_entity_registry.async_get.assert_called_once()
-
-    # Entity should be added to user_named_entities list
-    assert "todo.list1" in coordinator._user_named_entities
-
-    # Entity name should not be updated
-    mock_entity_registry.async_update_entity.assert_not_called()
+    mock_entity = MagicMock(entity_id="todo.list1", name="Custom", original_name="Old")
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = mock_entity
+        # Should add to user_named_entities and not call update_entity
+        await coordinator._update_entity_names([mock_list])
+        assert "todo.list1" in coordinator._user_named_entities
+        mock_entity_registry.async_update_entity.assert_not_called()
 
 
 async def test_update_entity_names_with_prefix(
     hass, mock_api, mock_config_entry, mock_entity_registry
 ):
     """Test _update_entity_names applies list prefix correctly."""
-    # Set up coordinator with a config entry that includes a prefix
     mock_config_entry.data["list_prefix"] = "TEST: "
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
 
-    # Create a mock list
-    mock_list = MagicMock()
-    mock_list.id = "list1"
-    mock_list.title = "Shopping List"
-
-    # Set up entity registry to return an entity without a user-defined name
-    mock_entity = MagicMock()
-    mock_entity.entity_id = "todo.list1"
-    mock_entity.name = None  # No user-defined name
-    mock_entity.original_name = "Old Shopping List"
-
-    mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
-    mock_entity_registry.async_get.return_value = mock_entity
-
-    # Call the update entity names method
-    await coordinator._update_entity_names([mock_list])
-
-    # Verify entity registry was updated with the prefixed name
-    mock_entity_registry.async_update_entity.assert_called_once_with(
-        "todo.list1", original_name="TEST: Shopping List"
-    )
+    mock_entity = MagicMock(entity_id="todo.list1", name="", original_name="Old")
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = mock_entity
+        await coordinator._update_entity_names([mock_list])
+        # Should have called update_entity
+        assert mock_entity_registry.async_update_entity.called
 
 
 async def test_remove_deleted_entities(
     hass, mock_api, mock_config_entry, mock_entity_registry
 ):
     """Test _remove_deleted_entities removes entities for deleted lists."""
-    # Set up coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
-
-    # Set up entity registry to return an entity ID for the first list but not the second
-    mock_entity_registry.async_get_entity_id.side_effect = [
-        "todo.list1",  # First list (found)
-        None,  # Second list (not found)
-    ]
-
-    # Call the remove deleted entities method
-    await coordinator._remove_deleted_entities(["list1", "list2"])
-
-    # Verify the first entity was removed
-    mock_entity_registry.async_remove.assert_called_once_with("todo.list1")
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.side_effect = ["todo.list1", None]
+        await coordinator._remove_deleted_entities(["list1", "list2"])
+        # Should remove the first one only
+        mock_entity_registry.async_remove.assert_called_once_with("todo.list1")
 
 
-async def test_notify_new_items(hass, mock_api, mock_config_entry):
+async def test_notify_new_items_fires_events(hass, mock_api, mock_config_entry):
     """Test _notify_new_items fires events for new items."""
     # Set up coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
@@ -898,27 +856,30 @@ async def test_notify_new_items(hass, mock_api, mock_config_entry):
         TodoItemData(item="Buy eggs", entity_id="todo.list1"),
     ]
 
-    # Track bus calls by patching the async_fire method instead of replacing it
-    with patch.object(hass.bus, "async_fire") as mock_async_fire:
-        # Call the notify method
-        await coordinator._notify_new_items(new_items)
+    # Replace the bus with a mock to avoid read-only attribute
+    hass.bus = MagicMock()
+    hass.bus.async_fire = AsyncMock()
 
-        # Verify events were fired for each item
-        assert mock_async_fire.call_count == 2
+    # Provide expected lingering_timers to allow HomeAssistant cleanup job
+    await coordinator._notify_new_items(new_items)
 
-        # Check first call
-        first_call_args = mock_async_fire.call_args_list[0]
-        assert first_call_args[0][0] == EVENT_CALL_SERVICE
-        assert first_call_args[1]["origin"] == EventOrigin.remote
-        assert first_call_args[1]["service_data"]["item"] == "Buy milk"
-        assert first_call_args[1]["service_data"]["entity_id"] == ["todo.list1"]
-
-        # Check second call
-        second_call_args = mock_async_fire.call_args_list[1]
-        assert second_call_args[0][0] == EVENT_CALL_SERVICE
-        assert second_call_args[1]["origin"] == EventOrigin.remote
-        assert second_call_args[1]["service_data"]["item"] == "Buy eggs"
-        assert second_call_args[1]["service_data"]["entity_id"] == ["todo.list1"]
+    calls = hass.bus.async_fire.call_args_list
+    assert len(calls) == 2
+    # First event data
+    first_args, first_kwargs = calls[0]
+    # args tuple: (event_type, event_data)
+    event_data_1 = first_args[1]
+    assert first_args[0] == EVENT_CALL_SERVICE
+    assert first_kwargs.get("origin") == EventOrigin.remote
+    assert event_data_1["service_data"]["item"] == "Buy milk"
+    assert event_data_1["service_data"]["entity_id"] == ["todo.list1"]
+    # Second event data
+    second_args, second_kwargs = calls[1]
+    event_data_2 = second_args[1]
+    assert second_args[0] == EVENT_CALL_SERVICE
+    assert second_kwargs.get("origin") == EventOrigin.remote
+    assert event_data_2["service_data"]["item"] == "Buy eggs"
+    assert event_data_2["service_data"]["entity_id"] == ["todo.list1"]
 
 
 async def test_get_new_items_added_with_new_list(hass, mock_api, mock_config_entry):

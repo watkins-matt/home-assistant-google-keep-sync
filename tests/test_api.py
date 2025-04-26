@@ -326,15 +326,15 @@ async def test_is_list_sorted(google_keep_api, mock_hass):
 
     # List is sorted
     sorted_list = [item1, item2, item3]
-    assert (
-        google_keep_api.is_list_sorted(sorted_list) is True
-    ), "The list should be identified as sorted"
+    assert google_keep_api.is_list_sorted(sorted_list) is True, (
+        "The list should be identified as sorted"
+    )
 
     # List is not sorted
     not_sorted_list = [item3, item1, item2]
-    assert (
-        google_keep_api.is_list_sorted(not_sorted_list) is False
-    ), "The list should be identified as not sorted"
+    assert google_keep_api.is_list_sorted(not_sorted_list) is False, (
+        "The list should be identified as not sorted"
+    )
 
 
 async def test_async_login_with_saved_token(google_keep_api, mock_hass):
@@ -561,27 +561,27 @@ async def test_async_login_with_oauth_token_success(google_keep_api, mock_hass):
     google_keep_api._username = TEST_USERNAME
     google_keep_api._token = "ya29.oauth_token"
 
-    # Need to properly mock the executor job to return a master token
-    def executor_mock(*args, **kwargs):
-        # This is the function that gets called when self._hass.async_add_executor_job is executed
-        # It should return a master token
-        return "master_token_123"
+    async def executor_job_mock(func, *args, **kwargs):
+        # First call is token exchange, return token string
+        if func is not google_keep_api._keep.resume:
+            return "master_token_123"
+        # For resume call, simulate sync behavior
+        return None
 
-    # Replace the entire mock_hass.async_add_executor_job with our own mock
-    mock_hass.async_add_executor_job = AsyncMock(side_effect=executor_mock)
+    mock_hass.async_add_executor_job = AsyncMock(side_effect=executor_job_mock)
 
-    # Patch _async_save_state_and_token method and ensure resume is properly mocked
+    # Patch _async_save_state_and_token
     with patch.object(google_keep_api, "_async_save_state_and_token", AsyncMock()):
-        # Call the method we're testing
         result = await google_keep_api.async_login_with_oauth_token()
 
-        # Assertions
         assert result is True
         assert google_keep_api._authenticated is True
         assert google_keep_api._token == "master_token_123"
-        google_keep_api._keep.resume.assert_called_once_with(
-            TEST_USERNAME, "master_token_123", None
-        )
+        # Ensure async_add_executor_job was called for resume
+        calls = mock_hass.async_add_executor_job.call_args_list
+        assert calls[1][0][0] == google_keep_api._keep.resume
+        assert calls[1][0][1:] == (TEST_USERNAME, "master_token_123", None)
+        google_keep_api._async_save_state_and_token.assert_called_once()
 
 
 async def test_async_login_with_oauth_token_no_credentials(google_keep_api):
