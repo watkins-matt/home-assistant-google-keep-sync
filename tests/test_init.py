@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
 from custom_components.google_keep_sync import (
+    async_migrate_entry,
     async_service_request_sync,
     async_setup_entry,
     async_unload_entry,
@@ -108,3 +109,80 @@ async def test_async_service_request_sync_too_soon_warning(
         await async_service_request_sync(coordinator, None)
         assert not coordinator.async_refresh.called
         mock_logger.warning.assert_called()
+
+
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        # Migration 1: unique_id update (should also remove password and
+        # go to version 3)
+        {
+            "version": 1,
+            "unique_id": "oldid",
+            "username": "UserA",
+            "token": "tok",
+            "password": "pw",
+            "expected_version": 3,
+            "expected_unique_id": "google_keep_sync.usera",
+            "expected_data": {"username": "UserA", "token": "tok"},
+            "should_fail": False,
+        },
+        # Migration 2: remove password, token present
+        {
+            "version": 2,
+            "unique_id": "google_keep_sync.userb",
+            "username": "UserB",
+            "token": "tok2",
+            "password": "pw2",
+            "expected_version": 3,
+            "expected_unique_id": "google_keep_sync.userb",
+            "expected_data": {"username": "UserB", "token": "tok2"},
+            "should_fail": False,
+        },
+        # Migration 2: remove password, token missing (should fail)
+        {
+            "version": 2,
+            "unique_id": "google_keep_sync.userc",
+            "username": "UserC",
+            "token": None,
+            "password": "pw3",
+            "expected_version": 2,
+            "expected_unique_id": "google_keep_sync.userc",
+            "expected_data": {"username": "UserC"},
+            "should_fail": True,
+        },
+    ],
+)
+async def test_async_migrate_entry(hass, test_case):
+    """Test config entry migrations for Google Keep Sync."""
+    data = {"username": test_case["username"]}
+    if test_case["token"] is not None:
+        data["token"] = test_case["token"]
+    if test_case["password"] is not None:
+        data["password"] = test_case["password"]
+    entry = MagicMock()
+    entry.version = test_case["version"]
+    entry.data = data.copy()
+    entry.unique_id = test_case["unique_id"]
+
+    def update_entry(e, **kwargs):
+        if "data" in kwargs:
+            e.data = kwargs["data"]
+        if "version" in kwargs:
+            e.version = kwargs["version"]
+        if "unique_id" in kwargs:
+            e.unique_id = kwargs["unique_id"]
+
+    hass.config_entries.async_update_entry = update_entry
+    result = await async_migrate_entry(hass, entry)
+    if test_case["should_fail"]:
+        assert result is False
+        assert entry.version == test_case["version"]  # Should not update version
+    else:
+        assert result is True
+        assert entry.version == test_case["expected_version"]
+        assert entry.unique_id == test_case["expected_unique_id"]
+        for k, v in test_case["expected_data"].items():
+            assert entry.data[k] == v
+        if "password" not in test_case["expected_data"]:
+            assert "password" not in entry.data

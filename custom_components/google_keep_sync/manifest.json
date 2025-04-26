@@ -16,5 +16,8 @@
   "ssdp": [ ],
   "zeroconf": [ ],
   "version": "1.0.0-beta",
+  "config_entry": {
+    "version": 3
+  },
   "loggers": [ "custom_components.google_keep_sync" ]
 }

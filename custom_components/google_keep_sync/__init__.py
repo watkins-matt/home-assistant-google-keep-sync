@@ -78,3 +78,41 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old config entry to new format."""
+    version = entry.version
+    data = dict(entry.data)
+    unique_id = entry.unique_id
+    updated = False
+
+    # Migration 1: unique_id format
+    if version == 1:
+        if unique_id and not unique_id.startswith(f"{DOMAIN}."):
+            new_unique_id = f"{DOMAIN}.{data['username'].lower()}"
+            hass.config_entries.async_update_entry(entry, unique_id=new_unique_id)
+            updated = True
+        version = 2
+
+    # Migration 2: Remove password, enforce token
+    migration_version_token_required = 2
+    migration_version_latest = 3
+    if version == migration_version_token_required:
+        if "password" in data:
+            data.pop("password")
+            updated = True
+        token = data.get("token")
+        if not token:
+            # No token present, migration cannot continue
+            _LOGGER.error(
+                "Google Keep Sync config entry migration failed: token is required. "
+                "Please update your integration to use a token."
+            )
+            return False
+        version = migration_version_latest
+
+    if updated or entry.version != version:
+        hass.config_entries.async_update_entry(entry, data=data, version=version)
+        _LOGGER.info("Migrated Google Keep Sync config entry to version %d", version)
+    return True

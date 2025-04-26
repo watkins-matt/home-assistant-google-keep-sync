@@ -54,7 +54,8 @@ class GoogleKeepAPI:
         """Initialize the API."""
         if token and not self.validate_token(token):
             raise ValueError(
-                f"Invalid token format. Must start with 'oauth2_4/' (OAuth) or 'aas_et/' (master, 223 chars). Got: {token[:12]}..."
+                "Invalid token format. Must start with 'oauth2_4/' (OAuth) or 'aas_et/'"
+                "(master, 223 chars). Got: {token[:12]}..."
             )
         self._keep = gkeepapi.Keep()
 
