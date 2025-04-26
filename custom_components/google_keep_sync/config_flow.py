@@ -82,12 +82,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             api = GoogleKeepAPI(
                 self.hass,
                 self.config_entry.data["username"],
-                self.config_entry.data.get("password", ""),
                 self.config_entry.data.get("token"),
             )
 
             if not await api.authenticate():
                 _LOGGER.warning("Authentication failed, reauth required")
+                # Tell Home Assistant to start the reauth flow for this entry
+                self.config_entry.async_start_reauth(self.hass)
+                # Abort the options flow so the UI returns to the integrations page
                 return self.async_abort(reason="reauth_required")
 
             _LOGGER.debug("Fetching all lists from Google Keep API")
@@ -198,7 +200,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle reauth upon authentication error."""
         _LOGGER.debug("Starting reauth process")
-        self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -207,30 +208,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Confirm re-authentication with Google Keep."""
         _LOGGER.debug("Confirming reauth")
         errors = {}
+        entry = self._get_reauth_entry()
 
         if user_input:
-            if self.entry is None:
-                _LOGGER.error("Configuration entry not found")
-                return self.async_abort(reason="config_entry_not_found")
-
-            # Add the username to user_input, since the reauth step doesn't include it
-            user_input["username"] = self.entry.data["username"]
-
-            # Process validation and handle errors
+            user_input["username"] = entry.data["username"]
             errors = await self.handle_user_input(user_input)
-
-            # No errors, so update the entry and reload the integration
             if not errors:
+                unique_id = f"{DOMAIN}.{user_input['username']}".lower()
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_mismatch()
                 _LOGGER.debug("Reauth successful, updating entry")
-                unique_id = f"{DOMAIN}_{user_input['username']}".lower()
-                self.hass.config_entries.async_update_entry(
-                    self.entry,
-                    data=user_input,
-                    unique_id=unique_id,
-                    title=user_input["username"].lower(),
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates=user_input,
                 )
-                await self.hass.config_entries.async_reload(self.entry.entry_id)
-                return self.async_abort(reason="reauth_successful")
 
         try:
             return self.async_show_form(
@@ -270,7 +261,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             raise InvalidTokenFormatError
 
         # Create API instance with the provided credentials
-        self.api = GoogleKeepAPI(hass, username, "", token)
+        self.api = GoogleKeepAPI(hass, username, token)
 
         # Both master tokens and OAuth tokens are handled by the API here
         success = await self.api.authenticate()
@@ -278,7 +269,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {"username": username, "token": token}
+        # Note that the user may have provided an oauth token, so we need to use
+        # self.api.token master token that it was exchanged for
+        self.user_data = {"username": username, "token": self.api.token}
 
     async def handle_user_input(self, user_input: dict[str, Any]) -> dict[str, str]:
         """Handle user input, checking for any errors."""
