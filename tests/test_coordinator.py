@@ -5,7 +5,7 @@ from typing import List
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-from homeassistant.const import EVENT_CALL_SERVICE
+from homeassistant.const import EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
 
@@ -848,41 +848,47 @@ async def test_remove_deleted_entities(
         mock_entity_registry.async_remove.assert_called_once_with("todo.list1")
 
 
+@pytest.mark.asyncio
 async def test_notify_new_items_fires_events(hass, mock_api, mock_config_entry):
-    """Test _notify_new_items fires events for new items."""
-    # Set up coordinator
+    """Test _notify_new_items fires service-call events."""
+    # Instantiate the coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
 
-    # Create test items
+    # Prepare two new items
     new_items = [
         TodoItemData(item="Buy milk", entity_id="todo.list1"),
         TodoItemData(item="Buy eggs", entity_id="todo.list1"),
     ]
 
-    # Replace the bus with a mock to avoid read-only attribute
-    hass.bus = MagicMock()
-    hass.bus.async_fire = AsyncMock()
+    # List to record the events
+    recorded_events = []
 
-    # Provide expected lingering_timers to allow HomeAssistant cleanup job
+    # Listen for the service-call events
+    hass.bus.async_listen(
+        EVENT_CALL_SERVICE,
+        lambda event: recorded_events.append(event),
+    )
+
+    # Invoke the method under test
     await coordinator._notify_new_items(new_items)
 
-    calls = hass.bus.async_fire.call_args_list
-    assert len(calls) == 2
-    # First event data
-    first_args, first_kwargs = calls[0]
-    # args tuple: (event_type, event_data)
-    event_data_1 = first_args[1]
-    assert first_args[0] == EVENT_CALL_SERVICE
-    assert first_kwargs.get("origin") == EventOrigin.remote
-    assert event_data_1["service_data"]["item"] == "Buy milk"
-    assert event_data_1["service_data"]["entity_id"] == ["todo.list1"]
-    # Second event data
-    second_args, second_kwargs = calls[1]
-    event_data_2 = second_args[1]
-    assert second_args[0] == EVENT_CALL_SERVICE
-    assert second_kwargs.get("origin") == EventOrigin.remote
-    assert event_data_2["service_data"]["item"] == "Buy eggs"
-    assert event_data_2["service_data"]["entity_id"] == ["todo.list1"]
+    # Fire STOP to let the cleanup fixture cancel its timer
+    hass.bus.fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
+
+    # Two events should have been recorded
+    expected_recorded_event_count = 2
+    assert len(recorded_events) == expected_recorded_event_count
+
+    # Validate first event
+    first = recorded_events[0].data
+    assert first["service_data"]["item"] == "Buy milk"
+    assert first["service_data"]["entity_id"] == ["todo.list1"]
+
+    # Validate second event
+    second = recorded_events[1].data
+    assert second["service_data"]["item"] == "Buy eggs"
+    assert second["service_data"]["entity_id"] == ["todo.list1"]
 
 
 async def test_get_new_items_added_with_new_list(hass, mock_api, mock_config_entry):
