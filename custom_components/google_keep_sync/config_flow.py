@@ -266,6 +266,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not token:
             raise MissingTokenError
 
+        if not GoogleKeepAPI.validate_token(token):
+            raise InvalidTokenFormatError
+
         # Create API instance with the provided credentials
         self.api = GoogleKeepAPI(hass, username, "", token)
 
@@ -313,15 +316,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         _LOGGER.debug("Starting async_step_user")
         errors = {}
         if user_input:
-            token = user_input.get("token")
-            if token and not self.hass.data[
-                "google_keep_sync.api.GoogleKeepAPI"
-            ].validate_token(token):
-                errors["token"] = "invalid_token"  # noqa: S105
-            if not errors:
-                return self.async_create_entry(
-                    title=user_input["username"], data=user_input
-                )
             # Check to see if the same username has already been configured
             try:
                 _LOGGER.debug("Checking for existing configuration")
