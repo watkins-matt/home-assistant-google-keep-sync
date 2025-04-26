@@ -326,15 +326,15 @@ async def test_is_list_sorted(google_keep_api, mock_hass):
 
     # List is sorted
     sorted_list = [item1, item2, item3]
-    assert google_keep_api.is_list_sorted(sorted_list) is True, (
-        "The list should be identified as sorted"
-    )
+    assert (
+        google_keep_api.is_list_sorted(sorted_list) is True
+    ), "The list should be identified as sorted"
 
     # List is not sorted
     not_sorted_list = [item3, item1, item2]
-    assert google_keep_api.is_list_sorted(not_sorted_list) is False, (
-        "The list should be identified as not sorted"
-    )
+    assert (
+        google_keep_api.is_list_sorted(not_sorted_list) is False
+    ), "The list should be identified as not sorted"
 
 
 async def test_async_login_with_saved_token(google_keep_api, mock_hass):
@@ -636,7 +636,8 @@ async def test_sync_with_google_keep_retry(google_keep_api, mock_hass):
     await google_keep_api._sync_with_google_keep()
 
     # Verify sync was called twice (initial attempt + retry)
-    assert google_keep_api._keep.sync.call_count == 2
+    expected_call_count = 2
+    assert google_keep_api._keep.sync.call_count == expected_call_count
 
 
 async def test_sync_with_google_keep_resync_required(google_keep_api, mock_hass):
@@ -653,7 +654,8 @@ async def test_sync_with_google_keep_resync_required(google_keep_api, mock_hass)
     await google_keep_api._sync_with_google_keep()
 
     # Verify sync was called twice (first attempt + full resync)
-    assert google_keep_api._keep.sync.call_count == 2
+    expected_call_count = 2
+    assert google_keep_api._keep.sync.call_count == expected_call_count
     # Verify the second call was a full resync
     google_keep_api._keep.sync.assert_called_with(True)
 
