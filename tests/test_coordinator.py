@@ -818,7 +818,10 @@ async def test_update_entity_names_with_prefix(
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
     mock_list = MagicMock(id="list1", title="Shopping List")
 
-    mock_entity = MagicMock(entity_id="todo.list1", name="", original_name="Old")
+    # Set name to empty string to simulate not user-named
+    mock_entity = MagicMock(entity_id="todo.list1", original_name="Old")
+    type(mock_entity).name = ""
+
     with patch(
         "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
         return_value=mock_entity_registry,
