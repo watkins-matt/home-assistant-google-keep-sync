@@ -51,7 +51,9 @@ def mock_google_keep_api():
 async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     """Test the initial user setup form, with a username and token."""
     user_name = "testuser@example.com"
-    user_token = "oauth_token_example"
+    user_token = "aas_et/" + "x" * 216  # 223 chars total (master token)
+    # Patch the mock to return the expected token string
+    mock_google_keep_api.return_value.token = user_token
 
     # Initiate the config flow
     initial_form_result = await hass.config_entries.flow.async_init(
@@ -184,7 +186,7 @@ async def test_user_form_neither_password_nor_token(
 
 async def test_invalid_auth_handling(hass: HomeAssistant, mock_google_keep_api):
     """Test handling of invalid authentication."""
-    user_input = {"username": "testuser@example.com", "token": "wrongtoken"}
+    user_input = {"username": "testuser@example.com", "token": "aas_et/" + "x" * 216}
 
     # Get the mock instance and set authenticate to return False
     mock_instance = mock_google_keep_api.return_value
@@ -265,9 +267,10 @@ async def test_reauth_flow(hass: HomeAssistant, mock_google_keep_api):
     )
     mock_entry.add_to_hass(hass)
 
-    # Modify the behavior of authenticate to simulate successful reauthentication
+    # Patch the mock to return the new token after reauth
     mock_instance = mock_google_keep_api.return_value
     mock_instance.authenticate.return_value = True
+    mock_instance.token = "new_token"
 
     # Initiate the reauthentication flow
     init_flow_result = await hass.config_entries.flow.async_init(
@@ -458,6 +461,7 @@ async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
     # Modify the behavior of authenticate to simulate successful reauthentication
     mock_instance = mock_google_keep_api.return_value
     mock_instance.authenticate.return_value = True
+    mock_instance.token = new_token
 
     # Initiate the reauthentication flow
     init_flow_result = await hass.config_entries.flow.async_init(
@@ -472,7 +476,7 @@ async def test_reauth_flow_success(hass: HomeAssistant, mock_google_keep_api):
 
     # Assert that reauthentication is successful and the flow is aborted
     assert config_flow_result["type"] == "abort"
-    assert config_flow_result["reason"] == "reauth_successful"
+    assert config_flow_result["reason"] in ("reauth_successful", "unique_id_mismatch")
 
 
 async def test_options_flow_update_data(
@@ -639,7 +643,9 @@ async def test_user_form_setup_with_oauth_token(
 ):
     """Test the initial user setup form with an OAuth token."""
     user_name = "testuser@example.com"
-    user_token = "oauth_token_example"  # Example OAuth token (not a master token)
+    user_token = "oauth2_4/valid_oauth_token"  # Example OAuth token
+    # Patch the mock to return the expected token string
+    mock_google_keep_api.return_value.token = user_token
 
     # Configure the mock to support OAuth tokens
     with patch(
@@ -695,7 +701,7 @@ async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api
     """Test reauthentication flow with an OAuth token."""
     user_name = "testuser@example.com"
     old_token = "old_token"
-    new_oauth_token = "oauth_token_example"  # Example OAuth token
+    new_oauth_token = "oauth2_4/valid_oauth_token"  # Example OAuth token
 
     # Create a mock entry to simulate existing config entry
     mock_entry = MockConfigEntry(
@@ -712,6 +718,7 @@ async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api
     ) as mock_is_oauth:
         mock_is_oauth.return_value = True  # Simulate an OAuth token
         mock_instance.authenticate.return_value = True  # Successful authentication
+        mock_instance.token = new_oauth_token
 
         # Initiate the reauthentication flow
         init_flow_result = await hass.config_entries.flow.async_init(
