@@ -12,7 +12,7 @@
             "blank_username": "Username cannot be blank.",
             "invalid_email": "Invalid email address.",
             "missing_token": "Token must be provided.",
-            "invalid_token_format": "Invalid token provided. The token must either be a master token starting with aas_et/ or a valid OAuth token."
+            "invalid_token_format": "Invalid token provided. The token must start with 'oauth2_4/' (OAuth) or 'aas_et/' (master, 223 characters)."
         },
         "step": {
             "user": {

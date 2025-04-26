@@ -42,7 +42,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = GoogleKeepAPI(
         hass,
         entry.data["username"],
-        entry.data.get("password", ""),
         entry.data.get("token"),
     )
 

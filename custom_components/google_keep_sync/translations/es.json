@@ -12,7 +12,7 @@
             "blank_username": "El nombre de usuario no puede estar en blanco.",
             "invalid_email": "Dirección de correo electrónico inválida.",
             "missing_token": "Se debe proporcionar un token.",
-            "invalid_token_format": "Token inválido proporcionado. El token debe ser un token maestro que comience con aas_et/ o un token OAuth válido."
+            "invalid_token_format": "Token inválido. El token debe comenzar con 'oauth2_4/' (OAuth) o 'aas_et/' (master, 223 caracteres)."
         },
         "step": {
             "user": {
