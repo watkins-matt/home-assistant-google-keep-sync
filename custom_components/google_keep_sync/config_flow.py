@@ -208,7 +208,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Confirm re-authentication with Google Keep."""
         _LOGGER.debug("Confirming reauth")
         errors = {}
-        entry = self._get_reauth_entry()
+        # Ensure the entry exists, abort if not found
+        try:
+            entry = self._get_reauth_entry()
+        except config_entries.UnknownEntry:
+            _LOGGER.error("Configuration entry not found")
+            return self.async_abort(reason="config_entry_not_found")
 
         if user_input:
             user_input["username"] = entry.data["username"]
@@ -218,18 +223,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_mismatch()
                 _LOGGER.debug("Reauth successful, updating entry")
-                return self.async_update_reload_and_abort(
-                    entry,
-                    data_updates=user_input,
-                )
+                # Update the config entry data with new credentials
+                updated_data = {**entry.data, **self.user_data}
+                self.hass.config_entries.async_update_entry(entry, data=updated_data)
+                # Reload integration to apply new token
+                await self.hass.config_entries.async_reload(entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
 
-        try:
-            return self.async_show_form(
-                step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
-            )
-        except config_entries.UnknownEntry:
-            _LOGGER.error("Configuration entry not found")
-            return self.async_abort(reason="config_entry_not_found")
+        # Show reauthentication form
+        return self.async_show_form(
+            step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
+        )
 
     @staticmethod
     @callback
