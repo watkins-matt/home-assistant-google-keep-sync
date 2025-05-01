@@ -216,19 +216,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             return self.async_abort(reason="config_entry_not_found")
 
         if user_input:
-            user_input["username"] = entry.data["username"]
-            errors = await self.handle_user_input(user_input)
-            if not errors:
-                unique_id = f"{DOMAIN}.{user_input['username']}".lower()
-                await self.async_set_unique_id(unique_id)
-                self._abort_if_unique_id_mismatch()
-                _LOGGER.debug("Reauth successful, updating entry")
-                # Update the config entry data with new credentials
-                updated_data = {**entry.data, **self.user_data}
-                self.hass.config_entries.async_update_entry(entry, data=updated_data)
-                # Reload integration to apply new token
-                await self.hass.config_entries.async_reload(entry.entry_id)
-                return self.async_abort(reason="reauth_successful")
+            # Perform authentication with provided token only
+            username = entry.data["username"]
+            token = user_input.get("token")
+            _LOGGER.debug("Attempting reauth authenticate for user %s", username)
+            api = GoogleKeepAPI(self.hass, username, token)
+            try:
+                success = await api.authenticate()
+            except CannotConnectError:
+                _LOGGER.warning("Cannot connect during reauth for user %s", username)
+                errors["base"] = "cannot_connect"
+            else:
+                if not success:
+                    _LOGGER.warning("Reauth authentication failed for user %s", username)
+                    errors["base"] = "invalid_auth"
+                else:
+                    _LOGGER.debug("Reauth successful, updating entry")
+                    # Update internal API and user_data for this flow
+                    self.api = api
+                    self.user_data = {"username": username, "token": api.token}
+                    # Update entry token in Home Assistant
+                    updated_data = {**entry.data, "token": api.token}
+                    self.hass.config_entries.async_update_entry(entry, data=updated_data)
+                    entry.data = updated_data
+                    return self.async_abort(reason="reauth_successful")
 
         # Show reauthentication form
         return self.async_show_form(
