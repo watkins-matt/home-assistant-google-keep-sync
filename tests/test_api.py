@@ -83,8 +83,8 @@ async def test_authenticate_new_login(google_keep_api, mock_hass, mock_store):
         assert result is True
         assert google_keep_api._authenticated is True
         assert google_keep_api._token == TEST_TOKEN
-        google_keep_api._keep.login.assert_called_once_with(
-            TEST_USERNAME, test_master_token
+        google_keep_api._keep.authenticate.assert_called_once_with(
+            TEST_USERNAME, test_master_token, None
         )
         google_keep_api._keep.getMasterToken.assert_called_once()
         google_keep_api._async_save_state_and_token.assert_called_once()
@@ -115,7 +115,8 @@ async def test_authenticate_failed_login(google_keep_api, mock_hass, mock_store)
     # Setup mock store with no saved credentials
     google_keep_api._store = mock_store
     mock_store.async_load.return_value = None
-    google_keep_api._keep.login.side_effect = gkeepapi.exception.LoginException
+    # Simulate login failure on authenticate
+    google_keep_api._keep.authenticate.side_effect = gkeepapi.exception.LoginException
 
     # Attempting authentication
     result = await google_keep_api.authenticate()
@@ -123,7 +124,8 @@ async def test_authenticate_failed_login(google_keep_api, mock_hass, mock_store)
     # Assertions
     assert result is False
     assert google_keep_api._authenticated is False
-    google_keep_api._keep.login.assert_called_once()
+    # Verify authenticate was invoked
+    google_keep_api._keep.authenticate.assert_called_once()
 
 
 async def test_authenticate_failed_resume(google_keep_api, mock_hass, mock_store):

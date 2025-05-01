@@ -228,7 +228,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 errors["base"] = "cannot_connect"
             else:
                 if not success:
-                    _LOGGER.warning("Reauth authentication failed for user %s", username)
+                    _LOGGER.warning(
+                        "Reauth authentication failed for user %s", username
+                    )
                     errors["base"] = "invalid_auth"
                 else:
                     _LOGGER.debug("Reauth successful, updating entry")
@@ -237,7 +239,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     self.user_data = {"username": username, "token": api.token}
                     # Update entry token in Home Assistant
                     updated_data = {**entry.data, "token": api.token}
-                    self.hass.config_entries.async_update_entry(entry, data=updated_data)
+                    self.hass.config_entries.async_update_entry(
+                        entry, data=updated_data
+                    )
                     entry.data = updated_data
                     return self.async_abort(reason="reauth_successful")
 

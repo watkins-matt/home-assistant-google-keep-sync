@@ -109,18 +109,21 @@ class GoogleKeepAPI:
         _LOGGER.debug(
             "Attempting login with token for user: %s", self._username_redacted
         )
+        # Track the final token used for login entirely by token_to_use
         if not self._username or not self._token:
             _LOGGER.debug("No username or token provided for token login")
             return False
 
         try:
-            token_to_use = self._token
-            # If the token is an OAuth token, exchange it for a master token
-            if self.is_oauth_token(token_to_use):
+            # Prepare token for authentication, exchange if OAuth
+            orig_token = self._token
+            token_to_use = orig_token
+            is_oauth = self.is_oauth_token(orig_token)
+            if is_oauth:
 
                 def exchange_token():
                     master_response = gpsoauth.exchange_token(
-                        self._username, token_to_use, ANDROID_ID
+                        self._username, orig_token, ANDROID_ID
                     )
                     if "Token" not in master_response:
                         _LOGGER.error(
@@ -135,11 +138,16 @@ class GoogleKeepAPI:
                     return False
                 token_to_use = master_token
                 self._token = master_token
+            # token_to_use updated
 
             await self._hass.async_add_executor_job(
                 self._keep.authenticate, self._username, token_to_use, None
             )
-            self._token = self._keep.getMasterToken()  # Store the new token
+            # Set token to what was used (exchanged or original)
+            self._token = token_to_use
+            # For master token flows, override with token returned by Keep
+            if not is_oauth:
+                self._token = self._keep.getMasterToken()
             await self._async_save_state_and_token()
             _LOGGER.debug(
                 "Successfully logged in with token for user: %s",
@@ -161,6 +169,7 @@ class GoogleKeepAPI:
             return False
 
         self._authenticated = True
+        # Token already set to token_to_use above
         return True
 
     async def authenticate(self) -> bool:
@@ -198,7 +207,7 @@ class GoogleKeepAPI:
                 )
                 self._token = saved_token  # Use the saved token
                 _LOGGER.debug(
-                    "Successfully logged in with saved state for user: %s",
+                    "Successfully logged in with saved state for user %s",
                     self._username_redacted,
                 )
             except gkeepapi.exception.LoginException as e:
