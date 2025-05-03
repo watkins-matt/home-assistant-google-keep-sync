@@ -630,7 +630,9 @@ async def test_reauth_confirm_entry_not_found(
     assert init_flow_result["reason"] == "config_entry_not_found"
 
 
-async def test_reauth_entry_not_found(hass, mock_api_instance):
+async def test_reauth_entry_not_found(
+    hass: HomeAssistant, mock_api_instance: MagicMock
+):
     """Test reauth flow when entry is not found."""
     # Start reauth flow with an entry_id that doesn't exist
     result = await hass.config_entries.flow.async_init(
@@ -748,7 +750,9 @@ async def test_reauth_with_oauth_token(hass: HomeAssistant, mock_google_keep_api
         assert updated_entry.data["token"] == new_oauth_token
 
 
-async def test_options_flow_authentication_failure(hass, mock_api_instance):
+async def test_options_flow_authentication_failure(
+    hass: HomeAssistant, mock_api_instance: MagicMock
+):
     """Test options flow handling authentication failure."""
     # Patch GoogleKeepAPI in config_flow to use our mock
     with patch(
@@ -773,7 +777,9 @@ async def test_options_flow_authentication_failure(hass, mock_api_instance):
         assert result["reason"] == "reauth_required"
 
 
-async def test_options_flow_fetch_lists_error(hass, mock_api_instance):
+async def test_options_flow_fetch_lists_error(
+    hass: HomeAssistant, mock_api_instance: MagicMock
+):
     """Test options flow handling API errors when fetching lists."""
     # Mock API authentication to succeed but list fetch to fail
     mock_api_instance.authenticate = AsyncMock(return_value=True)
@@ -795,7 +801,9 @@ async def test_options_flow_fetch_lists_error(hass, mock_api_instance):
     assert result["errors"]["base"] == "list_fetch_error"
 
 
-async def test_reauth_confirm_with_invalid_token(hass, mock_api_instance):
+async def test_reauth_confirm_with_invalid_token(
+    hass: HomeAssistant, mock_api_instance: MagicMock
+):
     """Test reauth confirm step with invalid token."""
     # Patch GoogleKeepAPI in config_flow
     with patch(
@@ -835,20 +843,9 @@ async def test_reauth_confirm_with_invalid_token(hass, mock_api_instance):
         assert result["errors"]["base"] == "invalid_auth"
 
 
-async def test_reauth_entry_not_found(hass, mock_api_instance):
-    """Test reauth flow when entry is not found."""
-    # Start reauth flow with an entry_id that doesn't exist
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_REAUTH, "entry_id": "non_existent_id"},
-    )
-
-    # Should abort with config_entry_not_found
-    assert result["type"] == "abort"
-    assert result["reason"] == "config_entry_not_found"
-
-
-async def test_step_options_with_user_input(hass, mock_api_instance, mock_keep_list):
+async def test_step_options_with_user_input(
+    hass: HomeAssistant, mock_api_instance: MagicMock, mock_keep_list: MagicMock
+):
     """Test options flow with user input."""
     # Mock API to succeed and return lists
     mock_api_instance.authenticate = AsyncMock(return_value=True)
