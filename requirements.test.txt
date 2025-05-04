@@ -4,4 +4,4 @@ pre-commit==3.8.0
 pytest-homeassistant-custom-component
 pytest-socket==0.7.0
 tzdata
-aioresponses==0.9.0
+aioresponses==0.7.8
