@@ -61,8 +61,6 @@ This is the traditional token that starts with "aas_et/" and is 223 characters l
 
 OAuth tokens offer an alternative authentication method if you have issues getting the master token. OAuth tokens are automatically exchanged for master tokens during the authentication process.
 
-Choose the authentication method that works best for you - both are fully supported by the integration.
-
 ## Generating a Token
 
 You have two options to generate authentication tokens:
@@ -94,30 +92,25 @@ sudo apt-get install docker.io
 
 #### Steps
 
-1. After you have Docker installed, enter the following commands.
+1. After you have Docker installed, run the following command. This will pull the image, run the container, and execute the token generation script. Answer the prompts to generate a master token. For the password, you should use an app password.
 
    ```bash
-   docker pull breph/ha-google-home_get-token:latest
-   docker run -it -d breph/ha-google-home_get-token
+   docker run -it --rm breph/ha-google-home_get-token:latest python3 get_tokens.py
    ```
 
-2. Copy the returned container ID to use in the following command.
+2. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
+
+3. (Optional) If you want to clean up and remove the Docker image after you're done, you can run:
 
    ```bash
-   docker exec -it <ID> bash
+   docker rmi breph/ha-google-home_get-token
    ```
 
-3. Inside the container, enter the following command and answer the prompts to generate a master token. For the password, you should preferably use an app password,
-
-   ```bash
-   python3 get_tokens.py
-   ```
-
-4. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
-
-5. Use this token in the integration's configuration process by entering it into the token field.
+4. Use this token in the integration's configuration process by entering it into the token field.
 
 ### Option 2: OAuth Token
+
+Note: This requires the latest beta.
 
 If you're experiencing issues with the master token approach, you can use an OAuth token instead:
 
