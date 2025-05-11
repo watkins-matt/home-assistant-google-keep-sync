@@ -13,7 +13,7 @@
       "invalid_email": "Invalid email address.",
       "both_password_and_token": "Provide either password or token, not both.",
       "neither_password_nor_token": "Either password or token must be provided.",
-      "invalid_token_format": "Invalid token provided. The token must start with aas_et/ and be 223 characters long."
+      "invalid_token_format": "Invalid token provided. The token must start with 'oauth2_4/' (OAuth) or 'aas_et/' (master, 223 characters)."
     },
     "step": {
       "user": {
@@ -21,7 +21,6 @@
         "description": "Enter your credentials for Google Keep Sync.",
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
           "token": "[%key:common::config_flow::data::api_token%]"
         }
       },

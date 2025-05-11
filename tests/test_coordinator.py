@@ -5,7 +5,7 @@ from typing import List
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-from homeassistant.const import EVENT_CALL_SERVICE
+from homeassistant.const import EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
 
@@ -732,3 +732,197 @@ async def test_coordinator_network_error_handling(
     # Second update - should handle network error gracefully
     await coordinator.async_refresh()
     assert coordinator.data == initial_data  # Data should remain unchanged
+
+
+async def test_async_update_data_exception(hass, mock_api, mock_config_entry):
+    """Test that _async_update_data handles exceptions gracefully."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Mock the API to raise an exception
+    mock_api.async_sync_data.side_effect = Exception("Test exception")
+
+    # Initialize some data
+    coordinator.data = [MagicMock()]
+
+    # Call the update method
+    result = await coordinator._async_update_data()
+
+    # Verify the update handled the exception and returned the previous data
+    assert result == coordinator.data
+    mock_api.async_sync_data.assert_called_once()
+
+
+async def test_update_entity_names_missing_entity(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names handles missing entities gracefully."""
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
+
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = None
+        # Should not raise
+        await coordinator._update_entity_names([mock_list])
+        # No entities updated
+        mock_entity_registry.async_update_entity.assert_not_called()
+
+
+async def test_update_entity_names_entity_not_in_registry(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names handles entities not found in registry."""
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
+
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = None
+        # Should not raise
+        await coordinator._update_entity_names([mock_list])
+        # No entities updated
+        mock_entity_registry.async_update_entity.assert_not_called()
+
+
+async def test_update_entity_names_user_named_entity(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names respects user-named entities."""
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
+
+    mock_entity = MagicMock(entity_id="todo.list1", name="Custom", original_name="Old")
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = mock_entity
+        # Should add to user_named_entities and not call update_entity
+        await coordinator._update_entity_names([mock_list])
+        assert "todo.list1" in coordinator._user_named_entities
+        mock_entity_registry.async_update_entity.assert_not_called()
+
+
+async def test_update_entity_names_with_prefix(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _update_entity_names applies list prefix correctly."""
+    mock_config_entry.data["list_prefix"] = "TEST: "
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    mock_list = MagicMock(id="list1", title="Shopping List")
+
+    # Set name to empty string to simulate not user-named
+    mock_entity = MagicMock(entity_id="todo.list1", original_name="Old")
+    type(mock_entity).name = ""
+
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.return_value = "todo.list1"
+        mock_entity_registry.async_get.return_value = mock_entity
+        await coordinator._update_entity_names([mock_list])
+        # Should have called update_entity
+        assert mock_entity_registry.async_update_entity.called
+
+
+async def test_remove_deleted_entities(
+    hass, mock_api, mock_config_entry, mock_entity_registry
+):
+    """Test _remove_deleted_entities removes entities for deleted lists."""
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+    with patch(
+        "custom_components.google_keep_sync.coordinator.async_get_entity_registry",
+        return_value=mock_entity_registry,
+    ):
+        mock_entity_registry.async_get_entity_id.side_effect = ["todo.list1", None]
+        await coordinator._remove_deleted_entities(["list1", "list2"])
+        # Should remove the first one only
+        mock_entity_registry.async_remove.assert_called_once_with("todo.list1")
+
+
+@pytest.mark.asyncio
+async def test_notify_new_items_fires_events(hass, mock_api, mock_config_entry):
+    """Test _notify_new_items fires service-call events."""
+    # Instantiate the coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Prepare two new items
+    new_items = [
+        TodoItemData(item="Buy milk", entity_id="todo.list1"),
+        TodoItemData(item="Buy eggs", entity_id="todo.list1"),
+    ]
+
+    # List to record the events
+    recorded_events = []
+
+    # Listen for the service-call events
+    hass.bus.async_listen(
+        EVENT_CALL_SERVICE,
+        lambda event: recorded_events.append(event),
+    )
+
+    # Invoke the method under test
+    await coordinator._notify_new_items(new_items)
+
+    # Fire STOP to let the cleanup fixture cancel its timer
+    hass.bus.fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
+
+    # Two events should have been recorded
+    expected_recorded_event_count = 2
+    assert len(recorded_events) == expected_recorded_event_count
+
+    # Validate first event
+    first = recorded_events[0].data
+    assert first["service_data"]["item"] == "Buy milk"
+    assert first["service_data"]["entity_id"] == ["todo.list1"]
+
+    # Validate second event
+    second = recorded_events[1].data
+    assert second["service_data"]["item"] == "Buy eggs"
+    assert second["service_data"]["entity_id"] == ["todo.list1"]
+
+
+async def test_get_new_items_added_with_new_list(hass, mock_api, mock_config_entry):
+    """Test _get_new_items_added handles new lists in updated data."""
+    # Set up coordinator
+    coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
+
+    # Create original and updated lists
+    original_lists = {
+        "list1": TodoList(
+            name="List 1",
+            items={
+                "item1": TodoItem(summary="Item 1", checked=False),
+            },
+        ),
+    }
+
+    updated_lists = {
+        "list1": TodoList(
+            name="List 1",
+            items={
+                "item1": TodoItem(summary="Item 1", checked=False),
+            },
+        ),
+        "list2": TodoList(
+            name="List 2",
+            items={
+                "item2": TodoItem(summary="Item 2", checked=False),
+            },
+        ),
+    }
+
+    # Call the method to find new items
+    new_items = await coordinator._get_new_items_added(original_lists, updated_lists)
+
+    # No new items should be found for list2 since it's a new list not in original_lists
+    assert len(new_items) == 0

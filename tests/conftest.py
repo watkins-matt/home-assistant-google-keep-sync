@@ -8,7 +8,7 @@ import sys
 from datetime import UTC, datetime
 from types import MappingProxyType
 from typing import Any, Callable, List, Mapping, Tuple
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
@@ -137,3 +137,35 @@ def mock_config_entry() -> MockConfigEntry:
         unique_id="google_keep_sync.testuser@example.com",
     )
     return entry
+
+
+@pytest.fixture
+def mock_entity_registry():
+    """Create a mock entity registry."""
+    registry = MagicMock()
+    registry.async_get_entity_id.return_value = "test_entity_id"
+    registry.async_get.return_value = None
+    registry.async_update_entity = MagicMock()
+    registry.async_remove = MagicMock()
+    return registry
+
+
+@pytest.fixture
+def mock_api_instance():
+    """Create a mock GoogleKeepAPI instance for direct injection into flow classes."""
+    api = MagicMock()
+    api.authenticate = AsyncMock(return_value=True)
+    api.fetch_all_lists = AsyncMock(return_value=[])
+    return api
+
+
+@pytest.fixture
+def mock_keep_list():
+    """Create a mock Google Keep list."""
+    mock_list = MagicMock()
+    mock_list.id = "list1"
+    mock_list.title = "Shopping List"
+    mock_list.deleted = False
+    mock_list.archived = False
+    mock_list.trashed = False
+    return mock_list

@@ -23,15 +23,13 @@ INVALID_AUTH_URL = "https://github.com/watkins-matt/home-assistant-google-keep-s
 SCHEMA_USER_DATA_STEP = vol.Schema(
     {
         vol.Required("username"): str,
-        vol.Optional("password"): str,
-        vol.Optional("token"): str,
+        vol.Required("token"): str,
     }
 )
 
 SCHEMA_REAUTH = vol.Schema(
     {
-        vol.Optional("password"): str,
-        vol.Optional("token"): str,
+        vol.Required("token"): str,
     }
 )
 
@@ -84,12 +82,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             api = GoogleKeepAPI(
                 self.hass,
                 self.config_entry.data["username"],
-                self.config_entry.data.get("password", ""),
                 self.config_entry.data.get("token"),
             )
 
             if not await api.authenticate():
                 _LOGGER.warning("Authentication failed, reauth required")
+                # Tell Home Assistant to start the reauth flow for this entry
+                self.config_entry.async_start_reauth(self.hass)
+                # Abort the options flow so the UI returns to the integrations page
                 return self.async_abort(reason="reauth_required")
 
             _LOGGER.debug("Fetching all lists from Google Keep API")
@@ -200,7 +200,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Handle reauth upon authentication error."""
         _LOGGER.debug("Starting reauth process")
-        self.entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
@@ -209,38 +208,47 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Confirm re-authentication with Google Keep."""
         _LOGGER.debug("Confirming reauth")
         errors = {}
-
-        if user_input:
-            if self.entry is None:
-                _LOGGER.error("Configuration entry not found")
-                return self.async_abort(reason="config_entry_not_found")
-
-            # Add the username to user_input, since the reauth step doesn't include it
-            user_input["username"] = self.entry.data["username"]
-
-            # Process validation and handle errors
-            errors = await self.handle_user_input(user_input)
-
-            # No errors, so update the entry and reload the integration
-            if not errors:
-                _LOGGER.debug("Reauth successful, updating entry")
-                unique_id = f"{DOMAIN}_{user_input['username']}".lower()
-                self.hass.config_entries.async_update_entry(
-                    self.entry,
-                    data=user_input,
-                    unique_id=unique_id,
-                    title=user_input["username"].lower(),
-                )
-                await self.hass.config_entries.async_reload(self.entry.entry_id)
-                return self.async_abort(reason="reauth_successful")
-
+        # Ensure the entry exists, abort if not found
         try:
-            return self.async_show_form(
-                step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
-            )
+            entry = self._get_reauth_entry()
         except config_entries.UnknownEntry:
             _LOGGER.error("Configuration entry not found")
             return self.async_abort(reason="config_entry_not_found")
+
+        if user_input:
+            # Perform authentication with provided token only
+            username = entry.data["username"]
+            token = user_input.get("token")
+            _LOGGER.debug("Attempting reauth authenticate for user %s", username)
+            api = GoogleKeepAPI(self.hass, username, token)
+            try:
+                success = await api.authenticate()
+            except CannotConnectError:
+                _LOGGER.warning("Cannot connect during reauth for user %s", username)
+                errors["base"] = "cannot_connect"
+            else:
+                if not success:
+                    _LOGGER.warning(
+                        "Reauth authentication failed for user %s", username
+                    )
+                    errors["base"] = "invalid_auth"
+                else:
+                    _LOGGER.debug("Reauth successful, updating entry")
+                    # Update internal API and user_data for this flow
+                    self.api = api
+                    self.user_data = {"username": username, "token": api.token}
+                    # Update entry token in Home Assistant
+                    updated_data = {**entry.data, "token": api.token}
+                    self.hass.config_entries.async_update_entry(
+                        entry, data=updated_data
+                    )
+                    entry.data = updated_data
+                    return self.async_abort(reason="reauth_successful")
+
+        # Show reauthentication form
+        return self.async_show_form(
+            step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
+        )
 
     @staticmethod
     @callback
@@ -254,7 +262,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Validate the user input allows us to connect."""
         _LOGGER.debug("Validating user input")
         username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
         token = data.get("token", "").strip()
 
         # Check for blank username
@@ -265,26 +272,25 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not re.match(r"[^@]+@[^@]+\.[^@]+", username):
             raise InvalidEmailError
 
-        # Check password and token conditions
-        if password and token:
-            raise BothPasswordAndTokenError
-        if not (password or token):
-            raise NeitherPasswordNorTokenError
+        # Check if token is provided
+        if not token:
+            raise MissingTokenError
 
-        # Validate token format
-        valid_token_length = 223
-        if token and (
-            not token.startswith("aas_et/") or len(token) != valid_token_length
-        ):
+        if not GoogleKeepAPI.validate_token(token):
             raise InvalidTokenFormatError
 
-        self.api = GoogleKeepAPI(hass, username, password, token)
+        # Create API instance with the provided credentials
+        self.api = GoogleKeepAPI(hass, username, token)
+
+        # Both master tokens and OAuth tokens are handled by the API here
         success = await self.api.authenticate()
 
         if not success:
             raise InvalidAuthError
 
-        self.user_data = {"username": username, "password": password, "token": token}
+        # Note that the user may have provided an oauth token, so we need to use
+        # self.api.token master token that it was exchanged for
+        self.user_data = {"username": username, "token": self.api.token}
 
     async def handle_user_input(self, user_input: dict[str, Any]) -> dict[str, str]:
         """Handle user input, checking for any errors."""
@@ -304,12 +310,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except InvalidEmailError:
             _LOGGER.warning("Invalid email format")
             errors["base"] = "invalid_email"
-        except BothPasswordAndTokenError:
-            _LOGGER.warning("Both password and token provided")
-            errors["base"] = "both_password_and_token"
-        except NeitherPasswordNorTokenError:
-            _LOGGER.warning("Neither password nor token provided")
-            errors["base"] = "neither_password_nor_token"
+        except MissingTokenError:
+            _LOGGER.warning("Token not provided")
+            errors["base"] = "missing_token"
         except InvalidTokenFormatError:
             _LOGGER.warning("Invalid token format")
             errors["base"] = "invalid_token_format"
@@ -487,13 +490,9 @@ class InvalidEmailError(HomeAssistantError):
     """Exception raised when the username is not a valid email."""
 
 
-class BothPasswordAndTokenError(HomeAssistantError):
-    """Exception raised when both password and token are provided."""
-
-
-class NeitherPasswordNorTokenError(HomeAssistantError):
-    """Exception raised when neither password nor token are provided."""
-
-
 class InvalidTokenFormatError(HomeAssistantError):
     """Exception raised when the token format is invalid."""
+
+
+class MissingTokenError(HomeAssistantError):
+    """Exception raised when the token is missing."""

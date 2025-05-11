@@ -11,17 +11,15 @@
             "already_configured": "Integración ya configurada para este usuario.",
             "blank_username": "El nombre de usuario no puede estar en blanco.",
             "invalid_email": "Dirección de correo electrónico inválida.",
-            "both_password_and_token": "Proporcione contraseña o token, no ambos.",
-            "neither_password_nor_token": "Se debe proporcionar contraseña o token.",
-            "invalid_token_format": "Token inválido proporcionado. El token debe comenzar con aas_et/ y tener 223 caracteres."
+            "missing_token": "Se debe proporcionar un token.",
+            "invalid_token_format": "Token inválido. El token debe comenzar con 'oauth2_4/' (OAuth) o 'aas_et/' (master, 223 caracteres)."
         },
         "step": {
             "user": {
                 "title": "Introduce las credenciales",
-                "description": "Introduce tu nombre de usuario y contraseña de tu cuenta de Google (dejando el campo del token en blanco). Asegúrate de estar usando una contraseña de aplicación; puedes crear una en https://myaccount.google.com/apppasswords.\n\nIniciar sesión con un nombre de usuario y contraseña puede fallar con ciertas versiones de la biblioteca. Si esto ocurre, puedes iniciar sesión con tu nombre de usuario y token que hayas obtenido manualmente en su lugar (dejando el campo de la contraseña en blanco). Consulta [Léame]({invalid_auth_url}) para obtener más detalles.",
+                "description": "Introduce tu nombre de usuario y token de tu cuenta de Google. Puedes usar un token maestro o un token OAuth. Consulta [Léame]({invalid_auth_url}) para obtener instrucciones sobre cómo obtener un token.",
                 "data": {
                     "username": "Nombre de usuario",
-                    "password": "Contraseña",
                     "token": "Token"
                 }
             },
@@ -43,7 +41,7 @@
             },
             "reauth_confirm": {
                 "title": "Reautenticar",
-                "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta"
+                "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta. Puedes introducir un token maestro o un token OAuth."
             }
         }
     },

@@ -5,6 +5,7 @@ import logging
 from enum import StrEnum
 
 import gkeepapi
+import gpsoauth
 from gkeepapi.exception import ResyncRequiredException
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import storage
@@ -13,6 +14,7 @@ from .exponential_backoff import exponential_backoff
 
 STORAGE_KEY = "google_keep_sync"
 STORAGE_VERSION = 1
+ANDROID_ID = "0123456789abcdef"  # Default Android ID, used for OAuth token exchange
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,20 +32,36 @@ class ListCase(StrEnum):
 class GoogleKeepAPI:
     """Class to authenticate and interact with Google Keep."""
 
+    @staticmethod
+    def validate_token(token: str) -> bool:
+        """Validate if the token is a valid OAuth or master token."""
+        expected_master_token_length = 223
+
+        if not token:
+            return False
+        if token.startswith("oauth2_4/"):
+            return True
+        if token.startswith("aas_et/") and len(token) == expected_master_token_length:
+            return True
+        return False
+
     def __init__(
         self,
         hass: HomeAssistant,
         username: str,
-        password: str = "",
         token: str | None = None,
     ):
         """Initialize the API."""
+        if token and not self.validate_token(token):
+            raise ValueError(
+                "Invalid token format. Must start with 'oauth2_4/' (OAuth) or 'aas_et/'"
+                "(master, 223 chars). Got: {token[:12]}..."
+            )
         self._keep = gkeepapi.Keep()
 
         self._hass = hass
         self._username = username
         self._username_redacted = self.redact_username(username)
-        self._password = password
         self._store = storage.Store(
             hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
         )
@@ -69,6 +87,107 @@ class GoogleKeepAPI:
 
         return username[0] + "*" * (len(username) - 1)
 
+    @staticmethod
+    def is_oauth_token(token: str) -> bool:
+        """Determine if the token is an OAuth token rather than a master token.
+
+        OAuth tokens don't start with "aas_et/" and aren't 223 characters long.
+        """
+        if not token:
+            return False
+
+        # Master tokens start with "aas_et/" and are 223 characters
+        master_token_length = 223
+        is_master_token = (
+            token.startswith("aas_et/") and len(token) == master_token_length
+        )
+
+        return not is_master_token
+
+    async def async_login_with_token(self) -> bool:
+        """Log in to Google Keep using the current token (OAuth or master)."""
+        _LOGGER.debug(
+            "Attempting login with token for user: %s", self._username_redacted
+        )
+        # Track the final token used for login entirely by token_to_use
+        if not self._username or not self._token:
+            _LOGGER.debug("No username or token provided for token login")
+            return False
+
+        try:
+            # Prepare token for authentication, exchange if OAuth
+            orig_token = self._token
+            token_to_use = orig_token
+            is_oauth = self.is_oauth_token(orig_token)
+            if is_oauth:
+
+                def exchange_token():
+                    master_response = gpsoauth.exchange_token(
+                        self._username, orig_token, ANDROID_ID
+                    )
+                    if "Token" not in master_response:
+                        _LOGGER.error(
+                            "Failed to exchange OAuth token: %s",
+                            master_response.get("Error", "Unknown error"),
+                        )
+                        return None
+                    return master_response["Token"]
+
+                master_token = await self._hass.async_add_executor_job(exchange_token)
+                if not master_token:
+                    return False
+                token_to_use = master_token
+                self._token = master_token
+            # token_to_use updated
+
+            await self._hass.async_add_executor_job(
+                self._keep.authenticate, self._username, token_to_use, None
+            )
+            # Set token to what was used (exchanged or original)
+            self._token = token_to_use
+            # For master token flows, override with token returned by Keep
+            if not is_oauth:
+                self._token = self._keep.getMasterToken()
+            await self._async_save_state_and_token()
+            _LOGGER.debug(
+                "Successfully logged in with token for user: %s",
+                self._username_redacted,
+            )
+        except gkeepapi.exception.LoginException as e:
+            _LOGGER.error(
+                "Failed to resume Google Keep with token for user %s: %s",
+                self._username_redacted,
+                e,
+            )
+            return False
+        except Exception as e:
+            _LOGGER.exception(
+                "Failed to authenticate with token for user %s: %s",
+                self._username_redacted,
+                e,
+            )
+            return False
+
+        self._authenticated = True
+        # Token already set to token_to_use above
+        return True
+
+    async def authenticate(self) -> bool:
+        """Log in to Google Keep."""
+        _LOGGER.debug(
+            "Starting authentication process for user: %s", self._username_redacted
+        )
+        if not await self.async_login_with_saved_state():
+            if not await self.async_login_with_token():
+                _LOGGER.error(
+                    "All authentication methods failed for user: %s",
+                    self._username_redacted,
+                )
+                return False
+
+        _LOGGER.debug("Authentication successful for user: %s", self._username_redacted)
+        return True
+
     async def async_login_with_saved_state(self) -> bool:
         """Log in to Google Keep using the saved state and token."""
         _LOGGER.debug(
@@ -88,7 +207,7 @@ class GoogleKeepAPI:
                 )
                 self._token = saved_token  # Use the saved token
                 _LOGGER.debug(
-                    "Successfully logged in with saved state for user: %s",
+                    "Successfully logged in with saved state for user %s",
                     self._username_redacted,
                 )
             except gkeepapi.exception.LoginException as e:
@@ -127,80 +246,6 @@ class GoogleKeepAPI:
             return False
 
         self._authenticated = True
-        return True
-
-    async def async_login_with_saved_token(self) -> bool:
-        """Log in to Google Keep using the saved token."""
-        _LOGGER.debug(
-            "Attempting login with saved token for user: %s", self._username_redacted
-        )
-        if self._username and self._token:
-            try:
-                await self._hass.async_add_executor_job(
-                    self._keep.resume, self._username, self._token, None
-                )
-                self._token = self._keep.getMasterToken()  # Store the new token
-                await self._async_save_state_and_token()
-                _LOGGER.debug(
-                    "Successfully logged in with saved token for user: %s",
-                    self._username_redacted,
-                )
-            except gkeepapi.exception.LoginException as e:
-                _LOGGER.error(
-                    "Failed to resume Google Keep with token for user %s: %s",
-                    self._username_redacted,
-                    e,
-                )
-                return False
-        else:
-            _LOGGER.debug("No saved token found for user: %s", self._username_redacted)
-            return False
-
-        self._authenticated = True
-        return True
-
-    async def async_login_with_password(self) -> bool:
-        """Login to Google Keep using the username and password."""
-        _LOGGER.debug(
-            "Attempting login with password for user: %s", self._username_redacted
-        )
-        try:
-            await self._hass.async_add_executor_job(
-                self._keep.login, self._username, self._password
-            )
-            self._token = self._keep.getMasterToken()  # Store the new token
-            await self._async_save_state_and_token()
-            _LOGGER.debug(
-                "Successfully logged in with password for user: %s",
-                self._username_redacted,
-            )
-        except gkeepapi.exception.LoginException as e:
-            _LOGGER.error(
-                "Failed to login to Google Keep with "
-                "username and password for user %s: %s",
-                self._username_redacted,
-                e,
-            )
-            return False
-
-        self._authenticated = True
-        return True
-
-    async def authenticate(self) -> bool:
-        """Log in to Google Keep."""
-        _LOGGER.debug(
-            "Starting authentication process for user: %s", self._username_redacted
-        )
-        if not await self.async_login_with_saved_state():
-            if not await self.async_login_with_saved_token():
-                if not await self.async_login_with_password():
-                    _LOGGER.error(
-                        "All authentication methods failed for user: %s",
-                        self._username_redacted,
-                    )
-                    return False
-
-        _LOGGER.debug("Authentication successful for user: %s", self._username_redacted)
         return True
 
     @property
