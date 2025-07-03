@@ -1,7 +1,7 @@
+aioresponses==0.7.8
 gkeepapi==0.16.0
 gpsoauth==1.1.1
 pre-commit==3.8.0
 pytest-homeassistant-custom-component
 pytest-socket==0.7.0
 tzdata
-aioresponses==0.7.8

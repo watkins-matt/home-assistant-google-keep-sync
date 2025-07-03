@@ -8,6 +8,7 @@ import pytest
 from homeassistant.const import EVENT_CALL_SERVICE, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import EventOrigin
 from homeassistant.helpers import entity_registry
+from requests.exceptions import ConnectionError
 
 from custom_components.google_keep_sync.api import GoogleKeepAPI
 from custom_components.google_keep_sync.const import DOMAIN
@@ -706,8 +707,6 @@ async def test_coordinator_network_error_handling(
     mock_api: MagicMock, mock_hass: MagicMock, mock_config_entry: MockConfigEntry
 ):
     """Test coordinator handles network errors gracefully."""
-    from requests.exceptions import ConnectionError
-
     # Create initial successful data
     mock_list = MagicMock()
     mock_list.id = "list1"
