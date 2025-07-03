@@ -11,11 +11,11 @@
   "iot_class": "cloud_polling",
   "requirements": [
     "gkeepapi==0.16.0",
-    "gpsoauth==1.1.1"
+    "gpsoauth @ git+https://github.com/watkins-matt/gpsoauth.git@master"
   ],
   "ssdp": [ ],
   "zeroconf": [ ],
-  "version": "1.0.0-beta",
+  "version": "1.0.0",
   "config_entry": {
     "version": 3
   },
