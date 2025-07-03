@@ -39,7 +39,7 @@ def workaround_for_windows_socket_issues():
     yield
 
 
-class MockConfigEntry(MagicMock):
+class MockConfigEntry:
     """A mock config entry for testing the Google Keep Sync integration."""
 
     def __init__(  # noqa
@@ -66,7 +66,6 @@ class MockConfigEntry(MagicMock):
         **kwargs: Any,
     ) -> None:
         """Initialize the fake config entry with the given parameters."""
-        super().__init__()
         self.created_at: datetime = created_at or datetime.now(UTC)
         self.data: Mapping[str, Any] = data
         self.disabled_by: ConfigEntryDisabler | None = disabled_by
@@ -101,7 +100,7 @@ class MockConfigEntry(MagicMock):
         """Simulate unloading the config entry."""
         return True
 
-    async def async_shutdown(self, hass: HomeAssistant) -> None:
+    def async_shutdown(self, hass: HomeAssistant | None = None) -> None:
         """Simulate shutting down the config entry."""
         return
 
@@ -121,6 +120,40 @@ class MockConfigEntry(MagicMock):
         can locate it.
         """
         hass.config_entries._entries[self.entry_id] = self
+
+    async def async_remove(self, hass: HomeAssistant) -> None:
+        """Simulate removing the config entry."""
+        return
+
+    def async_start_reauth(self, hass: HomeAssistant) -> None:
+        """Simulate starting reauthentication."""
+        return
+
+    def __repr__(self) -> str:
+        """Return representation string of MockConfigEntry."""
+        return f"<MockConfigEntry domain={self.domain} entry_id={self.entry_id}>"
+
+    @property
+    def as_storage_fragment(self) -> dict[str, Any]:
+        """Return a dict representation of the entry for storage."""
+        return {
+            "created_at": self.created_at.isoformat(),
+            "data": dict(self.data),
+            "disabled_by": self.disabled_by,
+            "discovery_keys": dict(self.discovery_keys),
+            "domain": self.domain,
+            "entry_id": self.entry_id,
+            "minor_version": self.minor_version,
+            "modified_at": self.modified_at.isoformat(),
+            "options": dict(self.options),
+            "pref_disable_new_entities": self.pref_disable_new_entities,
+            "pref_disable_polling": self.pref_disable_polling,
+            "source": self.source,
+            "state": self.state.value,
+            "title": self.title,
+            "unique_id": self.unique_id,
+            "version": self.version,
+        }
 
 
 @pytest.fixture(scope="function")
