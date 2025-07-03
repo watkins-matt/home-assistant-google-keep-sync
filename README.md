@@ -110,8 +110,6 @@ sudo apt-get install docker.io
 
 ### Option 2: OAuth Token
 
-Note: This requires the latest beta.
-
 If you're experiencing issues with the master token approach, you can use an OAuth token instead:
 
 1. Follow the instructions at [gpsoauth-java documentation](https://github.com/rukins/gpsoauth-java/blob/master/README.md#receiving-an-authentication-token) to obtain an OAuth token.
