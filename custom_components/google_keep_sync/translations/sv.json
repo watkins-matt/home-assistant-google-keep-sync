@@ -35,7 +35,7 @@
                 "data_description": {
                     "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
-                    "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras.",
+                    "list_auto_sort": "Sorterar automatiskt listobjekt alfabetiskt i både Home Assistant och Google Keep. Obs: Om detta aktiveras inaktiveras manuell omsortering av objekt. Inaktivera automatisk sortering om du föredrar att ordna objekt själv.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras."
                 }
             },
@@ -59,7 +59,7 @@
                 "data_description": {
                     "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
-                    "list_auto_sort": "Om markerad kommer alla dina valda listor att ändras för att sorteras alfabetiskt. Detta är tvåvägs, så dina listor i både Home Assistant och Google Keep kommer att sorteras.",
+                    "list_auto_sort": "Sorterar automatiskt listobjekt alfabetiskt i både Home Assistant och Google Keep. Obs: Om detta aktiveras inaktiveras manuell omsortering av objekt. Inaktivera automatisk sortering om du föredrar att ordna objekt själv.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras."
                 }
             }
