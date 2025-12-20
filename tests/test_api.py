@@ -640,6 +640,194 @@ async def test_sync_with_google_keep_retry(google_keep_api, mock_hass):
     assert google_keep_api._keep.sync.call_count == expected_call_count
 
 
+async def test_async_move_todo_item_to_beginning(google_keep_api, mock_hass):
+    """Test moving a todo item to the beginning of the list."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "item_3"
+
+    # Create mock items with sort values
+    item1 = MagicMock(id="item_1", sort=1000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+    item3 = MagicMock(id="item_3", sort=3000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2, item3]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # Move item_3 to the beginning (previous_uid=None)
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
+
+    # Verify sort values are set correctly
+    # item_3 (moved to beginning) should have the highest sort value
+    # Google Keep sorts in descending order, so highest sort = first position
+    assert item3.sort > item1.sort
+    assert item3.sort > item2.sort
+    assert item1.sort > item2.sort or item2.sort > item1.sort  # Other items maintain relative order
+
+    # Verify sync was called
+    google_keep_api._keep.sync.assert_called()
+
+
+async def test_async_move_todo_item_after_another(google_keep_api, mock_hass):
+    """Test moving a todo item to after another item."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "item_1"
+    previous_uid = "item_3"
+
+    # Create mock items with sort values
+    item1 = MagicMock(id="item_1", sort=1000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+    item3 = MagicMock(id="item_3", sort=3000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2, item3]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # Move item_1 to after item_3
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=previous_uid)
+
+    # Verify sort values are set correctly
+    # item_3 should have higher sort than item_1 (item_3 comes before item_1)
+    # item_1 should have lower sort than item_3 (item_1 comes after item_3)
+    assert item3.sort > item1.sort
+
+    # Verify sync was called
+    google_keep_api._keep.sync.assert_called()
+
+
+async def test_async_move_todo_item_not_found(google_keep_api, mock_hass):
+    """Test moving a todo item that doesn't exist."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "nonexistent_item"
+
+    # Create mock items
+    item1 = MagicMock(id="item_1", sort=1000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # Try to move nonexistent item
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
+
+    # Verify items are unchanged
+    assert len(mock_gkeep_list.items) == 2
+    assert mock_gkeep_list.items[0].id == "item_1"
+    assert mock_gkeep_list.items[1].id == "item_2"
+
+    # Verify sync was not called (since item wasn't found)
+    google_keep_api._keep.sync.assert_not_called()
+
+
+async def test_async_move_todo_item_previous_not_found(google_keep_api, mock_hass):
+    """Test moving a todo item after a previous item that doesn't exist."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "item_1"
+    previous_uid = "nonexistent_item"
+
+    # Create mock items
+    item1 = MagicMock(id="item_1", sort=1000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # Try to move item_1 after nonexistent item
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=previous_uid)
+
+    # Verify items are unchanged
+    assert len(mock_gkeep_list.items) == 2
+    assert mock_gkeep_list.items[0].id == "item_1"
+    assert mock_gkeep_list.items[1].id == "item_2"
+
+    # Verify sync was not called (since previous item wasn't found)
+    google_keep_api._keep.sync.assert_not_called()
+
+
+async def test_async_move_todo_item_list_not_found(google_keep_api, mock_hass):
+    """Test moving a todo item in a list that doesn't exist."""
+    google_keep_api._authenticated = True
+    list_id = "nonexistent_list"
+    item_id = "item_1"
+
+    # Setup mocked Google Keep to return None (list not found)
+    google_keep_api._keep.get.return_value = None
+
+    # Try to move item in nonexistent list
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
+
+    # Verify sync was not called
+    google_keep_api._keep.sync.assert_not_called()
+
+
+async def test_async_move_todo_item_sort_values_descending(google_keep_api, mock_hass):
+    """Test that sort values are assigned in descending order."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "item_2"
+
+    # Create mock items with existing sort values
+    item1 = MagicMock(id="item_1", sort=5000000)
+    item2 = MagicMock(id="item_2", sort=6000000)
+    item3 = MagicMock(id="item_3", sort=7000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2, item3]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # Move item_2 to the beginning
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
+
+    # Verify sort values are in descending order (first item has highest)
+    # The base_sort should be max(existing_sorts) = 7000000
+    # item_2 (moved to beginning) should have highest sort value
+    assert item2.sort >= item1.sort
+    assert item2.sort >= item3.sort
+    assert item2.sort > min(item1.sort, item3.sort)
+
+
+async def test_async_move_todo_item_resync_required(google_keep_api, mock_hass):
+    """Test moving a todo item when ResyncRequiredException is raised."""
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+    item_id = "item_2"
+
+    # Create mock items
+    item1 = MagicMock(id="item_1", sort=1000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+    item3 = MagicMock(id="item_3", sort=3000000)
+
+    # Setup mocked Google Keep list
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    mock_gkeep_list.items = [item1, item2, item3]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    # First sync call raises ResyncRequiredException, second succeeds
+    google_keep_api._keep.sync.side_effect = [
+        gkeepapi.exception.ResyncRequiredException(),
+        None,  # Success on full resync
+    ]
+
+    # Move item_2 to the beginning
+    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
+
+    # Verify sync was called twice (initial + full resync)
+    assert google_keep_api._keep.sync.call_count == 2
+    # Verify the second call was a full resync (sync(True))
+    google_keep_api._keep.sync.assert_any_call(True)
+
+
 async def test_sync_with_google_keep_resync_required(google_keep_api, mock_hass):
     """Test the _sync_with_google_keep method with ResyncRequiredException."""
     google_keep_api._authenticated = True
