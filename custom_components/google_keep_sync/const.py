@@ -3,4 +3,4 @@
 from datetime import timedelta
 
 DOMAIN = "google_keep_sync"
-SCAN_INTERVAL = timedelta(minutes=15)
+SCAN_INTERVAL = timedelta(minutes=2)
