@@ -16,10 +16,10 @@ jobs:
     outputs:
       badge-success: ${{ steps.generate_badge.outputs.success }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -76,7 +76,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: gh-pages
 
@@ -87,7 +87,7 @@ jobs:
           path: badges
 
       - name: Deploy Badge to gh-pages
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Update coverage badge [skip ci]"
           branch: gh-pages
