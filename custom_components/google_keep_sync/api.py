@@ -2,6 +2,7 @@
 
 import functools
 import logging
+import time
 from enum import StrEnum
 
 import gkeepapi
@@ -389,6 +390,110 @@ class GoogleKeepAPI:
                     break
             else:
                 _LOGGER.warning("Item %s not found in list %s", item_id, list_id)
+        else:
+            _LOGGER.error("List %s not found in Google Keep", list_id)
+
+    @authenticated_required
+    async def async_move_todo_item(
+        self,
+        list_id: str,
+        item_id: str,
+        previous_uid: str | None = None,
+    ) -> None:
+        """Move a todo item to a new position in a Google Keep list."""
+        _LOGGER.debug(
+            "Moving todo item %s to position after %s in list %s",
+            item_id,
+            previous_uid,
+            list_id,
+        )
+        keep_list = self._keep.get(list_id)
+        if keep_list and isinstance(keep_list, gkeepapi.node.List):
+            # Find the item to move
+            item_to_move = next(
+                (item for item in keep_list.items if item.id == item_id), None
+            )
+            if not item_to_move:
+                _LOGGER.warning("Item %s not found in list %s", item_id, list_id)
+                return
+
+            # Get all items in order
+            all_items = list(keep_list.items)
+
+            # Find the index of the item to move
+            move_index = next(
+                (i for i, item in enumerate(all_items) if item.id == item_id), None
+            )
+            if move_index is None:
+                _LOGGER.warning("Item %s not found in list %s", item_id, list_id)
+                return
+
+            # Remove the item from its current position
+            item_to_move = all_items.pop(move_index)
+
+            # Find the target position (after previous_uid)
+            if previous_uid is None:
+                # Move to the beginning
+                target_index = 0
+            else:
+                # Find the index of the previous item
+                target_index = next(
+                    (
+                        i
+                        for i, item in enumerate(all_items)
+                        if item.id == previous_uid
+                    ),
+                    None,
+                )
+                if target_index is None:
+                    _LOGGER.warning(
+                        "Previous item %s not found in list %s", previous_uid, list_id
+                    )
+                    return
+                # Insert after the previous item
+                target_index += 1
+
+            # Insert the item at the target position
+            all_items.insert(target_index, item_to_move)
+
+            # Reorder items in Google Keep by updating their sort values
+            # Google Keep uses sort values (timestamps) to determine order
+            def reorder_items():
+                # Get existing sort values to preserve relative ordering
+                # We'll use the minimum sort value as a base and adjust from there
+                existing_sorts = [item.sort for item in all_items if hasattr(item, 'sort') and item.sort]
+                
+                if existing_sorts:
+                    # Use the minimum sort value as base, or current time if none exist
+                    base_sort = min(existing_sorts)
+                else:
+                    # If no sort values exist, use current time in microseconds
+                    base_sort = int(time.time() * 1000000)
+                
+                # Assign new sort values to maintain the new order
+                # Increment by enough to ensure proper ordering (1000 microseconds = 1 millisecond)
+                for i, item in enumerate(all_items):
+                    # Set a new sort value based on position
+                    # Use the base sort value and increment by position
+                    new_sort = base_sort + (i * 1000)  # Increment by 1000 microseconds per item
+                    item.sort = new_sort
+                
+                # The changes will be synced when we call sync() later
+
+            await self._hass.async_add_executor_job(reorder_items)
+            
+            # Sync the changes to Google Keep
+            try:
+                await self._hass.async_add_executor_job(self._keep.sync)
+                _LOGGER.debug(
+                    "Successfully moved item %s to position after %s in list %s",
+                    item_id,
+                    previous_uid,
+                    list_id,
+                )
+            except ResyncRequiredException:
+                _LOGGER.warning("Resync required after moving item, performing full resync")
+                await self._hass.async_add_executor_job(self._keep.sync, True)
         else:
             _LOGGER.error("List %s not found in Google Keep", list_id)
 

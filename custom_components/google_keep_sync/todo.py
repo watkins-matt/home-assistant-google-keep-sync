@@ -33,6 +33,7 @@ class GoogleKeepTodoListEntity(
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.UPDATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
+        | TodoListEntityFeature.MOVE_TODO_ITEM
     )
 
     def __init__(
@@ -133,6 +134,35 @@ class GoogleKeepTodoListEntity(
             # Request refresh to synchronize with Google Keep
             await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh after item creation.")
+
+    async def async_move_todo_item(self, uid: str, previous_uid: str | None = None) -> None:
+        """Move a todo item to a new position in Google Keep."""
+        _LOGGER.debug(
+            "Moving todo item: %s to position after: %s in list: %s",
+            uid,
+            previous_uid,
+            self._gkeep_list_id,
+        )
+        list_id = self._gkeep_list_id
+
+        try:
+            # Move the item in Google Keep
+            await self.api.async_move_todo_item(list_id, uid, previous_uid)
+            _LOGGER.debug(
+                "Successfully moved item %s to position after %s in Google Keep.",
+                uid,
+                previous_uid,
+            )
+
+        except Exception as e:
+            _LOGGER.error(
+                "Failed to move item %s in Google Keep: %s", uid, e
+            )
+
+        finally:
+            # Resync data with Google Keep
+            await self.coordinator.async_refresh()
+            _LOGGER.debug("Requested data refresh after move.")
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
