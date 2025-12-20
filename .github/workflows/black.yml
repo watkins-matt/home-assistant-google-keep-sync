@@ -14,7 +14,7 @@ jobs:
     name: Ensure code is formatted with Black
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: psf/black@stable
         with:
           version: "24.10.0"
