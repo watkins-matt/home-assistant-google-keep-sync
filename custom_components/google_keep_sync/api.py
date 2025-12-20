@@ -438,11 +438,7 @@ class GoogleKeepAPI:
             else:
                 # Find the index of the previous item
                 target_index = next(
-                    (
-                        i
-                        for i, item in enumerate(all_items)
-                        if item.id == previous_uid
-                    ),
+                    (i for i, item in enumerate(all_items) if item.id == previous_uid),
                     None,
                 )
                 if target_index is None:
@@ -462,28 +458,34 @@ class GoogleKeepAPI:
             def reorder_items():
                 # Get existing sort values to preserve relative ordering
                 # We'll use the maximum sort value as a base and adjust from there
-                existing_sorts = [item.sort for item in all_items if hasattr(item, 'sort') and item.sort]
-                
+                existing_sorts = [
+                    item.sort
+                    for item in all_items
+                    if hasattr(item, "sort") and item.sort
+                ]
+
                 if existing_sorts:
                     # Use the maximum sort value as base to ensure we're above existing items
                     base_sort = max(existing_sorts)
                 else:
                     # If no sort values exist, use current time in microseconds
                     base_sort = int(time.time() * 1000000)
-                
+
                 # Assign new sort values to maintain the new order
                 # Google Keep sorts in DESCENDING order, so first item gets highest sort value
                 # Decrement by enough to ensure proper ordering (1000 microseconds = 1 millisecond)
                 for i, item in enumerate(all_items):
                     # Set a new sort value based on position
                     # First item (i=0) gets highest value, last item gets lowest value
-                    new_sort = base_sort - (i * 1000)  # Decrement by 1000 microseconds per item
+                    new_sort = base_sort - (
+                        i * 1000
+                    )  # Decrement by 1000 microseconds per item
                     item.sort = new_sort
-                
+
                 # The changes will be synced when we call sync() later
 
             await self._hass.async_add_executor_job(reorder_items)
-            
+
             # Sync the changes to Google Keep
             try:
                 await self._hass.async_add_executor_job(self._keep.sync)
@@ -494,7 +496,9 @@ class GoogleKeepAPI:
                     list_id,
                 )
             except ResyncRequiredException:
-                _LOGGER.warning("Resync required after moving item, performing full resync")
+                _LOGGER.warning(
+                    "Resync required after moving item, performing full resync"
+                )
                 await self._hass.async_add_executor_job(self._keep.sync, True)
         else:
             _LOGGER.error("List %s not found in Google Keep", list_id)

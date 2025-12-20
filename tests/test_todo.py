@@ -331,7 +331,7 @@ async def test_move_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     """Test moving a todo item to a new position."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
     list_prefix = ""
-    
+
     # Create mock items with IDs
     item1 = MagicMock(id="item_1", text="Item 1", checked=False)
     item2 = MagicMock(id="item_2", text="Item 2", checked=False)
@@ -379,11 +379,13 @@ async def test_move_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
     mock_coordinator.async_refresh.assert_called_once()
 
 
-async def test_move_todo_item_to_beginning(hass: HomeAssistant, mock_api, mock_coordinator):
+async def test_move_todo_item_to_beginning(
+    hass: HomeAssistant, mock_api, mock_coordinator
+):
     """Test moving a todo item to the beginning of the list."""
     grocery_list = MagicMock(id="grocery_list", title="Grocery List")
     list_prefix = ""
-    
+
     # Create mock items
     item1 = MagicMock(id="item_1", text="Item 1", checked=False)
     item2 = MagicMock(id="item_2", text="Item 2", checked=False)
