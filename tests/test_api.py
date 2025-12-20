@@ -21,12 +21,21 @@ TEST_ITEM_ID = "test_item_id"
 TEST_ITEM_TEXT = "Test Item"
 
 
+async def _run_sync(f, *args, **kwargs):
+    """Run a sync function and return result as awaitable."""
+    result = f(*args, **kwargs)
+    # If the result is a coroutine (from AsyncMock), await it
+    if hasattr(result, "__await__"):
+        return await result
+    return result
+
+
 @pytest.fixture
 def mock_hass():
     """Fixture for mocking Home Assistant."""
     mock_hass = MagicMock()
-    mock_hass.async_add_executor_job.side_effect = lambda f, *args, **kwargs: f(
-        *args, **kwargs
+    mock_hass.async_add_executor_job.side_effect = lambda f, *args, **kwargs: _run_sync(
+        f, *args, **kwargs
     )
     return mock_hass
 
@@ -664,7 +673,8 @@ async def test_async_move_todo_item_to_beginning(google_keep_api, mock_hass):
     # Google Keep sorts in descending order, so highest sort = first position
     assert item3.sort > item1.sort
     assert item3.sort > item2.sort
-    assert item1.sort > item2.sort or item2.sort > item1.sort  # Other items maintain relative order
+    # Other items maintain relative order
+    assert item1.sort > item2.sort or item2.sort > item1.sort
 
     # Verify sync was called
     google_keep_api._keep.sync.assert_called()
@@ -688,7 +698,9 @@ async def test_async_move_todo_item_after_another(google_keep_api, mock_hass):
     google_keep_api._keep.get.return_value = mock_gkeep_list
 
     # Move item_1 to after item_3
-    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=previous_uid)
+    await google_keep_api.async_move_todo_item(
+        list_id, item_id, previous_uid=previous_uid
+    )
 
     # Verify sort values are set correctly
     # item_3 should have higher sort than item_1 (item_3 comes before item_1)
@@ -718,7 +730,8 @@ async def test_async_move_todo_item_not_found(google_keep_api, mock_hass):
     await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
 
     # Verify items are unchanged
-    assert len(mock_gkeep_list.items) == 2
+    expected_item_count = 2
+    assert len(mock_gkeep_list.items) == expected_item_count
     assert mock_gkeep_list.items[0].id == "item_1"
     assert mock_gkeep_list.items[1].id == "item_2"
 
@@ -743,10 +756,13 @@ async def test_async_move_todo_item_previous_not_found(google_keep_api, mock_has
     google_keep_api._keep.get.return_value = mock_gkeep_list
 
     # Try to move item_1 after nonexistent item
-    await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=previous_uid)
+    await google_keep_api.async_move_todo_item(
+        list_id, item_id, previous_uid=previous_uid
+    )
 
     # Verify items are unchanged
-    assert len(mock_gkeep_list.items) == 2
+    expected_item_count = 2
+    assert len(mock_gkeep_list.items) == expected_item_count
     assert mock_gkeep_list.items[0].id == "item_1"
     assert mock_gkeep_list.items[1].id == "item_2"
 
@@ -823,7 +839,8 @@ async def test_async_move_todo_item_resync_required(google_keep_api, mock_hass):
     await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
 
     # Verify sync was called twice (initial + full resync)
-    assert google_keep_api._keep.sync.call_count == 2
+    expected_sync_calls = 2
+    assert google_keep_api._keep.sync.call_count == expected_sync_calls
     # Verify the second call was a full resync (sync(True))
     google_keep_api._keep.sync.assert_any_call(True)
 
