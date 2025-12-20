@@ -439,9 +439,9 @@ class GoogleKeepAPI:
                 # Find the index of the previous item
                 target_index = next(
                     (i for i, item in enumerate(all_items) if item.id == previous_uid),
-                    None,
+                    -1,
                 )
-                if target_index is None:
+                if target_index == -1:
                     _LOGGER.warning(
                         "Previous item %s not found in list %s", previous_uid, list_id
                     )
