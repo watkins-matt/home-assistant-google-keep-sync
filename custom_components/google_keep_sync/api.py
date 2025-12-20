@@ -458,24 +458,26 @@ class GoogleKeepAPI:
 
             # Reorder items in Google Keep by updating their sort values
             # Google Keep uses sort values (timestamps) to determine order
+            # Note: Google Keep sorts in DESCENDING order (higher sort values appear first)
             def reorder_items():
                 # Get existing sort values to preserve relative ordering
-                # We'll use the minimum sort value as a base and adjust from there
+                # We'll use the maximum sort value as a base and adjust from there
                 existing_sorts = [item.sort for item in all_items if hasattr(item, 'sort') and item.sort]
                 
                 if existing_sorts:
-                    # Use the minimum sort value as base, or current time if none exist
-                    base_sort = min(existing_sorts)
+                    # Use the maximum sort value as base to ensure we're above existing items
+                    base_sort = max(existing_sorts)
                 else:
                     # If no sort values exist, use current time in microseconds
                     base_sort = int(time.time() * 1000000)
                 
                 # Assign new sort values to maintain the new order
-                # Increment by enough to ensure proper ordering (1000 microseconds = 1 millisecond)
+                # Google Keep sorts in DESCENDING order, so first item gets highest sort value
+                # Decrement by enough to ensure proper ordering (1000 microseconds = 1 millisecond)
                 for i, item in enumerate(all_items):
                     # Set a new sort value based on position
-                    # Use the base sort value and increment by position
-                    new_sort = base_sort + (i * 1000)  # Increment by 1000 microseconds per item
+                    # First item (i=0) gets highest value, last item gets lowest value
+                    new_sort = base_sort - (i * 1000)  # Decrement by 1000 microseconds per item
                     item.sort = new_sort
                 
                 # The changes will be synced when we call sync() later
