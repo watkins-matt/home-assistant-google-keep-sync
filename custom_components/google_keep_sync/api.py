@@ -452,9 +452,10 @@ class GoogleKeepAPI:
             # Insert the item at the target position
             all_items.insert(target_index, item_to_move)
 
-            # Reorder items in Google Keep by updating their sort values
-            # Google Keep uses sort values (timestamps) to determine order
-            # Note: Google Keep sorts in DESCENDING order (higher sort values appear first)
+            # Reorder items in Google Keep by updating their sort values.
+            # Google Keep uses sort values (timestamps) to determine order.
+            # Note: Google Keep sorts in DESCENDING order
+            # (higher sort values appear first)
             def reorder_items():
                 # Get existing sort values to preserve relative ordering
                 # We'll use the maximum sort value as a base and adjust from there
@@ -465,15 +466,16 @@ class GoogleKeepAPI:
                 ]
 
                 if existing_sorts:
-                    # Use the maximum sort value as base to ensure we're above existing items
+                    # Use max sort value as base to ensure we're above existing
                     base_sort = max(existing_sorts)
                 else:
                     # If no sort values exist, use current time in microseconds
                     base_sort = int(time.time() * 1000000)
 
-                # Assign new sort values to maintain the new order
-                # Google Keep sorts in DESCENDING order, so first item gets highest sort value
-                # Decrement by enough to ensure proper ordering (1000 microseconds = 1 millisecond)
+                # Assign new sort values to maintain the new order.
+                # Google Keep sorts in DESCENDING order, so first item
+                # gets highest sort value. Decrement by 1000 microseconds
+                # (1 millisecond) per item to ensure proper ordering.
                 for i, item in enumerate(all_items):
                     # Set a new sort value based on position
                     # First item (i=0) gets highest value, last item gets lowest value
