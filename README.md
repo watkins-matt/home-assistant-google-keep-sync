@@ -120,6 +120,24 @@ If you're experiencing issues with the master token approach, you can use an OAu
 
 After setup, your selected Google Keep lists will be available in Home Assistant. You can view and interact with these lists, and any changes you make in Home Assistant will be instantly synced to Google Keep.
 
+## List Ordering
+
+The integration offers two approaches to organizing your list items:
+
+### Manual Reordering
+
+By default, you can drag and drop items in the Home Assistant UI to reorder them. Changes are synced to Google Keep, so your custom order is preserved across both platforms.
+
+### Auto Sort
+
+If you prefer alphabetical organization, enable **Automatically Sort Lists** in the integration options. When enabled:
+
+- Items are automatically sorted alphabetically on each sync
+- Sorting is bidirectional (applies to both Home Assistant and Google Keep)
+- Manual reordering is disabled to prevent conflicts
+
+Choose the approach that best fits your workflow. You cannot use both simultaneously—enabling auto sort disables manual reordering.
+
 ## Services
 
 As a result of the fact that we are working directly with native todo entities, you can
