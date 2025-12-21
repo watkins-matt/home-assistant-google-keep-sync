@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from types import MappingProxyType
-from typing import Any, Callable, List, Mapping, Tuple
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -49,7 +50,7 @@ class MockConfigEntry:
         data: Mapping[str, Any] = MappingProxyType({}),
         disabled_by: ConfigEntryDisabler | None = None,
         discovery_keys: MappingProxyType[
-            str, Tuple[DiscoveryKey, ...]
+            str, tuple[DiscoveryKey, ...]
         ] = MappingProxyType({}),
         domain: str = "",
         entry_id: str | None = None,
@@ -69,7 +70,7 @@ class MockConfigEntry:
         self.created_at: datetime = created_at or datetime.now(UTC)
         self.data: Mapping[str, Any] = data
         self.disabled_by: ConfigEntryDisabler | None = disabled_by
-        self.discovery_keys: MappingProxyType[str, Tuple[DiscoveryKey, ...]] = (
+        self.discovery_keys: MappingProxyType[str, tuple[DiscoveryKey, ...]] = (
             discovery_keys
         )
         self.domain: str = domain
@@ -86,7 +87,7 @@ class MockConfigEntry:
         self.version: int = version
 
         self.setup_lock: asyncio.Lock = asyncio.Lock()
-        self.update_listeners: List[Callable[[], None]] = []
+        self.update_listeners: list[Callable[[], None]] = []
 
         self.clear_state_cache: Callable[[], None] = lambda: None
         self.clear_storage_cache: Callable[[], None] = lambda: None

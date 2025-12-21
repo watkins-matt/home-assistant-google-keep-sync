@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.1
+    rev: v0.14.0
     hooks:
       - id: ruff
         args:
@@ -8,7 +8,7 @@ repos:
 
   # Use mypyc-compiled black, see https://black.readthedocs.io/en/stable/integrations/source_version_control.html
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.10.0
+    rev: 25.12.0
     hooks:
       - id: black
         language_version: python3.13
@@ -16,7 +16,7 @@ repos:
           - --quiet
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
+    rev: v2.4.1
     hooks:
       - id: codespell
         args:
@@ -26,13 +26,13 @@ repos:
         exclude_types: [csv, json]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.3.0
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
-        args: [--py37-plus]
+        args: [--py311-plus]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-executables-have-shebangs
         stages: [manual]
@@ -44,7 +44,7 @@ repos:
         args: ['--fix=lf']
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.0
+    rev: v1.19.1
     hooks:
       - id: mypy
         args:

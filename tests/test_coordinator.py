@@ -1,7 +1,6 @@
 """Unit tests for the todo component."""
 
 import logging
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -383,7 +382,7 @@ async def test_all_deleted_lists(
     }
 
     # Setup mock lists
-    mock_synced_lists: List[MagicMock] = []
+    mock_synced_lists: list[MagicMock] = []
     deleted_list_ids = ["list1", "list2", "list3"]
 
     # Mock the API to return all lists as deleted
@@ -442,7 +441,7 @@ async def test_all_deleted_lists(
             assert actual_calls == expected_calls
 
             # Ensure configuration was updated to remove all lists
-            updated_lists: List[str] = []
+            updated_lists: list[str] = []
             mock_hass.config_entries.async_update_entry.assert_called_once_with(
                 mock_config_entry,
                 data={**mock_config_entry.data, "lists_to_sync": updated_lists},
@@ -537,7 +536,7 @@ async def test_exception_during_entity_removal(
     """Test coordinator's behavior when an exception occurs during entity removal."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
-    mock_synced_lists: List[MagicMock] = []
+    mock_synced_lists: list[MagicMock] = []
     deleted_list_ids = ["list1"]
 
     # Mock the API to return some deleted lists
@@ -651,7 +650,7 @@ async def test_handle_deleted_lists_logging(
     """Test that appropriate logs are generated when handling deleted lists."""
     # Setup mock lists
     mock_list1 = MagicMock(id="list1", title="List 1")
-    mock_synced_lists: List[MagicMock] = []
+    mock_synced_lists: list[MagicMock] = []
     deleted_list_ids = ["list1"]
 
     # Mock the API to return some deleted lists
