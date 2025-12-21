@@ -124,4 +124,32 @@ else
     echo "No requirements.test.txt found for Google Keep Sync. Skipping."
 fi
 
+# Configure debug logging for google_keep_sync
+CONFIGURATION_YAML="$CONFIG_DIR/configuration.yaml"
+if [ -f "$CONFIGURATION_YAML" ]; then
+    if grep -q "custom_components.google_keep_sync" "$CONFIGURATION_YAML"; then
+        echo "Debug logging already configured in configuration.yaml"
+    elif ! grep -q "^logger:" "$CONFIGURATION_YAML"; then
+        # No logger section exists, append the whole block
+        echo "Adding logger section with debug logging..."
+        cat <<EOL >> "$CONFIGURATION_YAML"
+
+logger:
+  default: info
+  logs:
+    custom_components.google_keep_sync: debug
+EOL
+        echo "Debug logging added to configuration.yaml"
+    else
+        # logger: section exists, add our entry
+        if ! grep -q "^  logs:" "$CONFIGURATION_YAML"; then
+            # No logs: subsection, add it after logger:
+            sed -i '/^logger:/a\  logs:' "$CONFIGURATION_YAML"
+        fi
+        # Add our debug entry under logs:
+        sed -i '/^  logs:/a\    custom_components.google_keep_sync: debug' "$CONFIGURATION_YAML"
+        echo "Debug logging added to existing logger section"
+    fi
+fi
+
 echo "Bootstrap process completed."
