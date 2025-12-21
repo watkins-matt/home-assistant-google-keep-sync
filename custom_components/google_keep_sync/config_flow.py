@@ -65,16 +65,24 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             _LOGGER.debug("Processing user input in OptionsFlowHandler")
             # Update the config entry with new data
+            auto_sort = user_input.get("list_auto_sort", False)
+            # Clear placeholder if auto_sort is enabled (incompatible features)
+            placeholder = (
+                ""
+                if auto_sort
+                else user_input.get("empty_item_placeholder", "").strip()
+            )
             updated_data = {
                 **self.config_entry.data,
                 **user_input,
-                "list_auto_sort": user_input.get("list_auto_sort", False),
+                "list_auto_sort": auto_sort,
                 "list_item_case": user_input.get(
                     "list_item_case", ListCase.NO_CHANGE.value
                 ),
                 "sync_interval": user_input.get(
                     "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
                 ),
+                "empty_item_placeholder": placeholder,
             }
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=updated_data
@@ -148,6 +156,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         sync_interval = self.config_entry.data.get(
             "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
         )
+        empty_item_placeholder = self.config_entry.data.get(
+            "empty_item_placeholder", ""
+        )
 
         # Create a set of existing_lists for quick lookup
         existing_list_set = set(existing_lists)
@@ -200,6 +211,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             unit_of_measurement="minutes",
                         )
                     ),
+                    vol.Optional(
+                        "empty_item_placeholder", default=empty_item_placeholder
+                    ): str,
                 }
             ),
             errors=errors,
@@ -391,17 +405,25 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         if user_input is not None:
             _LOGGER.debug("Processing user input in async_step_options")
+            auto_sort = user_input.get("list_auto_sort", False)
+            # Clear placeholder if auto_sort is enabled (incompatible features)
+            placeholder = (
+                ""
+                if auto_sort
+                else user_input.get("empty_item_placeholder", "").strip()
+            )
             entry_data = {
                 **self.user_data,
                 "lists_to_sync": user_input.get("lists_to_sync", []),
                 "list_prefix": user_input.get("list_prefix", ""),
-                "list_auto_sort": user_input.get("list_auto_sort", False),
+                "list_auto_sort": auto_sort,
                 "list_item_case": user_input.get(
                     "list_item_case", ListCase.NO_CHANGE.value
                 ),
                 "sync_interval": user_input.get(
                     "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
                 ),
+                "empty_item_placeholder": placeholder,
             }
             _LOGGER.info(
                 "Creating config entry for user %s", self.user_data["username"]
@@ -418,6 +440,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         sync_interval = self.user_data.get(
             "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
         )
+        empty_item_placeholder = self.user_data.get("empty_item_placeholder", "")
 
         try:
             # Fetch all lists from Google Keep to display as options
@@ -490,6 +513,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                             unit_of_measurement="minutes",
                         )
                     ),
+                    vol.Optional(
+                        "empty_item_placeholder", default=empty_item_placeholder
+                    ): str,
                 }
             )
 

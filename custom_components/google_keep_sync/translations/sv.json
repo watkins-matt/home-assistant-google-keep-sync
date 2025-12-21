@@ -31,14 +31,16 @@
                     "list_prefix": "Listprefix",
                     "list_auto_sort": "Sortera Listor Automatiskt",
                     "list_item_case": "Ändra versalisering för listobjekt",
-                    "sync_interval": "Synkroniseringsintervall"
+                    "sync_interval": "Synkroniseringsintervall",
+                    "empty_item_placeholder": "Platshållare för tomma objekt"
                 },
                 "data_description": {
                     "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
                     "list_auto_sort": "Sorterar automatiskt listobjekt alfabetiskt i både Home Assistant och Google Keep. Obs: Om detta aktiveras inaktiveras manuell omsortering av objekt. Inaktivera automatisk sortering om du föredrar att ordna objekt själv.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras.",
-                    "sync_interval": "Hur ofta synkronisering med Google Keep sker (1-1440 minuter). Lägre värden ger snabbare uppdateringar men kan orsaka hastighetsbegränsning. Öka detta värde om du upplever synkroniseringsproblem."
+                    "sync_interval": "Hur ofta synkronisering med Google Keep sker (1-1440 minuter). Lägre värden ger snabbare uppdateringar men kan orsaka hastighetsbegränsning. Öka detta värde om du upplever synkroniseringsproblem.",
+                    "empty_item_placeholder": "Text som visas för tomma Google Keep-objekt (används som avgränsare). Standard är tomt (inaktiverat), vilket filtrerar bort tomma objekt. Använd unik text som du inte använder för riktiga objekt. Inkompatibel med automatisk sortering."
                 }
             },
             "reauth_confirm": {
@@ -57,14 +59,16 @@
                     "list_prefix": "Listprefix",
                     "list_auto_sort": "Sortera Listor Automatiskt",
                     "list_item_case": "Ändra versalisering för listobjekt",
-                    "sync_interval": "Synkroniseringsintervall"
+                    "sync_interval": "Synkroniseringsintervall",
+                    "empty_item_placeholder": "Platshållare för tomma objekt"
                 },
                 "data_description": {
                     "lists_to_sync": "Välj vilka listor som ska synkroniseras. Du kan välja flera listor. Arkiverade eller raderade listor visas inte här.",
                     "list_prefix": "(Valfritt, kan lämnas tomt) Lägg till en unik identifierare framför varje listnamn i Home Assistant. Till exempel, genom att skriva 'Google' kommer din inköpslista att visas som 'Google Inköpslista'. Lämna fältet tomt för att behålla listornas namn som de är i Google Keep.",
                     "list_auto_sort": "Sorterar automatiskt listobjekt alfabetiskt i både Home Assistant och Google Keep. Obs: Om detta aktiveras inaktiveras manuell omsortering av objekt. Inaktivera automatisk sortering om du föredrar att ordna objekt själv.",
                     "list_item_case": "Ändrar alla dina listobjekt till angivet skiftläge. Standard är att inte ändra något. Detta är dubbelriktat, så dina listobjekt i både Home Assistant och Google Keep kommer att ändras.",
-                    "sync_interval": "Hur ofta synkronisering med Google Keep sker (1-1440 minuter). Lägre värden ger snabbare uppdateringar men kan orsaka hastighetsbegränsning. Öka detta värde om du upplever synkroniseringsproblem."
+                    "sync_interval": "Hur ofta synkronisering med Google Keep sker (1-1440 minuter). Lägre värden ger snabbare uppdateringar men kan orsaka hastighetsbegränsning. Öka detta värde om du upplever synkroniseringsproblem.",
+                    "empty_item_placeholder": "Text som visas för tomma Google Keep-objekt (används som avgränsare). Standard är tomt (inaktiverat), vilket filtrerar bort tomma objekt. Använd unik text som du inte använder för riktiga objekt. Inkompatibel med automatisk sortering."
                 }
             }
         },
