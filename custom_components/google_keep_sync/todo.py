@@ -29,23 +29,20 @@ class GoogleKeepTodoListEntity(
     """A To-do List representation of a Google Keep List."""
 
     _attr_has_entity_name = True
-    _attr_supported_features = (
-        TodoListEntityFeature.CREATE_TODO_ITEM
-        | TodoListEntityFeature.UPDATE_TODO_ITEM
-        | TodoListEntityFeature.DELETE_TODO_ITEM
-    )
 
     def __init__(
         self,
         coordinator: DataUpdateCoordinator,
         gkeep_list: gkeepapi.node.List,
         list_prefix: str,
+        auto_sort: bool = False,
     ):
         """Initialize the Google Keep Todo List Entity."""
         super().__init__(coordinator)
         self.api = coordinator.api
         self._gkeep_list = gkeep_list
         self._gkeep_list_id = gkeep_list.id
+        self._auto_sort = auto_sort
         self._attr_name = (
             f"{list_prefix} " if list_prefix else ""
         ) + f"{gkeep_list.title}"
@@ -70,6 +67,22 @@ class GoogleKeepTodoListEntity(
         entity_id = f"todo.google_keep_{title.lower().replace(' ', '_')}"
         _LOGGER.debug("Generated entity ID: '%s' for title: '%s'", entity_id, title)
         return entity_id
+
+    @property
+    def supported_features(self) -> TodoListEntityFeature:
+        """Return supported features.
+
+        Move is only supported when auto-sort is disabled, since auto-sort
+        would override any manual reordering on the next sync.
+        """
+        features = (
+            TodoListEntityFeature.CREATE_TODO_ITEM
+            | TodoListEntityFeature.UPDATE_TODO_ITEM
+            | TodoListEntityFeature.DELETE_TODO_ITEM
+        )
+        if not self._auto_sort:
+            features |= TodoListEntityFeature.MOVE_TODO_ITEM
+        return features
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Delete todo items from Google Keep."""
@@ -134,6 +147,35 @@ class GoogleKeepTodoListEntity(
             await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh after item creation.")
 
+    async def async_move_todo_item(
+        self, uid: str, previous_uid: str | None = None
+    ) -> None:
+        """Move a todo item to a new position in Google Keep."""
+        _LOGGER.debug(
+            "Moving todo item: %s to position after: %s in list: %s",
+            uid,
+            previous_uid,
+            self._gkeep_list_id,
+        )
+        list_id = self._gkeep_list_id
+
+        try:
+            # Move the item in Google Keep
+            await self.api.async_move_todo_item(list_id, uid, previous_uid)
+            _LOGGER.debug(
+                "Successfully moved item %s to position after %s in Google Keep.",
+                uid,
+                previous_uid,
+            )
+
+        except Exception as e:
+            _LOGGER.error("Failed to move item %s in Google Keep: %s", uid, e)
+
+        finally:
+            # Resync data with Google Keep
+            await self.coordinator.async_refresh()
+            _LOGGER.debug("Requested data refresh after move.")
+
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         for gkeep_list in self.coordinator.data:
@@ -190,10 +232,12 @@ async def async_setup_entry(
     # Retrieve user-selected lists from the configuration
     selected_lists = entry.data.get("lists_to_sync", [])
     list_prefix = entry.data.get("list_prefix", "")
+    auto_sort = entry.data.get("list_auto_sort", False)
     _LOGGER.debug(
-        "User selected %d lists to sync with prefix: '%s'",
+        "User selected %d lists to sync with prefix: '%s', auto_sort: %s",
         len(selected_lists),
         list_prefix,
+        auto_sort,
     )
 
     # Filter Google Keep lists based on user selection
@@ -204,8 +248,8 @@ async def async_setup_entry(
     _LOGGER.debug("Filtered %d lists for syncing", len(lists_to_sync))
 
     entities = [
-        GoogleKeepTodoListEntity(coordinator, list, list_prefix)
-        for list in lists_to_sync
+        GoogleKeepTodoListEntity(coordinator, gkeep_list, list_prefix, auto_sort)
+        for gkeep_list in lists_to_sync
     ]
     _LOGGER.debug("Created %d GoogleKeepTodoListEntity instances", len(entities))
 

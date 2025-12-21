@@ -23,6 +23,7 @@ def mock_api():
         mock_api.async_create_todo_item = AsyncMock(return_value="new_item_id")
         mock_api.async_update_todo_item = AsyncMock()
         mock_api.async_delete_todo_item = AsyncMock()
+        mock_api.async_move_todo_item = AsyncMock()
 
         # Mock fetch_all_lists to return a list of mock gkeepapi.node.List objects
         mock_lists = [
@@ -323,4 +324,121 @@ async def test_async_delete_todo_items_exception(mock_api, mock_coordinator):
     await entity.async_delete_todo_items(["item1"])
 
     # Verify that async_refresh is called despite the deletion error
+    mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_move_todo_item(hass: HomeAssistant, mock_api, mock_coordinator):
+    """Test moving a todo item to a new position."""
+    grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    list_prefix = ""
+
+    # Create mock items with IDs
+    item1 = MagicMock(id="item_1", text="Item 1", checked=False)
+    item2 = MagicMock(id="item_2", text="Item 2", checked=False)
+    item3 = MagicMock(id="item_3", text="Item 3", checked=False)
+    grocery_list.items = [item1, item2, item3]
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.data = [
+        {
+            "id": "grocery_list",
+            "title": "Grocery List",
+            "items": [
+                {"id": "item_1", "text": "Item 1", "checked": False},
+                {"id": "item_2", "text": "Item 2", "checked": False},
+                {"id": "item_3", "text": "Item 3", "checked": False},
+            ],
+        }
+    ]
+
+    # Mock the async_move_todo_item method
+    mock_api.async_move_todo_item = AsyncMock()
+
+    # Side effect to update coordinator data after move
+    def async_refresh_side_effect():
+        # Simulate reordered items
+        mock_coordinator.data[0]["items"] = [
+            {"id": "item_2", "text": "Item 2", "checked": False},
+            {"id": "item_3", "text": "Item 3", "checked": False},
+            {"id": "item_1", "text": "Item 1", "checked": False},
+        ]
+
+    mock_coordinator.async_refresh = AsyncMock(side_effect=async_refresh_side_effect)
+
+    # Create the entity
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
+    entity.hass = hass
+
+    # Move item_1 to after item_3
+    await entity.async_move_todo_item("item_1", previous_uid="item_3")
+
+    # Verify the API method was called correctly
+    mock_api.async_move_todo_item.assert_called_once_with(
+        "grocery_list", "item_1", "item_3"
+    )
+    mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_move_todo_item_to_beginning(
+    hass: HomeAssistant, mock_api, mock_coordinator
+):
+    """Test moving a todo item to the beginning of the list."""
+    grocery_list = MagicMock(id="grocery_list", title="Grocery List")
+    list_prefix = ""
+
+    # Create mock items
+    item1 = MagicMock(id="item_1", text="Item 1", checked=False)
+    item2 = MagicMock(id="item_2", text="Item 2", checked=False)
+    item3 = MagicMock(id="item_3", text="Item 3", checked=False)
+    grocery_list.items = [item1, item2, item3]
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.data = [
+        {
+            "id": "grocery_list",
+            "title": "Grocery List",
+            "items": [
+                {"id": "item_1", "text": "Item 1", "checked": False},
+                {"id": "item_2", "text": "Item 2", "checked": False},
+                {"id": "item_3", "text": "Item 3", "checked": False},
+            ],
+        }
+    ]
+
+    # Mock the async_move_todo_item method
+    mock_api.async_move_todo_item = AsyncMock()
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create the entity
+    entity = GoogleKeepTodoListEntity(mock_coordinator, grocery_list, list_prefix)
+    entity.hass = hass
+
+    # Move item_3 to the beginning (previous_uid=None)
+    await entity.async_move_todo_item("item_3", previous_uid=None)
+
+    # Verify the API method was called with None for previous_uid
+    mock_api.async_move_todo_item.assert_called_once_with(
+        "grocery_list", "item_3", None
+    )
+    mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_move_todo_item_exception(mock_api, mock_coordinator):
+    """Test async_move_todo_item calls async_refresh even if move fails."""
+    # Create a dummy list with items
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    item1 = MagicMock(id="item_1", text="Item 1", checked=False)
+    item2 = MagicMock(id="item_2", text="Item 2", checked=False)
+    dummy_list.items = [item1, item2]
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+    # Force an exception during the move operation
+    entity.api.async_move_todo_item = AsyncMock(side_effect=Exception("Move Error"))
+    mock_coordinator.async_refresh = AsyncMock()
+
+    await entity.async_move_todo_item("item_1", previous_uid="item_2")
+
+    # Verify that async_refresh is called despite the move error
     mock_coordinator.async_refresh.assert_called_once()
