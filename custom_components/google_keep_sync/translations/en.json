@@ -30,13 +30,15 @@
                     "lists_to_sync": "Lists to Sync",
                     "list_prefix": "List Prefix",
                     "list_auto_sort": "Automatically Sort Lists",
-                    "list_item_case": "Change List Item Case"
+                    "list_item_case": "Change List Item Case",
+                    "sync_interval": "Sync Interval"
                 },
                 "data_description": {
                     "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
                     "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
                     "list_auto_sort": "Automatically sorts list items alphabetically in both Home Assistant and Google Keep. Note: Enabling this disables manual reordering of items. Disable auto-sort if you prefer to arrange items yourself.",
-                    "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed."
+                    "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed.",
+                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues."
                 }
             },
             "reauth_confirm": {
@@ -54,13 +56,15 @@
                     "lists_to_sync": "Lists to Sync",
                     "list_prefix": "List Prefix",
                     "list_auto_sort": "Automatically Sort Lists",
-                    "list_item_case": "Change List Item Case"
+                    "list_item_case": "Change List Item Case",
+                    "sync_interval": "Sync Interval"
                 },
                 "data_description": {
                     "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
                     "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
                     "list_auto_sort": "Automatically sorts list items alphabetically in both Home Assistant and Google Keep. Note: Enabling this disables manual reordering of items. Disable auto-sort if you prefer to arrange items yourself.",
-                    "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed."
+                    "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed.",
+                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues."
                 }
             }
         },

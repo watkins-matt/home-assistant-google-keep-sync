@@ -2,6 +2,7 @@
 
 import logging
 from collections import namedtuple
+from datetime import timedelta
 
 from gkeepapi.node import List as GKeepList
 from homeassistant.config_entries import ConfigEntry
@@ -12,7 +13,7 @@ from homeassistant.helpers.entity_registry import async_get as async_get_entity_
 from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
 
 from .api import GoogleKeepAPI, ListCase
-from .const import DOMAIN, SCAN_INTERVAL
+from .const import DEFAULT_SYNC_INTERVAL_MINUTES, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 TodoItem = namedtuple("TodoItem", ["summary", "checked"])
@@ -30,16 +31,22 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
         entry: ConfigEntry,
     ) -> None:
         """Initialize the Google Keep Todo coordinator."""
+        sync_interval_minutes = entry.data.get(
+            "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
+        )
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(minutes=sync_interval_minutes),
         )
         self.api = api
         self.config_entry = entry
         self._user_named_entities: set[str] = set()
-        _LOGGER.debug("GoogleKeepSyncCoordinator initialized")
+        _LOGGER.debug(
+            "GoogleKeepSyncCoordinator initialized with %d minute sync interval",
+            sync_interval_minutes,
+        )
 
     async def _async_update_data(self) -> list[GKeepList]:
         """Fetch data from API and handle deleted entities."""

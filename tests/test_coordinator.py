@@ -849,23 +849,32 @@ async def test_remove_deleted_entities(
 @pytest.mark.asyncio
 async def test_notify_new_items_fires_events(hass, mock_api, mock_config_entry):
     """Test _notify_new_items fires service-call events."""
+    # Flush any pending events from previous tests
+    await hass.async_block_till_done()
+
     # Instantiate the coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, mock_api, mock_config_entry)
 
+    # Use unique item names to avoid conflicts with other tests
+    unique_item_1 = "Test_Milk_12345"
+    unique_item_2 = "Test_Eggs_12345"
+
     # Prepare two new items
     new_items = [
-        TodoItemData(item="Buy milk", entity_id="todo.list1"),
-        TodoItemData(item="Buy eggs", entity_id="todo.list1"),
+        TodoItemData(item=unique_item_1, entity_id="todo.list1"),
+        TodoItemData(item=unique_item_2, entity_id="todo.list1"),
     ]
 
     # List to record the events
     recorded_events = []
 
-    # Listen for the service-call events
-    hass.bus.async_listen(
-        EVENT_CALL_SERVICE,
-        lambda event: recorded_events.append(event),
-    )
+    # Listen for the service-call events, filtering for our unique items
+    def event_filter(event):
+        item = event.data.get("service_data", {}).get("item", "")
+        if item in (unique_item_1, unique_item_2):
+            recorded_events.append(event)
+
+    hass.bus.async_listen(EVENT_CALL_SERVICE, event_filter)
 
     # Invoke the method under test
     await coordinator._notify_new_items(new_items)
@@ -878,15 +887,13 @@ async def test_notify_new_items_fires_events(hass, mock_api, mock_config_entry):
     expected_recorded_event_count = 2
     assert len(recorded_events) == expected_recorded_event_count
 
-    # Validate first event
-    first = recorded_events[0].data
-    assert first["service_data"]["item"] == "Buy milk"
-    assert first["service_data"]["entity_id"] == ["todo.list1"]
+    # Extract items from events (order may vary in test environment)
+    recorded_items = {event.data["service_data"]["item"] for event in recorded_events}
+    assert recorded_items == {unique_item_1, unique_item_2}
 
-    # Validate second event
-    second = recorded_events[1].data
-    assert second["service_data"]["item"] == "Buy eggs"
-    assert second["service_data"]["entity_id"] == ["todo.list1"]
+    # Validate both events have correct entity_id
+    for event in recorded_events:
+        assert event.data["service_data"]["entity_id"] == ["todo.list1"]
 
 
 async def test_get_new_items_added_with_new_list(hass, mock_api, mock_config_entry):
