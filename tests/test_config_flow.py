@@ -10,7 +10,10 @@ from custom_components.google_keep_sync.config_flow import (
     CannotConnectError,
     ConfigFlow,
 )
-from custom_components.google_keep_sync.const import DOMAIN
+from custom_components.google_keep_sync.const import (
+    DEFAULT_SYNC_INTERVAL_MINUTES,
+    DOMAIN,
+)
 from tests.conftest import MockConfigEntry
 
 
@@ -80,6 +83,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "list_prefix": "testprefix",
         "list_auto_sort": False,
         "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
     }
     final_form_result = await hass.config_entries.flow.async_configure(
         credentials_form_result["flow_id"], user_input=options_input
@@ -95,6 +99,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "list_prefix": "testprefix",
         "list_auto_sort": False,
         "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
     }
 
 
@@ -529,6 +534,7 @@ async def test_options_flow_create_entry(
         "list_prefix": "Test",
         "list_auto_sort": False,
         "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
     }
 
     # Submit user input
@@ -686,6 +692,7 @@ async def test_user_form_setup_with_oauth_token(
             "list_prefix": "testprefix",
             "list_auto_sort": False,
             "list_item_case": "no_change",
+            "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
         }
         final_form_result = await hass.config_entries.flow.async_configure(
             credentials_form_result["flow_id"], user_input=options_input
@@ -701,6 +708,7 @@ async def test_user_form_setup_with_oauth_token(
             "list_prefix": "testprefix",
             "list_auto_sort": False,
             "list_item_case": "no_change",
+            "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
         }
 
 
@@ -858,11 +866,13 @@ async def test_step_options_with_user_input(
     flow.user_data = {"username": "user@example.com", "token": "token123"}
 
     # Call async_step_options with user input
+    custom_sync_interval = DEFAULT_SYNC_INTERVAL_MINUTES * 2  # 30 minutes
     user_input = {
         "lists_to_sync": ["list1"],
         "list_prefix": "Test: ",
         "list_auto_sort": True,
         "list_item_case": "upper",
+        "sync_interval": custom_sync_interval,
     }
 
     result = await flow.async_step_options(user_input)
@@ -873,3 +883,4 @@ async def test_step_options_with_user_input(
     assert result["data"]["list_prefix"] == "Test: "
     assert result["data"]["list_auto_sort"] is True
     assert result["data"]["list_item_case"] == "upper"
+    assert result["data"]["sync_interval"] == custom_sync_interval

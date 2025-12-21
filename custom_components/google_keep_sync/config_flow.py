@@ -14,7 +14,12 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 
 from .api import GoogleKeepAPI, ListCase
-from .const import DOMAIN
+from .const import (
+    DEFAULT_SYNC_INTERVAL_MINUTES,
+    DOMAIN,
+    MAX_SYNC_INTERVAL_MINUTES,
+    MIN_SYNC_INTERVAL_MINUTES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +71,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "list_auto_sort": user_input.get("list_auto_sort", False),
                 "list_item_case": user_input.get(
                     "list_item_case", ListCase.NO_CHANGE.value
+                ),
+                "sync_interval": user_input.get(
+                    "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
                 ),
             }
             self.hass.config_entries.async_update_entry(
@@ -137,6 +145,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         list_item_case = self.config_entry.data.get(
             "list_item_case", ListCase.NO_CHANGE.value
         )
+        sync_interval = self.config_entry.data.get(
+            "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
+        )
 
         # Create a set of existing_lists for quick lookup
         existing_list_set = set(existing_lists)
@@ -179,6 +190,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ),
                     vol.Optional("list_prefix", default=list_prefix): str,
                     vol.Optional("list_auto_sort", default=auto_sort): bool,
+                    vol.Optional(
+                        "sync_interval", default=sync_interval
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_SYNC_INTERVAL_MINUTES,
+                            max=MAX_SYNC_INTERVAL_MINUTES,
+                            mode=selector.NumberSelectorMode.BOX,
+                            unit_of_measurement="minutes",
+                        )
+                    ),
                 }
             ),
             errors=errors,
@@ -378,6 +399,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 "list_item_case": user_input.get(
                     "list_item_case", ListCase.NO_CHANGE.value
                 ),
+                "sync_interval": user_input.get(
+                    "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
+                ),
             }
             _LOGGER.info(
                 "Creating config entry for user %s", self.user_data["username"]
@@ -391,6 +415,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         list_prefix = self.user_data.get("list_prefix", "")
         auto_sort = self.user_data.get("list_auto_sort", False)
         list_item_case = self.user_data.get("list_item_case", ListCase.NO_CHANGE.value)
+        sync_interval = self.user_data.get(
+            "sync_interval", DEFAULT_SYNC_INTERVAL_MINUTES
+        )
 
         try:
             # Fetch all lists from Google Keep to display as options
@@ -453,6 +480,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     ),
                     vol.Optional("list_prefix", default=list_prefix): str,
                     vol.Optional("list_auto_sort", default=auto_sort): bool,
+                    vol.Optional(
+                        "sync_interval", default=sync_interval
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_SYNC_INTERVAL_MINUTES,
+                            max=MAX_SYNC_INTERVAL_MINUTES,
+                            mode=selector.NumberSelectorMode.BOX,
+                            unit_of_measurement="minutes",
+                        )
+                    ),
                 }
             )
 
