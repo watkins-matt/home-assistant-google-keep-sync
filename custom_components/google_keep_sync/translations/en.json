@@ -31,14 +31,16 @@
                     "list_prefix": "List Prefix",
                     "list_auto_sort": "Automatically Sort Lists",
                     "list_item_case": "Change List Item Case",
-                    "sync_interval": "Sync Interval"
+                    "sync_interval": "Sync Interval",
+                    "empty_item_placeholder": "Empty Item Placeholder"
                 },
                 "data_description": {
                     "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
                     "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
                     "list_auto_sort": "Automatically sorts list items alphabetically in both Home Assistant and Google Keep. Note: Enabling this disables manual reordering of items. Disable auto-sort if you prefer to arrange items yourself.",
                     "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed.",
-                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues."
+                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues.",
+                    "empty_item_placeholder": "Text to display for empty Google Keep items (used as separators). Default is blank (disabled), which filters out empty items. Use unique text you won't use for real items. Incompatible with auto-sort."
                 }
             },
             "reauth_confirm": {
@@ -57,14 +59,16 @@
                     "list_prefix": "List Prefix",
                     "list_auto_sort": "Automatically Sort Lists",
                     "list_item_case": "Change List Item Case",
-                    "sync_interval": "Sync Interval"
+                    "sync_interval": "Sync Interval",
+                    "empty_item_placeholder": "Empty Item Placeholder"
                 },
                 "data_description": {
                     "lists_to_sync": "Choose which lists to synchronize. You can select multiple lists. Archived or deleted lists are not shown here.",
                     "list_prefix": "(Optional, can be blank) Add a unique identifier to the front of each list name in Home Assistant. For example, entering 'Google' will display your shopping list as 'Google Shopping List'. Leave empty to have the lists named as they are in Google Keep.",
                     "list_auto_sort": "Automatically sorts list items alphabetically in both Home Assistant and Google Keep. Note: Enabling this disables manual reordering of items. Disable auto-sort if you prefer to arrange items yourself.",
                     "list_item_case": "Changes all of your list items to the given case. Default is to not change anything. This is bidirectional, so your list items in both Home Assistant and Google Keep will be changed.",
-                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues."
+                    "sync_interval": "How often to sync with Google Keep (1-1440 minutes). Lower values provide faster updates but may cause rate limiting. Increase this value if you experience sync issues.",
+                    "empty_item_placeholder": "Text to display for empty Google Keep items (used as separators). Default is blank (disabled), which filters out empty items. Use unique text you won't use for real items. Incompatible with auto-sort."
                 }
             }
         },

@@ -442,3 +442,238 @@ async def test_move_todo_item_exception(mock_api, mock_coordinator):
 
     # Verify that async_refresh is called despite the move error
     mock_coordinator.async_refresh.assert_called_once()
+
+
+async def test_todo_items_placeholder_enabled(mock_api, mock_coordinator):
+    """Test that empty items show placeholder when feature is enabled."""
+    # Create items: one valid, one empty, and one with only whitespace
+    valid_item = MagicMock(id="1", text="Buy Milk", checked=False)
+    empty_item = MagicMock(id="2", text="", checked=False)
+    whitespace_item = MagicMock(id="3", text="   ", checked=False)
+
+    # Set up a dummy list containing all items
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [valid_item, empty_item, whitespace_item]
+
+    # Create entity with placeholder enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="---"
+    )
+    items = entity.todo_items
+
+    # All items should be returned, with empty/whitespace items showing placeholder
+    expected_item_count = 3
+    assert len(items) == expected_item_count
+    assert items[0].summary == "Buy Milk"
+    assert items[1].summary == "---"
+    assert items[2].summary == "---"
+
+
+async def test_todo_items_placeholder_disabled_empty_str(mock_api, mock_coordinator):
+    """Test that empty items are filtered when placeholder is empty string."""
+    # Create items: one valid, one empty
+    valid_item = MagicMock(id="1", text="Buy Milk", checked=False)
+    empty_item = MagicMock(id="2", text="", checked=False)
+
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [valid_item, empty_item]
+
+    # Create entity with empty placeholder (disabled)
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder=""
+    )
+    items = entity.todo_items
+
+    # Only valid item should be returned
+    assert len(items) == 1
+    assert items[0].summary == "Buy Milk"
+
+
+async def test_todo_items_placeholder_disabled_whitespace(mock_api, mock_coordinator):
+    """Test that empty items are filtered when placeholder is whitespace only."""
+    # Create items: one valid, one empty
+    valid_item = MagicMock(id="1", text="Buy Milk", checked=False)
+    empty_item = MagicMock(id="2", text="", checked=False)
+
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [valid_item, empty_item]
+
+    # Create entity with whitespace-only placeholder (should be treated as disabled)
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="   "
+    )
+    items = entity.todo_items
+
+    # Only valid item should be returned
+    assert len(items) == 1
+    assert items[0].summary == "Buy Milk"
+
+
+async def test_create_placeholder_item_syncs_as_empty(mock_api, mock_coordinator):
+    """Test creating item with placeholder text syncs as empty to Google Keep."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity with placeholder enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="---"
+    )
+
+    # Create item with placeholder text
+    await entity.async_create_todo_item(TodoItem(summary="---"))
+
+    # Verify API was called with empty string
+    mock_api.async_create_todo_item.assert_called_once_with("test_list", "")
+
+
+async def test_create_non_placeholder_item_syncs_normally(mock_api, mock_coordinator):
+    """Test that creating a regular item syncs with its actual text."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity with placeholder enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="---"
+    )
+
+    # Create regular item (not placeholder)
+    await entity.async_create_todo_item(TodoItem(summary="Buy Eggs"))
+
+    # Verify API was called with actual text
+    mock_api.async_create_todo_item.assert_called_once_with("test_list", "Buy Eggs")
+
+
+async def test_update_to_placeholder_syncs_as_empty(mock_api, mock_coordinator):
+    """Test that updating an item to placeholder text syncs as empty to Google Keep."""
+    item = MagicMock(id="1", text="Old text", checked=False)
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [item]
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity with placeholder enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="---"
+    )
+
+    # Update item to placeholder text
+    await entity.async_update_todo_item(
+        TodoItem(uid="1", summary="---", status=TodoItemStatus.NEEDS_ACTION)
+    )
+
+    # Verify API was called with empty string
+    mock_api.async_update_todo_item.assert_called_once_with("test_list", "1", "", False)
+
+
+async def test_update_non_placeholder_item_syncs_normally(mock_api, mock_coordinator):
+    """Test that updating an item with regular text syncs normally."""
+    item = MagicMock(id="1", text="Old text", checked=False)
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [item]
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity with placeholder enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder="---"
+    )
+
+    # Update item with regular text
+    await entity.async_update_todo_item(
+        TodoItem(uid="1", summary="New text", status=TodoItemStatus.COMPLETED)
+    )
+
+    # Verify API was called with actual text
+    mock_api.async_update_todo_item.assert_called_once_with(
+        "test_list", "1", "New text", True
+    )
+
+
+async def test_placeholder_disabled_create_does_not_convert(mock_api, mock_coordinator):
+    """Test that placeholder text is not converted when feature is disabled."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity without placeholder (disabled)
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder=""
+    )
+
+    # Create item with what would be placeholder text
+    await entity.async_create_todo_item(TodoItem(summary="---"))
+
+    # Verify API was called with the literal text (not converted to empty)
+    mock_api.async_create_todo_item.assert_called_once_with("test_list", "---")
+
+
+async def test_placeholder_disabled_when_auto_sort_enabled(mock_api, mock_coordinator):
+    """Test that placeholder is disabled when auto_sort is enabled."""
+    # Create items: one valid, one empty
+    valid_item = MagicMock(id="1", text="Buy Milk", checked=False)
+    empty_item = MagicMock(id="2", text="", checked=False)
+
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = [valid_item, empty_item]
+
+    # Create entity with placeholder set BUT auto_sort enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=True, empty_item_placeholder="---"
+    )
+    items = entity.todo_items
+
+    # Empty items should be filtered out (placeholder disabled due to auto_sort)
+    assert len(items) == 1
+    assert items[0].summary == "Buy Milk"
+
+
+async def test_create_with_auto_sort_does_not_convert_placeholder(
+    mock_api, mock_coordinator
+):
+    """Test that placeholder is not converted to empty when auto_sort is enabled."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.async_refresh = AsyncMock()
+
+    # Create entity with placeholder set BUT auto_sort enabled
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=True, empty_item_placeholder="---"
+    )
+
+    # Create item with placeholder text
+    await entity.async_create_todo_item(TodoItem(summary="---"))
+
+    # Verify API was called with literal text (not converted due to auto_sort)
+    mock_api.async_create_todo_item.assert_called_once_with("test_list", "---")

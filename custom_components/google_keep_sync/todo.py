@@ -36,6 +36,7 @@ class GoogleKeepTodoListEntity(
         gkeep_list: gkeepapi.node.List,
         list_prefix: str,
         auto_sort: bool = False,
+        empty_item_placeholder: str = "",
     ):
         """Initialize the Google Keep Todo List Entity."""
         super().__init__(coordinator)
@@ -43,6 +44,7 @@ class GoogleKeepTodoListEntity(
         self._gkeep_list = gkeep_list
         self._gkeep_list_id = gkeep_list.id
         self._auto_sort = auto_sort
+        self._empty_item_placeholder = empty_item_placeholder
         self._attr_name = (
             f"{list_prefix} " if list_prefix else ""
         ) + f"{gkeep_list.title}"
@@ -114,6 +116,13 @@ class GoogleKeepTodoListEntity(
             list_id = self._gkeep_list_id
             item_id = item.uid
             new_text = item.summary
+
+            # Convert placeholder to empty string for Google Keep
+            # Only if auto_sort is disabled (placeholder incompatible with auto_sort)
+            placeholder = self._empty_item_placeholder
+            if not self._auto_sort and placeholder.strip() and new_text == placeholder:
+                new_text = ""
+
             checked = item.status == TodoItemStatus.COMPLETED
 
             # Update Google Keep in the background
@@ -133,6 +142,12 @@ class GoogleKeepTodoListEntity(
         _LOGGER.debug("Creating new todo item in list: %s", self._gkeep_list_id)
         list_id = self._gkeep_list_id
         text = item.summary
+
+        # Convert placeholder to empty string for Google Keep
+        # Only if auto_sort is disabled (placeholder incompatible with auto_sort)
+        placeholder = self._empty_item_placeholder
+        if not self._auto_sort and placeholder.strip() and text == placeholder:
+            text = ""
 
         try:
             # Create the new item in the specified list
@@ -190,35 +205,60 @@ class GoogleKeepTodoListEntity(
 
     @property
     def todo_items(self) -> list[TodoItem]:
-        """Get the current set of To-do items, filtering out empty entries."""
-        items = [
-            TodoItem(
-                summary=item.text,
-                uid=item.id,
-                status=(
-                    TodoItemStatus.COMPLETED
-                    if item.checked
-                    else TodoItemStatus.NEEDS_ACTION
-                ),
+        """Get the current set of To-do items.
+
+        Empty entries are converted to placeholders if the feature is enabled.
+        Placeholder is disabled when auto_sort is enabled (incompatible features).
+        """
+        items = []
+        # Placeholder is disabled if auto_sort is on or placeholder text is empty
+        placeholder_enabled = not self._auto_sort and bool(
+            self._empty_item_placeholder.strip()
+        )
+        empty_count = 0
+
+        for item in self._gkeep_list.items:
+            is_empty = not item.text or not item.text.strip()
+
+            if is_empty:
+                empty_count += 1
+                if not placeholder_enabled:
+                    continue  # Filter out empty items when placeholder is disabled
+                summary = self._empty_item_placeholder
+            else:
+                summary = item.text
+
+            items.append(
+                TodoItem(
+                    summary=summary,
+                    uid=item.id,
+                    status=(
+                        TodoItemStatus.COMPLETED
+                        if item.checked
+                        else TodoItemStatus.NEEDS_ACTION
+                    ),
+                )
             )
-            for item in self._gkeep_list.items
-            if item.text
-            and len(item.text.strip())
-            > 0  # Filter out empty or whitespace-only entries
-        ]
-        total_items = len(self._gkeep_list.items)
-        filtered_items = len(items)
+
         _LOGGER.debug(
             "Retrieved %d todo items for list: %s",
-            filtered_items,
+            len(items),
             self._gkeep_list_id,
         )
-        if filtered_items < total_items:
-            _LOGGER.warning(
-                "Filtered out %d empty items from list: %s",
-                total_items - filtered_items,
-                self._gkeep_list_id,
-            )
+        if empty_count > 0:
+            if placeholder_enabled:
+                _LOGGER.debug(
+                    "Converted %d empty items to placeholder '%s' in list: %s",
+                    empty_count,
+                    self._empty_item_placeholder,
+                    self._gkeep_list_id,
+                )
+            else:
+                _LOGGER.debug(
+                    "Filtered out %d empty items from list: %s",
+                    empty_count,
+                    self._gkeep_list_id,
+                )
         return items
 
 
@@ -233,6 +273,7 @@ async def async_setup_entry(
     selected_lists = entry.data.get("lists_to_sync", [])
     list_prefix = entry.data.get("list_prefix", "")
     auto_sort = entry.data.get("list_auto_sort", False)
+    empty_item_placeholder = entry.data.get("empty_item_placeholder", "")
     _LOGGER.debug(
         "User selected %d lists to sync with prefix: '%s', auto_sort: %s",
         len(selected_lists),
@@ -248,7 +289,9 @@ async def async_setup_entry(
     _LOGGER.debug("Filtered %d lists for syncing", len(lists_to_sync))
 
     entities = [
-        GoogleKeepTodoListEntity(coordinator, gkeep_list, list_prefix, auto_sort)
+        GoogleKeepTodoListEntity(
+            coordinator, gkeep_list, list_prefix, auto_sort, empty_item_placeholder
+        )
         for gkeep_list in lists_to_sync
     ]
     _LOGGER.debug("Created %d GoogleKeepTodoListEntity instances", len(entities))

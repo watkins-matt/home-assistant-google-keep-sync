@@ -100,6 +100,7 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "list_auto_sort": False,
         "list_item_case": "no_change",
         "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "",
     }
 
 
@@ -543,7 +544,9 @@ async def test_options_flow_create_entry(
     )
 
     assert result["type"] == "create_entry"
-    assert result["data"] == user_input
+    # Result data includes the raw user_input plus empty_item_placeholder default
+    expected_data = {**user_input, "empty_item_placeholder": ""}
+    assert result["data"] == expected_data
 
 
 async def test_options_flow_reauth_required(
@@ -709,6 +712,7 @@ async def test_user_form_setup_with_oauth_token(
             "list_auto_sort": False,
             "list_item_case": "no_change",
             "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+            "empty_item_placeholder": "",
         }
 
 
@@ -884,3 +888,166 @@ async def test_step_options_with_user_input(
     assert result["data"]["list_auto_sort"] is True
     assert result["data"]["list_item_case"] == "upper"
     assert result["data"]["sync_interval"] == custom_sync_interval
+
+
+async def test_options_flow_with_empty_item_placeholder(
+    hass: HomeAssistant, mock_google_keep_api, mock_config_entry
+):
+    """Test options flow correctly stores empty_item_placeholder."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Initialize the options flow
+    init_result = await hass.config_entries.options.async_init(
+        mock_config_entry.entry_id
+    )
+    assert init_result["type"] == "form"
+    assert init_result["step_id"] == "init"
+
+    # Assert the form includes the 'empty_item_placeholder' field
+    assert "empty_item_placeholder" in init_result["data_schema"].schema
+
+    # Submit user input with empty_item_placeholder
+    user_input = {
+        "lists_to_sync": ["list_id_1", "list_id_2"],
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "---",
+    }
+
+    result = await hass.config_entries.options.async_configure(
+        init_result["flow_id"], user_input=user_input
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"]["empty_item_placeholder"] == "---"
+
+
+async def test_options_flow_placeholder_whitespace_stripped(
+    hass: HomeAssistant, mock_google_keep_api, mock_config_entry
+):
+    """Test options flow strips whitespace from empty_item_placeholder."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Initialize the options flow
+    init_result = await hass.config_entries.options.async_init(
+        mock_config_entry.entry_id
+    )
+
+    # Submit user input with whitespace-padded placeholder
+    user_input = {
+        "lists_to_sync": ["list_id_1"],
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "  ---  ",  # Has leading/trailing whitespace
+    }
+
+    result = await hass.config_entries.options.async_configure(
+        init_result["flow_id"], user_input=user_input
+    )
+
+    assert result["type"] == "create_entry"
+    # Whitespace should be stripped in the config entry data
+    updated_entry = hass.config_entries.async_get_entry(mock_config_entry.entry_id)
+    assert updated_entry.data["empty_item_placeholder"] == "---"
+
+
+async def test_options_flow_placeholder_empty_stored_as_empty(
+    hass: HomeAssistant, mock_google_keep_api, mock_config_entry
+):
+    """Test options flow stores empty placeholder as empty string."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Initialize the options flow
+    init_result = await hass.config_entries.options.async_init(
+        mock_config_entry.entry_id
+    )
+
+    # Submit user input with empty placeholder (disabled)
+    user_input = {
+        "lists_to_sync": ["list_id_1"],
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "",
+    }
+
+    result = await hass.config_entries.options.async_configure(
+        init_result["flow_id"], user_input=user_input
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"]["empty_item_placeholder"] == ""
+
+
+async def test_step_options_with_placeholder(
+    hass: HomeAssistant, mock_api_instance: MagicMock, mock_keep_list: MagicMock
+):
+    """Test ConfigFlow options step stores empty_item_placeholder correctly."""
+    # Mock API to succeed and return lists
+    mock_api_instance.authenticate = AsyncMock(return_value=True)
+    mock_api_instance.fetch_all_lists = AsyncMock(return_value=[mock_keep_list])
+
+    # Create a config flow
+    flow = ConfigFlow()
+    flow.hass = hass
+    flow.api = mock_api_instance
+    flow.user_data = {"username": "user@example.com", "token": "token123"}
+
+    # Call async_step_options with user input including placeholder
+    user_input = {
+        "lists_to_sync": ["list1"],
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "---",
+    }
+
+    result = await flow.async_step_options(user_input)
+
+    # Verify result creates entry with correct data including placeholder
+    assert result["type"] == "create_entry"
+    assert result["data"]["empty_item_placeholder"] == "---"
+
+
+async def test_step_options_auto_sort_clears_placeholder(
+    hass: HomeAssistant, mock_api_instance: MagicMock, mock_keep_list: MagicMock
+):
+    """Test that auto_sort clears empty_item_placeholder (incompatible features)."""
+    # Mock API to succeed and return lists
+    mock_api_instance.authenticate = AsyncMock(return_value=True)
+    mock_api_instance.fetch_all_lists = AsyncMock(return_value=[mock_keep_list])
+
+    # Create a config flow
+    flow = ConfigFlow()
+    flow.hass = hass
+    flow.api = mock_api_instance
+    flow.user_data = {"username": "user@example.com", "token": "token123"}
+
+    # Call async_step_options with auto_sort enabled AND placeholder set
+    user_input = {
+        "lists_to_sync": ["list1"],
+        "list_prefix": "",
+        "list_auto_sort": True,  # Auto-sort enabled
+        "list_item_case": "no_change",
+        "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
+        "empty_item_placeholder": "---",  # Should be cleared
+    }
+
+    result = await flow.async_step_options(user_input)
+
+    # Verify placeholder was cleared because auto_sort is enabled
+    assert result["type"] == "create_entry"
+    assert result["data"]["empty_item_placeholder"] == ""
+    assert result["data"]["list_auto_sort"] is True

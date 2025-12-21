@@ -138,6 +138,20 @@ If you prefer alphabetical organization, enable **Automatically Sort Lists** in 
 
 Choose the approach that best fits your workflow. You cannot use both simultaneously—enabling auto sort disables manual reordering.
 
+## Empty Items
+
+Google Keep allows creating empty items, which some users use as visual separators between groups of items. By default, empty items are filtered out since Home Assistant doesn't support displaying empty todo items.
+
+### Empty Item Placeholder
+
+If you use empty items as separators in Google Keep, you can enable the **Empty Item Placeholder** option in the integration settings. When configured:
+
+- Empty items from Google Keep are displayed using your chosen placeholder text (e.g., `---`)
+- Creating an item with the placeholder text in Home Assistant syncs as an empty item to Google Keep
+- Choose placeholder text that you won't use for actual list items
+
+**Note:** This feature is incompatible with auto-sort. When auto-sort is enabled, the placeholder option is automatically disabled since empty items would sort to the top of the list.
+
 ## Services
 
 As a result of the fact that we are working directly with native todo entities, you can
