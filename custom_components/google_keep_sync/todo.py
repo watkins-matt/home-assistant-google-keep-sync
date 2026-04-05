@@ -193,6 +193,26 @@ class GoogleKeepTodoListEntity(
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        # Sync config-driven settings so options flow changes take effect
+        # without requiring a full reload.
+        self._auto_sort = self.coordinator.config_entry.data.get(
+            "list_auto_sort", False
+        )
+        self._empty_item_placeholder = self.coordinator.config_entry.data.get(
+            "empty_item_placeholder", ""
+        )
+
+        # Explicitly set _attr_supported_features to bust HA's
+        # CachedProperties cache for supported_features.
+        features = (
+            TodoListEntityFeature.CREATE_TODO_ITEM
+            | TodoListEntityFeature.UPDATE_TODO_ITEM
+            | TodoListEntityFeature.DELETE_TODO_ITEM
+        )
+        if not self._auto_sort:
+            features |= TodoListEntityFeature.MOVE_TODO_ITEM
+        self._attr_supported_features = features
+
         for gkeep_list in self.coordinator.data:
             if gkeep_list.id == self._gkeep_list_id:
                 self._gkeep_list = gkeep_list

@@ -3,7 +3,11 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.components.todo import TodoItem, TodoItemStatus
+from homeassistant.components.todo import (
+    TodoItem,
+    TodoItemStatus,
+    TodoListEntityFeature,
+)
 from homeassistant.core import HomeAssistant
 
 from custom_components.google_keep_sync.const import DOMAIN
@@ -677,3 +681,127 @@ async def test_create_with_auto_sort_does_not_convert_placeholder(
 
     # Verify API was called with literal text (not converted due to auto_sort)
     mock_api.async_create_todo_item.assert_called_once_with("test_list", "---")
+
+
+async def test_handle_coordinator_update_syncs_auto_sort(
+    hass, mock_api, mock_coordinator
+):
+    """Test that _handle_coordinator_update picks up auto_sort changes from config."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.config_entry = MagicMock()
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": True,
+        "empty_item_placeholder": "",
+    }
+    mock_coordinator.data = [dummy_list]
+
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=True, empty_item_placeholder=""
+    )
+    entity.hass = hass
+
+    assert entity._auto_sort is True
+    assert not (entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM)
+
+    # Simulate user disabling auto_sort via options flow
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "empty_item_placeholder": "",
+    }
+
+    entity._handle_coordinator_update()
+
+    assert entity._auto_sort is False
+    assert entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM
+
+
+async def test_handle_coordinator_update_syncs_placeholder(
+    hass, mock_api, mock_coordinator
+):
+    """Test that _handle_coordinator_update picks up placeholder changes from config."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.config_entry = MagicMock()
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "empty_item_placeholder": "",
+    }
+    mock_coordinator.data = [dummy_list]
+
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=False, empty_item_placeholder=""
+    )
+    entity.hass = hass
+
+    assert entity._empty_item_placeholder == ""
+
+    # Simulate user setting a placeholder via options flow
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "empty_item_placeholder": "---",
+    }
+
+    entity._handle_coordinator_update()
+
+    assert entity._empty_item_placeholder == "---"
+
+
+async def test_supported_features_updates_after_auto_sort_disabled(
+    hass, mock_api, mock_coordinator
+):
+    """Test supported_features reflects auto_sort change after coordinator update."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = "Test List"
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+    mock_coordinator.config_entry = MagicMock()
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": True,
+        "empty_item_placeholder": "",
+    }
+    mock_coordinator.data = [dummy_list]
+
+    entity = GoogleKeepTodoListEntity(
+        mock_coordinator, dummy_list, "", auto_sort=True, empty_item_placeholder=""
+    )
+    entity.hass = hass
+
+    # Initially MOVE should NOT be supported
+    assert not (entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM)
+
+    # Change config and trigger update
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": False,
+        "empty_item_placeholder": "",
+    }
+    entity._handle_coordinator_update()
+
+    # Now MOVE should be supported
+    assert entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM
+
+    # Re-enable auto_sort and verify MOVE is removed again
+    mock_coordinator.config_entry.data = {
+        "list_prefix": "",
+        "list_auto_sort": True,
+        "empty_item_placeholder": "",
+    }
+    entity._handle_coordinator_update()
+
+    assert not (entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM)
