@@ -1,9 +1,9 @@
-aiodns>=3.2.0
+aiodns>=4.0.0
 aioresponses==0.7.8
 gkeepapi==0.16.0
-gpsoauth==1.1.1
+gpsoauth==2.0.0
 pre-commit==3.8.0
-pycares>=4.4.0
-pytest-homeassistant-custom-component
+pycares>=5.0.0
+pytest-homeassistant-custom-component==0.13.316
 pytest-socket==0.7.0
 tzdata

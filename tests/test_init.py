@@ -44,8 +44,16 @@ async def test_async_setup_entry_successful(
 ):
     """Test a successful setup entry."""
     mock_config_entry.add_to_hass(hass)
-    mock_config_entry.state = ConfigEntryState.LOADED
-    assert await async_setup_entry(hass, mock_config_entry)
+    mock_config_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
+    with (
+        patch(
+            "custom_components.google_keep_sync.GoogleKeepSyncCoordinator."
+            "async_config_entry_first_refresh",
+            AsyncMock(),
+        ),
+        patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
+    ):
+        assert await async_setup_entry(hass, mock_config_entry)
     assert hass.data[GOOGLE_KEEP_DOMAIN]
     await hass.async_block_till_done()
 
@@ -64,9 +72,20 @@ async def test_async_setup_entry_failed(
 async def test_async_unload_entry(hass: HomeAssistant, mock_api, mock_config_entry):
     """Test unloading a Google Keep Sync config entry."""
     mock_config_entry.add_to_hass(hass)
-    mock_config_entry.state = ConfigEntryState.LOADED
-    await async_setup_entry(hass, mock_config_entry)
-    assert await async_unload_entry(hass, mock_config_entry)
+    mock_config_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
+    with (
+        patch(
+            "custom_components.google_keep_sync.GoogleKeepSyncCoordinator."
+            "async_config_entry_first_refresh",
+            AsyncMock(),
+        ),
+        patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()),
+        patch.object(
+            hass.config_entries, "async_unload_platforms", AsyncMock(return_value=True)
+        ),
+    ):
+        await async_setup_entry(hass, mock_config_entry)
+        assert await async_unload_entry(hass, mock_config_entry)
     assert not hass.data[GOOGLE_KEEP_DOMAIN].get(mock_config_entry.entry_id)
     await hass.async_block_till_done()
 

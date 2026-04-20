@@ -34,9 +34,7 @@ async def _run_sync(f, *args, **kwargs):
 def mock_hass():
     """Fixture for mocking Home Assistant."""
     mock_hass = MagicMock()
-    mock_hass.async_add_executor_job.side_effect = lambda f, *args, **kwargs: _run_sync(
-        f, *args, **kwargs
-    )
+    mock_hass.async_add_executor_job.side_effect = _run_sync
     return mock_hass
 
 
