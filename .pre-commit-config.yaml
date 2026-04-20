@@ -55,6 +55,12 @@ repos:
         additional_dependencies:
           - types-requests
 
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
   - repo: local
     hooks:
       - id: pytest-coverage

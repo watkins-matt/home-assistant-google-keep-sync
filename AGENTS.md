@@ -119,6 +119,51 @@ pre-commit run --all-files
 
 If pre-commit makes any changes, stage them and run again until all hooks pass without modifications.
 
+The `commit-msg` hook stage must be installed once per clone so commit messages are validated:
+
+```bash
+pre-commit install --hook-type commit-msg
+```
+
+## Commit Messages
+
+All commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org) spec. This is enforced by pre-commit, and release-please uses the prefixes to decide the next version.
+
+Format:
+
+```
+<type>(<optional scope>): <description>
+
+<optional body>
+
+<optional footer>
+```
+
+Allowed types and their release effect:
+
+| Type | Version bump | Use for |
+|------|--------------|---------|
+| `feat` | minor | New user-facing feature |
+| `fix` | patch | Bug fix |
+| `perf` | patch | Performance improvement |
+| `refactor` | none | Code restructure with no behavior change |
+| `docs` | none | Documentation only |
+| `test` | none | Test-only changes |
+| `build` | none | Build system / dependencies |
+| `ci` | none | CI config changes |
+| `chore` | none | Other maintenance |
+| `revert` | context-dependent | Reverting a prior commit |
+
+Breaking changes bump the major version. Mark them either by appending `!` to the type (`feat!: drop support for HA 2025.x`) or with a `BREAKING CHANGE:` footer.
+
+Examples:
+
+```
+feat: add empty item placeholder option
+fix(coordinator): avoid duplicate add_item events after rename
+feat!: require master token instead of email/password
+```
+
 ## Python Version
 
 This project targets Python 3.11+ to align with Home Assistant requirements.
