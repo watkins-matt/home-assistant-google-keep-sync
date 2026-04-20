@@ -120,6 +120,17 @@ If you're experiencing issues with the master token approach, you can use an OAu
 
 After setup, your selected Google Keep lists will be available in Home Assistant. You can view and interact with these lists, and any changes you make in Home Assistant will be instantly synced to Google Keep.
 
+## How Sync Works
+
+The integration syncs in both directions, but with different timing:
+
+- **Home Assistant → Google Keep**: changes are pushed immediately when you add, update, delete, or reorder an item.
+- **Google Keep → Home Assistant**: changes are pulled on a polling interval (default every 15 minutes, configurable in the integration options).
+
+### Conflict Resolution
+
+Changes made in Home Assistant are pushed to Google Keep immediately and will overwrite whatever is currently on the Keep side for that item. Changes made directly in Google Keep are only seen on the next poll. If you edit the same item in both places between polls, the Home Assistant edit wins and the Keep-side change is overwritten and lost.
+
 ## List Ordering
 
 The integration offers two approaches to organizing your list items:
@@ -338,9 +349,19 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 ## Security
 
-As an additional security precaution, you can sign up for a new Google account to use exclusively with this integration. Afterward, on your primary account, add this new Google account as a collaborator on any lists you wish to synchronize.
+### Token Scope
 
-Then provide the credentials for this new account (using a token) to the integration. This will allow the integration limited access your Google Keep lists without having access to your entire primary Google account.
+The master token (or OAuth token, exchanged for a master token) authenticates against Google's internal Google Keep service. **The token's scope is not configurable.** It grants the same access the account itself has to Google Keep, including read and write access to all of that account's notes and lists, as well as any lists shared with it. There is no way to limit the token to specific lists.
+
+### Recommended: Use a Dedicated Account
+
+Because the token cannot be scoped, **using a dedicated Google account for this integration is strongly recommended**:
+
+1. Create a new Google account. It can be empty, with no other Google data stored in it.
+2. On your primary account, share the Google Keep lists you want to sync with the new account using Keep's collaborator option.
+3. Generate the token on the new account and use it in the integration.
+
+This way, even if the token is exposed (e.g. through a Home Assistant backup), the blast radius is limited to the lists you explicitly shared.
 
 ## Troubleshooting
 
