@@ -1,5 +1,6 @@
 """Test the Google Keep Sync setup entry."""
 
+import logging
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -9,6 +10,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
 from custom_components.google_keep_sync import (
+    _LOGGER as INTEGRATION_LOGGER,
+)
+from custom_components.google_keep_sync import (
+    _filter_unknown_node_type_warning,
     async_migrate_entry,
     async_service_request_sync,
     async_setup_entry,
@@ -205,3 +210,43 @@ async def test_async_migrate_entry(hass, test_case):
             assert entry.data[k] == v
         if "password" not in test_case["expected_data"]:
             assert "password" not in entry.data
+
+
+def _make_record(msg: str, level: int = logging.WARNING) -> logging.LogRecord:
+    return logging.LogRecord(
+        name="gkeepapi.node",
+        level=level,
+        pathname=__file__,
+        lineno=1,
+        msg=msg,
+        args=(),
+        exc_info=None,
+    )
+
+
+def test_unknown_node_type_filter_drops_target_warning_at_default_level():
+    """The 'Unknown node type' warning is dropped when our logger is not at DEBUG."""
+    INTEGRATION_LOGGER.setLevel(logging.WARNING)
+    assert (
+        _filter_unknown_node_type_warning(_make_record("Unknown node type: None"))
+        is False
+    )
+
+
+def test_unknown_node_type_filter_preserves_other_warnings():
+    """Unrelated gkeepapi warnings pass through."""
+    assert _filter_unknown_node_type_warning(_make_record("Some other warning")) is True
+
+
+def test_unknown_node_type_filter_reroutes_to_debug_when_enabled():
+    """At DEBUG, the record is rewritten onto our logger with stack info."""
+    INTEGRATION_LOGGER.setLevel(logging.DEBUG)
+    try:
+        record = _make_record("Unknown node type: None")
+        assert _filter_unknown_node_type_warning(record) is True
+        assert record.name == INTEGRATION_LOGGER.name
+        assert record.levelno == logging.DEBUG
+        assert "Unknown node type: None" in record.getMessage()
+        assert "Stack:" in record.getMessage()
+    finally:
+        INTEGRATION_LOGGER.setLevel(logging.NOTSET)

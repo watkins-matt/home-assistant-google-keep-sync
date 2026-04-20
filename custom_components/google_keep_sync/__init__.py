@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 from functools import partial
 
 from homeassistant.config_entries import ConfigEntry
@@ -17,6 +18,24 @@ from .coordinator import GoogleKeepSyncCoordinator
 PLATFORMS: list[Platform] = [Platform.TODO]
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _filter_unknown_node_type_warning(record: logging.LogRecord) -> bool:
+    """Drop gkeepapi's noisy 'Unknown node type' warning; re-route to our DEBUG."""
+    if not record.getMessage().startswith("Unknown node type:"):
+        return True
+    if _LOGGER.getEffectiveLevel() > logging.DEBUG:
+        return False
+    stack = "".join(traceback.format_stack()[:-1])
+    record.name = _LOGGER.name
+    record.levelno = logging.DEBUG
+    record.levelname = "DEBUG"
+    record.msg = (
+        f"suppressed gkeepapi '{record.getMessage()}' from "
+        f"{record.pathname}:{record.lineno}\nStack:\n{stack}"
+    )
+    record.args = None
+    return True
 
 
 async def async_service_request_sync(coordinator: GoogleKeepSyncCoordinator, call):
@@ -38,6 +57,10 @@ async def async_service_request_sync(coordinator: GoogleKeepSyncCoordinator, cal
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Google Keep Sync from a config entry."""
+    gkeepapi_logger = logging.getLogger("gkeepapi.node")
+    if _filter_unknown_node_type_warning not in gkeepapi_logger.filters:
+        gkeepapi_logger.addFilter(_filter_unknown_node_type_warning)
+
     # Create API instance
     api = GoogleKeepAPI(
         hass,
