@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
 )
+from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import GoogleKeepSyncCoordinator
@@ -66,7 +67,7 @@ class GoogleKeepTodoListEntity(
 
     def _get_default_entity_id(self, title: str) -> str:
         """Return the entity ID for the given title."""
-        entity_id = f"todo.google_keep_{title.lower().replace(' ', '_')}"
+        entity_id = f"todo.google_keep_{slugify(title)}"
         _LOGGER.debug("Generated entity ID: '%s' for title: '%s'", entity_id, title)
         return entity_id
 

@@ -805,3 +805,30 @@ async def test_supported_features_updates_after_auto_sort_disabled(
     entity._handle_coordinator_update()
 
     assert not (entity.supported_features & TodoListEntityFeature.MOVE_TODO_ITEM)
+
+
+@pytest.mark.parametrize(
+    "title,expected_entity_id",
+    [
+        ("Grocery", "todo.google_keep_grocery"),
+        ("My List", "todo.google_keep_my_list"),
+        ("Asia-Markt", "todo.google_keep_asia_markt"),
+        ("Café Items", "todo.google_keep_cafe_items"),
+        ("Item #1", "todo.google_keep_item_1"),
+        ("a--b__c", "todo.google_keep_a_b_c"),
+    ],
+)
+async def test_entity_id_generation_sanitizes_title(
+    mock_api, mock_coordinator, title, expected_entity_id
+):
+    """Test that entity IDs are sanitized to be valid Home Assistant entity IDs."""
+    dummy_list = MagicMock()
+    dummy_list.id = "test_list"
+    dummy_list.title = title
+    dummy_list.items = []
+
+    mock_coordinator.api = mock_api
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
+
+    assert entity.entity_id == expected_entity_id
