@@ -1,6 +1,6 @@
 aiodns>=4.0.0
 aioresponses==0.7.8
-gkeepapi==0.16.0
+gkeepapi==0.17.1
 gpsoauth==2.0.0
 pre-commit==3.8.0
 pycares>=5.0.0
