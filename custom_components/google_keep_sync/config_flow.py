@@ -277,7 +277,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     self.hass.config_entries.async_update_entry(
                         entry, data=updated_data
                     )
-                    entry.data = updated_data
                     return self.async_abort(reason="reauth_successful")
 
         # Show reauthentication form
