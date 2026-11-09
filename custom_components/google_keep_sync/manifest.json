@@ -1,6 +1,10 @@
 {
   "domain": "google_keep_sync",
   "name": "Google Keep Sync",
+  "categories": [
+    "productivity_information.calendars_todos",
+    "productivity_information.shopping_groceries"
+  ],
   "codeowners": [
     "@watkins-matt"
   ],
@@ -9,6 +13,7 @@
   "documentation": "https://github.com/watkins-matt/home-assistant-google-keep-sync",
   "homekit": {},
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/watkins-matt/home-assistant-google-keep-sync/issues",
   "loggers": [
     "custom_components.google_keep_sync"
   ],
