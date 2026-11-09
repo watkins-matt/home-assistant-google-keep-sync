@@ -1,44 +1,63 @@
 """Work out what to install next to Home Assistant core in the dev container.
 
-  ha_requirements.py latest
-      Print the newest Home Assistant release that
-      pytest-homeassistant-custom-component has a release for. Core follows
-      this, not the newest Home Assistant release: the plugin must match core
-      exactly, and it trails a new release by a few days.
+Usage:
 
-  ha_requirements.py integrations <core checkout> <config dir>
-      Print the requirements of the integrations Home Assistant will load: the
-      ones named in configuration.yaml, the ones it always loads, the entity
-      integrations, their dependencies, and every custom integration. Home Assistant would install
-      them at startup; installing them up front gives a clean first start.
+ha_requirements.py latest
+    Print the newest Home Assistant release that
+    pytest-homeassistant-custom-component has a release for. Core follows this,
+    not the newest Home Assistant release: the plugin must match core exactly,
+    and it trails a new release by a few days.
 
-  ha_requirements.py tests <requirements.test.txt> <HA version>
-      Print JSON {"requirements": [...], "no_deps": [...]} for the test tools,
-      matched to the Home Assistant version in the venv:
-      pytest-homeassistant-custom-component is replaced by the release built
-      for that version, so installing it never replaces the core checkout. If
-      there is no such release yet (a new Home Assistant release is usually a
-      day or two ahead of it), the newest older one is installed without its
-      dependencies, and those are listed by name only.
+ha_requirements.py integrations <core checkout> <config dir>
+    Print the requirements of the integrations Home Assistant will load: the
+    ones named in configuration.yaml, the ones it always loads, the entity
+    integrations, their dependencies, and every custom integration. Home
+    Assistant would install them at startup; installing them up front gives a
+    clean first start.
+
+ha_requirements.py tests <requirements.test.txt> <HA version>
+    Print JSON {"requirements": [...], "no_deps": [...]} for the test tools,
+    matched to the Home Assistant version in the venv:
+    pytest-homeassistant-custom-component is replaced by the release built for
+    that version, so installing it never replaces the core checkout. If there
+    is no such release yet (a new Home Assistant release is usually a day or two
+    ahead of it), the newest older one is installed without its dependencies,
+    and those are listed by name only.
 """
 
 from __future__ import annotations
 
+import http
+import http.client
 import json
 import re
 import sys
-import urllib.request
 from pathlib import Path
 
 PHCC = "pytest-homeassistant-custom-component"
 ALWAYS_LOADED = [
-    "analytics", "api", "auth", "backup", "config", "frontend", "homeassistant",
-    "http", "logger", "network", "onboarding", "person", "recorder", "repairs",
-    "search", "system_log", "websocket_api",
+    "analytics",
+    "api",
+    "auth",
+    "backup",
+    "config",
+    "frontend",
+    "homeassistant",
+    "http",
+    "logger",
+    "network",
+    "onboarding",
+    "person",
+    "recorder",
+    "repairs",
+    "search",
+    "system_log",
+    "websocket_api",
 ]
 
 
 def integrations(core: Path, config: Path) -> None:
+    """Print the requirements of the integrations Home Assistant will load."""
     components = core / "homeassistant" / "components"
     custom = config / "custom_components"
     todo = list(ALWAYS_LOADED)
@@ -69,9 +88,17 @@ def integrations(core: Path, config: Path) -> None:
     print("\n".join(sorted(requirements)))
 
 
-def _get(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=30) as response:
+def _get(path: str) -> dict:
+    """Fetch a JSON document from PyPI (https://pypi.org<path>)."""
+    connection = http.client.HTTPSConnection("pypi.org", timeout=30)
+    try:
+        connection.request("GET", path, headers={"Accept": "application/json"})
+        response = connection.getresponse()
+        if response.status != http.HTTPStatus.OK:
+            raise RuntimeError(f"pypi.org{path}: HTTP {response.status}")
         return json.load(response)
+    finally:
+        connection.close()
 
 
 def _vtuple(version: str) -> tuple[int, ...]:
@@ -87,20 +114,33 @@ def _name(spec: str) -> str:
 
 
 def tests(requirements_file: Path, ha_version: str) -> None:
+    """Print the test tools to install for Home Assistant ha_version, as JSON."""
     lines = [
-        line.strip() for line in requirements_file.read_text().splitlines()
+        line.strip()
+        for line in requirements_file.read_text().splitlines()
         if line.strip() and not line.strip().startswith("#")
     ]
     others = [line for line in lines if not re.match(rf"{PHCC}\b", line)]
     releases = sorted(
-        (v for v in _get(f"https://pypi.org/pypi/{PHCC}/json")["releases"]
-         if re.fullmatch(r"\d+\.\d+\.\d+", v)),
-        key=_vtuple, reverse=True,
+        (
+            v
+            for v in _get(f"/pypi/{PHCC}/json")["releases"]
+            if re.fullmatch(r"\d+\.\d+\.\d+", v)
+        ),
+        key=_vtuple,
+        reverse=True,
     )
     for version in releases[:80]:
-        info = _get(f"https://pypi.org/pypi/{PHCC}/{version}/json")["info"]
+        info = _get(f"/pypi/{PHCC}/{version}/json")["info"]
         deps = [d for d in info.get("requires_dist") or [] if "extra ==" not in d]
-        pin = next((m.group(1) for d in deps if (m := re.match(r"homeassistant\s*==\s*([\w.]+)", d))), None)
+        pin = next(
+            (
+                m.group(1)
+                for d in deps
+                if (m := re.match(r"homeassistant\s*==\s*([\w.]+)", d))
+            ),
+            None,
+        )
         if pin is None or _vtuple(pin) > _vtuple(ha_version):
             continue
         exact = pin == ha_version
@@ -114,7 +154,10 @@ def tests(requirements_file: Path, ha_version: str) -> None:
             if _name(spec) != "homeassistant":
                 wanted[_name(spec)] = spec if exact else _name_as_written(spec)
         result = {
-            "requirements": [*wanted.values(), *([f"{PHCC}=={version}"] if exact else [])],
+            "requirements": [
+                *wanted.values(),
+                *([f"{PHCC}=={version}"] if exact else []),
+            ],
             "no_deps": [] if exact else [f"{PHCC}=={version}"],
         }
         print(json.dumps(result))
@@ -125,12 +168,16 @@ def tests(requirements_file: Path, ha_version: str) -> None:
 def latest() -> None:
     """Print the newest Home Assistant release the test plugin supports."""
     releases = sorted(
-        (v for v in _get(f"https://pypi.org/pypi/{PHCC}/json")["releases"]
-         if re.fullmatch(r"\d+\.\d+\.\d+", v)),
-        key=_vtuple, reverse=True,
+        (
+            v
+            for v in _get(f"/pypi/{PHCC}/json")["releases"]
+            if re.fullmatch(r"\d+\.\d+\.\d+", v)
+        ),
+        key=_vtuple,
+        reverse=True,
     )
     for version in releases[:20]:
-        info = _get(f"https://pypi.org/pypi/{PHCC}/{version}/json")["info"]
+        info = _get(f"/pypi/{PHCC}/{version}/json")["info"]
         for dep in info.get("requires_dist") or []:
             m = re.match(r"homeassistant\s*==\s*(\d+\.\d+\.\d+)\s*$", dep.split(";")[0])
             if m:
