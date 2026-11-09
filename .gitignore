@@ -1,4 +1,6 @@
 *.code-workspace
+!google-keep-sync.code-workspace
+.devcontainer/devcontainer-lock.json
 *.pyc
 .venv
 .pytest_cache
