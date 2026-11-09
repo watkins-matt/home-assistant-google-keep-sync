@@ -73,9 +73,7 @@
             }
         },
         "error": {
-            "list_fetch_error": "Error al obtener las listas",
-            "cannot_connect": "No se puede conectar",
-            "invalid_auth": "Autenticación inválida"
+            "list_fetch_error": "Error al obtener las listas"
         },
         "abort": {
             "reauth_required": "Reautenticación necesaria",

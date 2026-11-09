@@ -11,8 +11,7 @@
       "already_configured": "[%key:common::config_flow::error::already_configured%]",
       "blank_username": "Username cannot be blank.",
       "invalid_email": "Invalid email address.",
-      "both_password_and_token": "Provide either password or token, not both.",
-      "neither_password_nor_token": "Either password or token must be provided.",
+      "missing_token": "Token must be provided.",
       "invalid_token_format": "Invalid token. Paste the whole value of the oauth_token cookie; it starts with 'oauth2_4/'."
     },
     "step": {
@@ -74,9 +73,7 @@
       }
     },
     "error": {
-      "list_fetch_error": "Error occurred while fetching lists",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]"
+      "list_fetch_error": "Error occurred while fetching lists"
     },
     "abort": {
       "reauth_required": "[%key:common::config_flow::abort::reauth_successful%]",
