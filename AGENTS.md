@@ -113,10 +113,10 @@ pytest --cov --cov-fail-under=95
 
 ## Translations
 
-`strings.json` and every file in `custom_components/google_keep_sync/translations/` (`en.json`, `es.json`, `sv.json`) must stay in sync. When you add, change or remove a user-facing string:
+`strings.json` and all the translation JSON files in `custom_components/google_keep_sync/translations/` must stay in sync. When you add, change or remove a user-facing string:
 
-- Make the same change in `strings.json`, `translations/en.json` and **every other translation** in the same commit. Translate the new meaning; don't leave the old text or English in a translated file.
-- Keep the set of keys identical across all four files, and keep placeholders such as `{invalid_auth_url}` unchanged.
+- Make the same change in `strings.json` and in all the translation JSON files in the same commit. Translate the new meaning; don't leave the old text or English in a translated file.
+- Keep the set of keys identical across `strings.json` and all the translation JSON files, and keep placeholders such as `{invalid_auth_url}` unchanged.
 - Remove keys the code no longer uses from all of them.
 
 ## Pre-commit Hooks
