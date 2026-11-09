@@ -22,10 +22,10 @@ jobs:
     outputs:
       badge-success: ${{ steps.generate_badge.outputs.success }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.14
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.14'
 
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload coverage badge for gh-pages
         if: steps.generate_badge.outputs.success == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-badge
           path: badges/coverage.svg
@@ -82,12 +82,12 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: gh-pages
 
       - name: Download coverage badge
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-badge
           path: badges
