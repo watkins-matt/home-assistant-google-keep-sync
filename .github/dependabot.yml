@@ -1,5 +1,7 @@
 # Monthly, one grouped PR per kind. PR titles are conventional (chore(deps): /
 # ci(deps):), so they pass the title check and don't trigger a release.
+# Python: ranges (>=) are left alone while the newest release fits them, so a
+# loose minimum stays loose; exact pins (==) are bumped.
 # gkeepapi and gpsoauth are also listed in manifest.json, which Dependabot
 # doesn't read: tests/test_repository_consistency.py fails such a PR until
 # manifest.json lists the same version; retitle it fix(deps): so it ships.
@@ -9,6 +11,7 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    versioning-strategy: increase-if-necessary
     groups:
       python:
         patterns: ["*"]
