@@ -1,42 +1,37 @@
-# Monthly, one grouped PR per kind. PR titles are conventional (chore(deps): /
-# ci(deps):), so they pass the title check and don't trigger a release.
+# One Dependabot PR a month for everything: the Python test requirements, the
+# pre-commit hooks and the GitHub Actions. Its title is conventional
+# (chore(deps): ...), so it passes the title check and doesn't trigger a
+# release.
+#
 # Python: ranges (>=) are left alone while the newest release fits them, so a
 # loose minimum stays loose; exact pins (==) are bumped.
+#
 # gkeepapi and gpsoauth are also listed in manifest.json, which Dependabot
-# doesn't read: tests/test_repository_consistency.py fails such a PR until
-# manifest.json lists the same version; retitle it fix(deps): so it ships.
+# doesn't read: tests/test_repository_consistency.py fails the PR until
+# manifest.json lists the same version; then retitle it fix(deps): so it ships.
 version: 2
+
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+
 updates:
   - package-ecosystem: pip
     directory: /
-    schedule:
-      interval: monthly
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
     versioning-strategy: increase-if-necessary
-    groups:
-      python:
-        patterns: ["*"]
-    commit-message:
-      prefix: chore
-      include: scope
 
   - package-ecosystem: pre-commit
     directory: /
-    schedule:
-      interval: monthly
-    groups:
-      pre-commit:
-        patterns: ["*"]
-    commit-message:
-      prefix: chore
-      include: scope
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
 
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: monthly
-    groups:
-      actions:
-        patterns: ["*"]
-    commit-message:
-      prefix: ci
-      include: scope
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
