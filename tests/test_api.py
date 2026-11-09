@@ -286,6 +286,41 @@ async def test_async_sync_data(google_keep_api, mock_hass):
     google_keep_api._keep.get.assert_called_once()
 
 
+async def test_async_sync_data_saves_state(google_keep_api, mock_hass, mock_store):
+    """Test that a successful sync persists the current state."""
+    google_keep_api._authenticated = True
+    google_keep_api._store = mock_store
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = TEST_LIST_ID
+    mock_list.title = "List"
+    google_keep_api._keep.get = MagicMock(return_value=mock_list)
+
+    await google_keep_api.async_sync_data([TEST_LIST_ID])
+
+    mock_store.async_save.assert_called_once_with(
+        {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
+    )
+
+
+async def test_async_sync_data_save_state_failure(
+    google_keep_api, mock_hass, mock_store
+):
+    """Test that failing to persist state does not fail the sync."""
+    google_keep_api._authenticated = True
+    google_keep_api._store = mock_store
+    mock_store.async_save.side_effect = OSError("disk full")
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = TEST_LIST_ID
+    mock_list.title = "List"
+    google_keep_api._keep.get = MagicMock(return_value=mock_list)
+
+    lists, deleted = await google_keep_api.async_sync_data([TEST_LIST_ID])
+
+    assert lists == [mock_list]
+    assert deleted == []
+    assert google_keep_api._last_synced == [mock_list]
+
+
 async def test_async_sync_data_sort_unchecked(google_keep_api, mock_hass):
     """Test synchronizing and sorting data with Google Keep."""
     google_keep_api._authenticated = True

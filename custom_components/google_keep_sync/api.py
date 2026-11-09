@@ -603,6 +603,14 @@ class GoogleKeepAPI:
 
             _LOGGER.debug("Sync completed, returning %d lists", len(synced_lists))
 
+            # Persist the freshly synced state. Otherwise a restart restores
+            # the snapshot from the last login, which can bring back items
+            # that were deleted remotely since then.
+            try:
+                await self._async_save_state_and_token()
+            except Exception as e:
+                _LOGGER.warning("Failed to save Google Keep state: %s", e)
+
             self._last_synced = synced_lists
             return synced_lists, deleted_list_ids
 
