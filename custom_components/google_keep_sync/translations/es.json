@@ -45,7 +45,7 @@
             },
             "reauth_confirm": {
                 "title": "Reautenticar",
-                "description": "Google Keep Sync necesita volver a iniciar sesión en tu cuenta de Google. Introduce un token OAuth nuevo; consulta el [Léame](https://github.com/watkins-matt/home-assistant-google-keep-sync#getting-a-token) para saber cómo obtenerlo."
+                "description": "Google Keep Sync necesita volver a iniciar sesión en tu cuenta de Google. Introduce un token OAuth nuevo; consulta el [Léame]({invalid_auth_url}) para saber cómo obtenerlo."
             }
         }
     },

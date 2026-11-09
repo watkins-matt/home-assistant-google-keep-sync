@@ -281,7 +281,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         # Show reauthentication form
         return self.async_show_form(
-            step_id="reauth_confirm", data_schema=SCHEMA_REAUTH, errors=errors
+            step_id="reauth_confirm",
+            data_schema=SCHEMA_REAUTH,
+            errors=errors,
+            description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
         )
 
     @staticmethod
