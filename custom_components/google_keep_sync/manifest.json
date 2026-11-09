@@ -10,7 +10,7 @@
   "homekit": { },
   "iot_class": "cloud_polling",
   "requirements": [
-    "gpsoauth==2.0.0",
+    "gpsoauth>=2.0.0",
     "gkeepapi==0.17.1"
   ],
   "ssdp": [ ],
