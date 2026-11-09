@@ -70,6 +70,8 @@ This is a Home Assistant custom integration that provides bidirectional synchron
 
 The integration uses a **master token** (starts with `aas_et/`, 223 characters) for authentication. Users can also provide an exchange token (starts with `oauth2_4/`) which is automatically converted to a master token.
 
+User-facing text (the README and the config flow strings) describes only the OAuth token: the `oauth_token` cookie copied from `accounts.google.com/EmbeddedSetup`. The ways of getting a master token directly no longer work, so don't document them, even though the code still accepts both formats. A master token gives access to the whole Google account, not only Keep; say so wherever the token's reach comes up.
+
 Auth state is persisted to Home Assistant storage for fast re-authentication on restart.
 
 ## Key Patterns
@@ -108,6 +110,14 @@ Test coverage must remain above **95%**. All new code should include appropriate
 ```bash
 pytest --cov --cov-fail-under=95
 ```
+
+## Translations
+
+`strings.json` and all the translation JSON files in `custom_components/google_keep_sync/translations/` must stay in sync. When you add, change or remove a user-facing string:
+
+- Make the same change in `strings.json` and in all the translation JSON files in the same commit. Translate the new meaning; don't leave the old text or English in a translated file.
+- Keep the set of keys identical across `strings.json` and all the translation JSON files, and keep placeholders such as `{invalid_auth_url}` unchanged.
+- Remove keys the code no longer uses from all of them.
 
 ## Pre-commit Hooks
 

@@ -42,79 +42,55 @@ The integration requires Home Assistant 2023.11 or later, due to the fact that t
         - Restart Home Assistant.
 
 2. **Configure Integration**:
+    - Get a token by following [Getting a Token](#getting-a-token) below. Have the integration's setup open before you start, because the token expires after a short time.
     - Go to `Settings` -> `Devices & Services`.
     - Click `Add Integration`.
     - Search for and select `Google Keep Sync`.
-    - Enter your Google account username.
-    - Generate a token using the instructions below and enter the token.
-    - Follow the prompts to select the Google Keep lists you want to synchronize with Home Assistant.
+    - Enter your Google account's email address and paste the token.
+    - Select the Google Keep lists you want to sync. Each one becomes a to-do list in Home Assistant. To add or remove lists later, go to `Settings` -> `Devices & Services` -> `Google Keep Sync` -> `Configure`.
 
-## Authentication Options
+## Getting a Token
 
-The Google Keep Sync integration supports two types of authentication tokens:
+The integration signs in to Google Keep with a token you copy from your browser while signing in to Google. You only need to do this once. Home Assistant asks again only if the sign-in stops working.
 
-### 1. Master Token
+Use a computer; phone browsers can't show the token. If you use a [dedicated account](#recommended-use-a-dedicated-account) for the integration, sign in with that account.
 
-This is the traditional token that starts with "aas_et/" and is 223 characters long. This token provides direct access to Google Keep.
+1. Open a private window and go to <https://accounts.google.com/EmbeddedSetup>. A private window is `Ctrl+Shift+N` in Chrome, Edge, Brave and Opera, `Ctrl+Shift+P` in Firefox, and `Cmd+Shift+N` in Safari (on a Mac, use `Cmd` instead of `Ctrl`).
+2. Enter your email address and click `Next`. Enter your password and click `Next`. Complete 2-step verification if Google asks for it.
+3. If Google asks how you will use the device, choose `I will be using this device` and click `Next`.
+4. On the page with Google's Terms of Service, click `I agree`.
+5. **The page now keeps loading and never finishes. This is expected: your token is ready.** Don't wait for it, reload it or close it. Continue with the next step on this page.
+6. Open the browser's developer tools and copy the value of the cookie named `oauth_token`:
 
-### 2. OAuth Token
+    **Chrome, Edge, Brave and Opera**
 
-OAuth tokens offer an alternative authentication method if you have issues getting the master token. OAuth tokens are automatically exchanged for master tokens during the authentication process.
+    1. Press `F12` (Mac: `Cmd+Option+I`).
+    2. Open the `Application` tab. If you don't see it, click `>>` at the end of the tab row.
+    3. In the left sidebar, under `Storage`, expand `Cookies` and click `https://accounts.google.com`.
+    4. In the list of cookies, find the row whose `Name` is `oauth_token`.
+    5. Double-click the text in that row's `Value` column, press `Ctrl+A` to select all of it, then `Ctrl+C` to copy it (Mac: `Cmd+A`, `Cmd+C`).
 
-## Generating a Token
+    **Firefox**
 
-You have two options to generate authentication tokens:
+    1. Press `F12` (Mac: `Cmd+Option+I`).
+    2. Open the `Storage` tab.
+    3. In the left sidebar, expand `Cookies` and click `https://accounts.google.com`.
+    4. In the list of cookies, find the row whose `Name` is `oauth_token`.
+    5. Double-click the text in that row's `Value` column, press `Ctrl+A` to select all of it, then `Ctrl+C` to copy it (Mac: `Cmd+A`, `Cmd+C`).
 
-### Option 1: Master Token Using the Docker Container
+    **Safari (Mac)**
 
-You can use the [Docker container](https://github.com/Brephlas/dockerfile_breph-ha-google-home_get-token) created by @Brephlas.
+    1. If you haven't before, turn on the developer tools: `Safari` -> `Settings` -> `Advanced` -> `Show features for web developers` (on older versions: `Show Develop menu in menu bar`).
+    2. Press `Cmd+Option+I`.
+    3. Open the `Storage` tab.
+    4. In the left sidebar, expand `Cookies` and click `accounts.google.com`.
+    5. In the list of cookies, find the row whose `Name` is `oauth_token`.
+    6. Double-click the text in that row's `Value` column, press `Cmd+A` to select all of it, then `Cmd+C` to copy it.
 
-#### Requirements
+7. Check what you copied. It is the cookie's value, not its name: it starts with `oauth2_4/`, followed by a long string of letters, numbers and symbols. If it doesn't start with `oauth2_4/`, you copied the wrong cell or only part of it.
+8. Paste it into the `Token` field of the integration's setup right away. It expires after a short time; if the integration says the token is invalid, repeat these steps to get a new one.
 
-You need a computer that you can install Docker on. This can be any Linux computer,
-or you can even use a Windows machine by installing WSL. Note that you do not run these
-commands on your Home Assistant server itself, it must be a separate machine. Raspberry Pi
-machines will likely not work due to the ARM architecture.
-
-#### Windows with WSL
-
-If you want to use a Windows machine, you can install WSL2 and Docker. Follow the instructions [here to install WSL2](https://docs.microsoft.com/en-us/windows/wsl/install). Then, open Ubuntu
-and run the command `sudo apt-get install docker.io`.
-
-#### Linux
-
-If you are using a Linux machine, you can install Docker using the package manager of your choice. For Ubuntu, you can use the following commands:
-
-```bash
-sudo apt-get update
-sudo apt-get install docker.io
-```
-
-#### Steps
-
-1. After you have Docker installed, run the following command. This will pull the image, run the container, and execute the token generation script. Answer the prompts to generate a master token. For the password, you should use an app password.
-
-   ```bash
-   docker run -it --rm breph/ha-google-home_get-token:latest python3 get_tokens.py
-   ```
-
-2. The script will generate two tokens, a "master token" and an "access token". Copy the entire master token, including the "aas_et/" at the beginning.
-
-3. (Optional) If you want to clean up and remove the Docker image after you're done, you can run:
-
-   ```bash
-   docker rmi breph/ha-google-home_get-token
-   ```
-
-4. Use this token in the integration's configuration process by entering it into the token field.
-
-### Option 2: OAuth Token
-
-If you're experiencing issues with the master token approach, you can use an OAuth token instead:
-
-1. Follow the instructions at [gpsoauth-java documentation](https://github.com/rukins/gpsoauth-java/blob/master/README.md#receiving-an-authentication-token) to obtain an OAuth token.
-
-2. Enter the resulting token during the configuration process.
+The integration exchanges this token for a long-lived token for your Google account when you first sign in. **That token gives access to your whole Google account, not just Google Keep**, so treat it like your password; see [Security](#security).
 
 ## Usage
 
@@ -217,7 +193,7 @@ Below are some examples of how to do this, click to expand.
 
 1.  Create an email notify service in Home assistant
 
-    1. Create a new [app password](https://myaccount.google.com/apppasswords>) in your Gmail.
+    1. Have the SMTP server, username and password of the email account you will send from.
 
     1. Setup [creating cards by email]([https://support.atlassian.com/trello/docs/creating-cards-by-email/) in Trello
 
@@ -233,7 +209,7 @@ Below are some examples of how to do this, click to expand.
         encryption: starttls
         sender: "your_email@gmail.com"
         username: "your_email@gmail.com"
-        password: "app password"
+        password: "your SMTP password"
         sender_name: "your name"
         recipient: "your_cards_by_email_address@boards.trello.com"
     ```
@@ -343,7 +319,7 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 - **Polling Interval**: While changes made in Home Assistant are instantly reflected in Google Keep, changes made in Google Keep are not instantly reflected in Home Assistant. The integration polls Google Keep for updates every 15 minutes. Therefore, any changes made directly in Google Keep will be visible in Home Assistant after the next polling interval.
 
-- **Authentication**: Using a token is strongly encouraged. Password login usually doesn't work and is deprecated by the underlying library this integration uses.
+- **Authentication**: The integration signs in with a token from your browser (see [Getting a Token](#getting-a-token)). Signing in with your password is not supported.
 
 - **Checkboxes in Keep**: Only Google Keep notes with `Show checkboxes` selected will appear as options to sync with Home Assistant using this integration.
 
@@ -351,17 +327,19 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 ### Token Scope
 
-The master token (or OAuth token, exchanged for a master token) authenticates against Google's internal Google Keep service. **The token's scope is not configurable.** It grants the same access the account itself has to Google Keep, including read and write access to all of that account's notes and lists, as well as any lists shared with it. There is no way to limit the token to specific lists.
+The integration exchanges the token you paste for a long-lived token for your Google account, and uses that to talk to Google Keep. **That token is not limited to Google Keep.** Anyone who has it can use it to get access to the account's other Google services as well, such as Gmail, Drive and Photos. Its scope can't be restricted, not to Keep and not to specific lists. Home Assistant stores it with the integration's configuration, so it is also part of your Home Assistant backups.
+
+Changing the Google account's password signs the token out. After that, get a new token and re-authenticate the integration.
 
 ### Recommended: Use a Dedicated Account
 
-Because the token cannot be scoped, **using a dedicated Google account for this integration is strongly recommended**:
+Because the token gives access to the whole account, **using a dedicated Google account for this integration is strongly recommended**:
 
 1. Create a new Google account. It can be empty, with no other Google data stored in it.
 2. On your primary account, share the Google Keep lists you want to sync with the new account using Keep's collaborator option.
-3. Generate the token on the new account and use it in the integration.
+3. Get the token while signed in to the new account (see [Getting a Token](#getting-a-token)) and use it in the integration.
 
-This way, even if the token is exposed (e.g. through a Home Assistant backup), the blast radius is limited to the lists you explicitly shared.
+This way, even if the token is exposed (for example through a Home Assistant backup), it only gives access to an otherwise empty account and the lists you explicitly shared with it, not to your primary account.
 
 ## Troubleshooting
 
@@ -369,7 +347,16 @@ Encountering issues? Here are some common problems and their potential solutions
 
 ### Invalid Authentication Errors
 
-If you're experiencing `Invalid authentication` errors, these are due to incompatible versions of certain underlying libraries used by the integration, such as OpenSSL. To resolve this, make sure you are using a manually-generated token for authentication instead of a password.
+If the integration says the token is invalid, or keeps asking you for a token:
+
+- Get a new token with the steps in [Getting a Token](#getting-a-token) and paste it right away. The token expires after a short time, so one copied earlier may no longer work.
+- Copy the whole value of the `oauth_token` cookie. It starts with `oauth2_4/` and is long; a missing character at either end makes it invalid.
+- Copy the cookie while the page is still loading after you click `I agree`. Don't wait for the page to finish; it never does.
+- Use the token, not your password.
+
+### The Sign-in Page Keeps Loading
+
+This is expected. After you click `I agree`, the page never finishes loading. Copy the `oauth_token` cookie at that point, as described in [Getting a Token](#getting-a-token).
 
 ### Sync Delays
 
@@ -386,8 +373,9 @@ If you're experiencing `Invalid authentication` errors, these are due to incompa
 
 ### Lists Not Syncing
 
-- Ensure the lists you want to sync are selected during the integration setup.
-- Verify that the Google account used has access to the desired Google Keep lists.
+- Select the lists you want to sync during setup, or later with `Settings` -> `Devices & Services` -> `Google Keep Sync` -> `Configure`. Each selected list becomes a to-do list in Home Assistant.
+- Only Google Keep notes with `Show checkboxes` turned on can be synced.
+- Verify that the Google account used has access to the desired Google Keep lists. With a dedicated account, share the lists with it first.
 
 ## Disclaimer
 

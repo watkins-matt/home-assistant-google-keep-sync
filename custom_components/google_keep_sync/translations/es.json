@@ -12,12 +12,12 @@
             "blank_username": "El nombre de usuario no puede estar en blanco.",
             "invalid_email": "Dirección de correo electrónico inválida.",
             "missing_token": "Se debe proporcionar un token.",
-            "invalid_token_format": "Token inválido. El token debe comenzar con 'oauth2_4/' (OAuth) o 'aas_et/' (master, 223 caracteres)."
+            "invalid_token_format": "Token inválido. Pega el valor completo de la cookie oauth_token; empieza por 'oauth2_4/'."
         },
         "step": {
             "user": {
                 "title": "Introduce las credenciales",
-                "description": "Introduce tu nombre de usuario y token de tu cuenta de Google. Puedes usar un token maestro o un token OAuth. Consulta [Léame]({invalid_auth_url}) para obtener instrucciones sobre cómo obtener un token.",
+                "description": "Introduce la dirección de correo de tu cuenta de Google y un token OAuth: el valor de la cookie oauth_token que obtienes al iniciar sesión en accounts.google.com/EmbeddedSetup. Caduca al poco tiempo, así que pégalo enseguida. Consulta el [Léame]({invalid_auth_url}) para ver las instrucciones paso a paso.",
                 "data": {
                     "username": "Nombre de usuario",
                     "token": "Token"
@@ -45,7 +45,7 @@
             },
             "reauth_confirm": {
                 "title": "Reautenticar",
-                "description": "La integración de Google Keep Sync necesita reautenticar tu cuenta. Puedes introducir un token maestro o un token OAuth."
+                "description": "Google Keep Sync necesita volver a iniciar sesión en tu cuenta de Google. Introduce un token OAuth nuevo; consulta el [Léame](https://github.com/watkins-matt/home-assistant-google-keep-sync#getting-a-token) para saber cómo obtenerlo."
             }
         }
     },
@@ -73,9 +73,7 @@
             }
         },
         "error": {
-            "list_fetch_error": "Error al obtener las listas",
-            "cannot_connect": "No se puede conectar",
-            "invalid_auth": "Autenticación inválida"
+            "list_fetch_error": "Error al obtener las listas"
         },
         "abort": {
             "reauth_required": "Reautenticación necesaria",

@@ -12,12 +12,12 @@
             "blank_username": "Username cannot be blank.",
             "invalid_email": "Invalid email address.",
             "missing_token": "Token must be provided.",
-            "invalid_token_format": "Invalid token provided. The token must start with 'oauth2_4/' (OAuth) or 'aas_et/' (master, 223 characters)."
+            "invalid_token_format": "Invalid token. Paste the whole value of the oauth_token cookie; it starts with 'oauth2_4/'."
         },
         "step": {
             "user": {
                 "title": "Enter credentials",
-                "description": "Enter your username and token for your Google account. You can use either a master token or an OAuth token. See [Readme]({invalid_auth_url}) for instructions on how to obtain a token.",
+                "description": "Enter your Google account's email address and an OAuth token: the value of the oauth_token cookie you get while signing in at accounts.google.com/EmbeddedSetup. It expires after a short time, so paste it right away. See the [Readme]({invalid_auth_url}) for step-by-step instructions.",
                 "data": {
                     "username": "Username",
                     "token": "Token"
@@ -45,7 +45,7 @@
             },
             "reauth_confirm": {
                 "title": "Reauthenticate",
-                "description": "The Google Keep Sync integration needs to re-authenticate your account. You can enter either a master token or an OAuth token."
+                "description": "Google Keep Sync needs to sign in to your Google account again. Enter a new OAuth token; see the [Readme](https://github.com/watkins-matt/home-assistant-google-keep-sync#getting-a-token) for how to get one."
             }
         }
     },
