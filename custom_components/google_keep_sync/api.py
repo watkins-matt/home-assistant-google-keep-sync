@@ -407,6 +407,11 @@ class GoogleKeepAPI:
             previous_uid,
             list_id,
         )
+        # Pull the latest server state first, so the reorder works on the
+        # current items and doesn't re-upload stale copies of items that were
+        # changed or deleted remotely since the last sync.
+        await self._sync_with_google_keep()
+
         keep_list = self._keep.get(list_id)
         if keep_list and isinstance(keep_list, gkeepapi.node.List):
             # Find the item to move
@@ -453,40 +458,8 @@ class GoogleKeepAPI:
             all_items.insert(target_index, item_to_move)
 
             # Reorder items in Google Keep by updating their sort values.
-            # Google Keep uses sort values (timestamps) to determine order.
-            # Note: Google Keep sorts in DESCENDING order
-            # (higher sort values appear first)
-            def reorder_items():
-                # Get existing sort values to preserve relative ordering
-                # We'll use the maximum sort value as a base and adjust from there
-                existing_sorts = [
-                    item.sort
-                    for item in all_items
-                    if hasattr(item, "sort") and item.sort
-                ]
-
-                if existing_sorts:
-                    # Use max sort value as base to ensure we're above existing
-                    base_sort = max(existing_sorts)
-                else:
-                    # If no sort values exist, use current time in microseconds
-                    base_sort = int(time.time() * 1000000)
-
-                # Assign new sort values to maintain the new order.
-                # Google Keep sorts in DESCENDING order, so first item
-                # gets highest sort value. Decrement by 1000 microseconds
-                # (1 millisecond) per item to ensure proper ordering.
-                for i, item in enumerate(all_items):
-                    # Set a new sort value based on position
-                    # First item (i=0) gets highest value, last item gets lowest value
-                    new_sort = base_sort - (
-                        i * 1000
-                    )  # Decrement by 1000 microseconds per item
-                    item.sort = new_sort
-
-                # The changes will be synced when we call sync() later
-
-            await self._hass.async_add_executor_job(reorder_items)
+            # The changes are synced when we call sync() below.
+            await self._hass.async_add_executor_job(self.assign_sort_values, all_items)
 
             # Sync the changes to Google Keep
             try:
@@ -617,6 +590,31 @@ class GoogleKeepAPI:
         except Exception as e:
             _LOGGER.error("Failed to sync with Google Keep: %s", e)
             return (self._last_synced, [])
+
+    @staticmethod
+    def assign_sort_values(items: list[gkeepapi.node.ListItem]) -> None:
+        """Assign sort values so that the items keep the given order in Keep.
+
+        Google Keep uses sort values (timestamps) to determine order and sorts
+        in DESCENDING order, so the first item gets the highest value. Items
+        whose sort value is already correct are left untouched so they aren't
+        marked dirty and re-uploaded.
+        """
+        # Use the maximum existing sort value as a base to stay above the rest.
+        existing_sorts = [
+            item.sort for item in items if hasattr(item, "sort") and item.sort
+        ]
+        if existing_sorts:
+            base_sort = max(existing_sorts)
+        else:
+            # If no sort values exist, use current time in microseconds
+            base_sort = int(time.time() * 1000000)
+
+        # Decrement by 1000 microseconds (1 millisecond) per position.
+        for i, item in enumerate(items):
+            new_sort = base_sort - (i * 1000)
+            if item.sort != new_sort:
+                item.sort = new_sort
 
     @staticmethod
     def is_list_sorted(items: list[gkeepapi.node.ListItem]) -> bool:
