@@ -90,7 +90,7 @@ Use a computer; phone browsers can't show the token. If you use a [dedicated acc
 7. Check what you copied. It is the cookie's value, not its name: it starts with `oauth2_4/`, followed by a long string of letters, numbers and symbols. If it doesn't start with `oauth2_4/`, you copied the wrong cell or only part of it.
 8. Paste it into the `Token` field of the integration's setup right away. It expires after a short time; if the integration says the token is invalid, repeat these steps to get a new one.
 
-The integration exchanges this token for a long-lived one when you first sign in. Keep it private: like the account password, it gives access to the account's Google Keep.
+The integration exchanges this token for a long-lived token for your Google account when you first sign in. **That token gives access to your whole Google account, not just Google Keep**, so treat it like your password; see [Security](#security).
 
 ## Usage
 
@@ -327,17 +327,19 @@ The same process works for Bring Shopping list or any other integrated list to H
 
 ### Token Scope
 
-The token authenticates against Google's internal Google Keep service. **The token's scope is not configurable.** It grants the same access the account itself has to Google Keep, including read and write access to all of that account's notes and lists, as well as any lists shared with it. There is no way to limit the token to specific lists.
+The integration exchanges the token you paste for a long-lived token for your Google account, and uses that to talk to Google Keep. **That token is not limited to Google Keep.** Anyone who has it can use it to get access to the account's other Google services as well, such as Gmail, Drive and Photos. Its scope can't be restricted, not to Keep and not to specific lists. Home Assistant stores it with the integration's configuration, so it is also part of your Home Assistant backups.
+
+Changing the Google account's password signs the token out. After that, get a new token and re-authenticate the integration.
 
 ### Recommended: Use a Dedicated Account
 
-Because the token cannot be scoped, **using a dedicated Google account for this integration is strongly recommended**:
+Because the token gives access to the whole account, **using a dedicated Google account for this integration is strongly recommended**:
 
 1. Create a new Google account. It can be empty, with no other Google data stored in it.
 2. On your primary account, share the Google Keep lists you want to sync with the new account using Keep's collaborator option.
 3. Get the token while signed in to the new account (see [Getting a Token](#getting-a-token)) and use it in the integration.
 
-This way, even if the token is exposed (e.g. through a Home Assistant backup), the blast radius is limited to the lists you explicitly shared.
+This way, even if the token is exposed (for example through a Home Assistant backup), it only gives access to an otherwise empty account and the lists you explicitly shared with it, not to your primary account.
 
 ## Troubleshooting
 
