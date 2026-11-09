@@ -397,6 +397,6 @@ This is an unofficial integration and is not created, endorsed, or supported by 
 
 Open the repository in VS Code with the Dev Containers extension (and Docker or Podman, or use a Codespace) and choose **Reopen in Container**. Setup clones Home Assistant core (newest release) and gpsoauth next to the repository and links the integration into core's config.
 
-- Open `google-keep-sync.code-workspace`, press F5 (**Home Assistant**) and go to http://localhost:8123.
+- Press F5 (**Home Assistant**) and go to http://localhost:8123. For the full workspace (Home Assistant core, its config and gpsoauth next to this repository), open `google-keep-sync.code-workspace`.
 - Run the tests from the Testing view, or `~/.venvs/ha/bin/pytest`.
 - Each container start moves core to the newest release the test tools support (a few days behind a new Home Assistant release), so tests and Home Assistant share one version. It stays put while a branch is checked out there or it has local changes.

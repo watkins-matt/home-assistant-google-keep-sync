@@ -42,40 +42,5 @@
         "python.testing.pytestEnabled": false,
         "python.testing.pytestArgs": ["--no-cov"],
         "editor.formatOnSave": true
-    },
-    "launch": {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Home Assistant",
-                "type": "debugpy",
-                "request": "launch",
-                "python": "/home/vscode/.venvs/ha/bin/python",
-                "module": "homeassistant",
-                "cwd": "/workspaces/home-assistant-core",
-                "args": ["--debug", "-c", "/workspaces/home-assistant-core/config"],
-                "justMyCode": false
-            },
-            {
-                "name": "Home Assistant (skip pip)",
-                "type": "debugpy",
-                "request": "launch",
-                "python": "/home/vscode/.venvs/ha/bin/python",
-                "module": "homeassistant",
-                "cwd": "/workspaces/home-assistant-core",
-                "args": ["--debug", "-c", "/workspaces/home-assistant-core/config", "--skip-pip"],
-                "justMyCode": false
-            },
-            {
-                "name": "Tests (Google Keep Sync)",
-                "type": "debugpy",
-                "request": "launch",
-                "python": "/home/vscode/.venvs/ha/bin/python",
-                "module": "pytest",
-                "cwd": "/workspaces/home-assistant-google-keep-sync",
-                "args": ["--no-cov", "tests"],
-                "justMyCode": false
-            }
-        ]
     }
 }
