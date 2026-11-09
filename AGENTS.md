@@ -103,6 +103,8 @@ All code must pass **Ruff** with zero warnings. No `# noqa` comments to suppress
 ruff check .
 ```
 
+All code must also pass **mypy**. CI runs every hook in `.pre-commit-config.yaml` (Ruff, Black, mypy, codespell, pyupgrade and the file checks) at the versions pinned there, so run pre-commit locally to see the same result (see Pre-commit Hooks).
+
 ## Test Coverage
 
 Test coverage must remain above **95%**. All new code should include appropriate tests.
@@ -118,6 +120,8 @@ pytest --cov --cov-fail-under=95
 - Make the same change in `strings.json` and in all the translation JSON files in the same commit. Translate the new meaning; don't leave the old text or English in a translated file.
 - Keep the set of keys identical across `strings.json` and all the translation JSON files, and keep placeholders such as `{invalid_auth_url}` unchanged.
 - Remove keys the code no longer uses from all of them.
+
+`tests/test_repository_consistency.py` checks the keys and placeholders.
 
 ## Pre-commit Hooks
 
@@ -176,4 +180,8 @@ feat!: require master token instead of email/password
 
 ## Python Version
 
-This project targets Python 3.11+ to align with Home Assistant requirements.
+The code targets Python 3.11+ (`pyupgrade --py311-plus`), matching the oldest Home Assistant version in `hacs.json`. The tools and CI run on Python 3.14, which current Home Assistant releases need.
+
+## Dependencies
+
+Dependabot opens one grouped PR a month each for `requirements.test.txt`, the pre-commit hooks and the GitHub Actions. `gkeepapi` and `gpsoauth` are listed both in `manifest.json` (what Home Assistant installs for users) and in `requirements.test.txt` (what the tests use). They must name the same version: `tests/test_repository_consistency.py` fails otherwise. When a dependency PR bumps one of them, update `manifest.json` in the same PR and title it `fix(deps): ...` so the change is released.

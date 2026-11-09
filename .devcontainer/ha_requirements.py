@@ -106,7 +106,8 @@ def _vtuple(version: str) -> tuple[int, ...]:
 
 
 def _name_as_written(spec: str) -> str:
-    return re.match(r"[A-Za-z0-9_.\-]+", spec).group(0)
+    match = re.match(r"[A-Za-z0-9_.\-]+", spec)
+    return match.group(0) if match else spec.strip()
 
 
 def _name(spec: str) -> str:
