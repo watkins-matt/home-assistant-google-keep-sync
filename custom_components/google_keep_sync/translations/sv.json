@@ -12,12 +12,12 @@
             "blank_username": "Användarnamnet får inte vara tomt.",
             "invalid_email": "Ogiltig e-postadress.",
             "missing_token": "Token måste anges.",
-            "invalid_token_format": "Ogiltig token angiven. Token måste börja med 'oauth2_4/' (OAuth) eller 'aas_et/' (master, 223 tecken)."
+            "invalid_token_format": "Ogiltig token. Klistra in hela värdet av cookien oauth_token; det börjar med 'oauth2_4/'."
         },
         "step": {
             "user": {
                 "title": "Ange inloggningsuppgifter",
-                "description": "Ange ditt användarnamn och token för ditt Google-konto. Du kan använda antingen en master token eller en OAuth token. Se [Readme]({invalid_auth_url}) för instruktioner om hur du får en token.",
+                "description": "Ange e-postadressen för ditt Google-konto och en OAuth-token: värdet av cookien oauth_token som du får när du loggar in på accounts.google.com/EmbeddedSetup. Den slutar gälla efter en kort stund, så klistra in den direkt. Se [Readme]({invalid_auth_url}) för instruktioner steg för steg.",
                 "data": {
                     "username": "Användarnamn",
                     "token": "Token"
@@ -45,7 +45,7 @@
             },
             "reauth_confirm": {
                 "title": "Autentisera igen",
-                "description": "Google Keep Sync-integrationen behöver autentisera ditt konto igen. Du kan ange antingen en master token eller en OAuth token."
+                "description": "Google Keep Sync behöver logga in på ditt Google-konto igen. Ange en ny OAuth-token; se [Readme](https://github.com/watkins-matt/home-assistant-google-keep-sync#getting-a-token) för hur du får en."
             }
         }
     },
