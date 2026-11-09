@@ -1,0 +1,62 @@
+// Google Keep Sync development: Home Assistant core (from source, latest
+// release) with this integration linked in, ready to run and debug.
+// Open google-keep-sync.code-workspace for the full workspace. See
+// "Development" in README.md.
+{
+  "name": "Google Keep Sync",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/home-assistant-google-keep-sync,type=bind",
+  "workspaceFolder": "/workspaces/home-assistant-google-keep-sync",
+  // Survive container rebuilds: the core checkout, gpsoauth and the venvs.
+  "mounts": [
+    "source=gks-ha-core-${devcontainerId},target=/workspaces/home-assistant-core,type=volume",
+    "source=gks-gpsoauth-${devcontainerId},target=/workspaces/gpsoauth,type=volume",
+    "source=gks-venvs-${devcontainerId},target=/home/vscode/.venvs,type=volume"
+  ],
+  "containerEnv": {
+    // Home Assistant core: "latest" = the newest release the test plugin
+    // supports, kept current on every start; or a tag/branch (e.g. "dev")
+    // that is checked out once and never moved.
+    "HA_CORE_REF": "latest",
+    "HA_CORE_REPO": "https://github.com/home-assistant/core.git",
+    "GPSOAUTH_REPO": "https://github.com/simon-weber/gpsoauth.git"
+  },
+  // onCreateCommand: VS Code waits for it before starting extensions, so the
+  // venvs exist when the Python extension looks for its interpreter.
+  "onCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/setup.sh --update",
+  "forwardPorts": [8123],
+  "portsAttributes": {
+    "8123": { "label": "Home Assistant", "onAutoForward": "notify" }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "esbenp.prettier-vscode",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.venvs/ha/bin/python",
+        "python.testing.pytestArgs": ["--no-cov"],
+        "python.analysis.typeCheckingMode": "off",
+        "yaml.customTags": [
+          "!input scalar",
+          "!secret scalar",
+          "!include_dir_named scalar",
+          "!include_dir_list scalar",
+          "!include_dir_merge_list scalar",
+          "!include_dir_merge_named scalar"
+        ]
+      }
+    }
+  }
+}

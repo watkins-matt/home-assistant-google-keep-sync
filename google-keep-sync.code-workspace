@@ -1,0 +1,81 @@
+{
+    // Open this inside the dev container (File > Open Workspace from File...,
+    // or "Open Workspace" when VS Code offers it). The folders outside this
+    // repository are created by .devcontainer/setup.sh.
+    "folders": [
+        {
+            "path": ".",
+            "name": "Google Keep Sync Root"
+        },
+        {
+            "path": "custom_components/google_keep_sync",
+            "name": "Google Keep Sync"
+        },
+        {
+            "path": "../home-assistant-core",
+            "name": "Home Assistant Core"
+        },
+        {
+            "path": "../home-assistant-core/config",
+            "name": "Home Assistant Config"
+        },
+        {
+            "path": "../gpsoauth",
+            "name": "gpsoauth"
+        }
+    ],
+    "settings": {
+        "python.analysis.ignore": [
+            "/workspaces/home-assistant-core/**"
+        ],
+        "files.exclude": {
+            "**/__pycache__": true,
+            "**/*.pyc": true
+        },
+        "python.analysis.extraPaths": [
+            "/workspaces/home-assistant-core/homeassistant"
+        ],
+        "ruff.configuration": "/workspaces/home-assistant-google-keep-sync/ruff.toml",
+        "python.defaultInterpreterPath": "/home/vscode/.venvs/ha/bin/python",
+        // Off for the workspace; the repository's own .vscode/settings.json turns it
+        // on, so the Testing view shows only Google Keep Sync Root.
+        "python.testing.pytestEnabled": false,
+        "python.testing.pytestArgs": ["--no-cov"],
+        "editor.formatOnSave": true
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Home Assistant",
+                "type": "debugpy",
+                "request": "launch",
+                "python": "/home/vscode/.venvs/ha/bin/python",
+                "module": "homeassistant",
+                "cwd": "/workspaces/home-assistant-core",
+                "args": ["--debug", "-c", "/workspaces/home-assistant-core/config"],
+                "justMyCode": false
+            },
+            {
+                "name": "Home Assistant (skip pip)",
+                "type": "debugpy",
+                "request": "launch",
+                "python": "/home/vscode/.venvs/ha/bin/python",
+                "module": "homeassistant",
+                "cwd": "/workspaces/home-assistant-core",
+                "args": ["--debug", "-c", "/workspaces/home-assistant-core/config", "--skip-pip"],
+                "justMyCode": false
+            },
+            {
+                "name": "Tests (Google Keep Sync)",
+                "type": "debugpy",
+                "request": "launch",
+                "python": "/home/vscode/.venvs/ha/bin/python",
+                "module": "pytest",
+                "cwd": "/workspaces/home-assistant-google-keep-sync",
+                "args": ["--no-cov", "tests"],
+                "justMyCode": false
+            }
+        ]
+    }
+}
