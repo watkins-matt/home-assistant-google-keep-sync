@@ -286,6 +286,41 @@ async def test_async_sync_data(google_keep_api, mock_hass):
     google_keep_api._keep.get.assert_called_once()
 
 
+async def test_async_sync_data_saves_state(google_keep_api, mock_hass, mock_store):
+    """Test that a successful sync persists the current state."""
+    google_keep_api._authenticated = True
+    google_keep_api._store = mock_store
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = TEST_LIST_ID
+    mock_list.title = "List"
+    google_keep_api._keep.get = MagicMock(return_value=mock_list)
+
+    await google_keep_api.async_sync_data([TEST_LIST_ID])
+
+    mock_store.async_save.assert_called_once_with(
+        {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
+    )
+
+
+async def test_async_sync_data_save_state_failure(
+    google_keep_api, mock_hass, mock_store
+):
+    """Test that failing to persist state does not fail the sync."""
+    google_keep_api._authenticated = True
+    google_keep_api._store = mock_store
+    mock_store.async_save.side_effect = OSError("disk full")
+    mock_list = MagicMock(spec=gkeepapi.node.List)
+    mock_list.id = TEST_LIST_ID
+    mock_list.title = "List"
+    google_keep_api._keep.get = MagicMock(return_value=mock_list)
+
+    lists, deleted = await google_keep_api.async_sync_data([TEST_LIST_ID])
+
+    assert lists == [mock_list]
+    assert deleted == []
+    assert google_keep_api._last_synced == [mock_list]
+
+
 async def test_async_sync_data_sort_unchecked(google_keep_api, mock_hass):
     """Test synchronizing and sorting data with Google Keep."""
     google_keep_api._authenticated = True
@@ -733,8 +768,8 @@ async def test_async_move_todo_item_not_found(google_keep_api, mock_hass):
     assert mock_gkeep_list.items[0].id == "item_1"
     assert mock_gkeep_list.items[1].id == "item_2"
 
-    # Verify sync was not called (since item wasn't found)
-    google_keep_api._keep.sync.assert_not_called()
+    # Only the pre-move sync ran; nothing was pushed since the move was aborted
+    google_keep_api._keep.sync.assert_called_once_with()
 
 
 async def test_async_move_todo_item_previous_not_found(google_keep_api, mock_hass):
@@ -764,8 +799,8 @@ async def test_async_move_todo_item_previous_not_found(google_keep_api, mock_has
     assert mock_gkeep_list.items[0].id == "item_1"
     assert mock_gkeep_list.items[1].id == "item_2"
 
-    # Verify sync was not called (since previous item wasn't found)
-    google_keep_api._keep.sync.assert_not_called()
+    # Only the pre-move sync ran; nothing was pushed since the move was aborted
+    google_keep_api._keep.sync.assert_called_once_with()
 
 
 async def test_async_move_todo_item_list_not_found(google_keep_api, mock_hass):
@@ -780,8 +815,8 @@ async def test_async_move_todo_item_list_not_found(google_keep_api, mock_hass):
     # Try to move item in nonexistent list
     await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
 
-    # Verify sync was not called
-    google_keep_api._keep.sync.assert_not_called()
+    # Only the pre-move sync ran; nothing was pushed since the move was aborted
+    google_keep_api._keep.sync.assert_called_once_with()
 
 
 async def test_async_move_todo_item_sort_values_descending(google_keep_api, mock_hass):
@@ -827,8 +862,10 @@ async def test_async_move_todo_item_resync_required(google_keep_api, mock_hass):
     mock_gkeep_list.items = [item1, item2, item3]
     google_keep_api._keep.get.return_value = mock_gkeep_list
 
-    # First sync call raises ResyncRequiredException, second succeeds
+    # The pre-move sync succeeds; the post-move sync raises
+    # ResyncRequiredException and the full resync then succeeds.
     google_keep_api._keep.sync.side_effect = [
+        None,  # Pre-move sync
         gkeepapi.exception.ResyncRequiredException(),
         None,  # Success on full resync
     ]
@@ -836,11 +873,46 @@ async def test_async_move_todo_item_resync_required(google_keep_api, mock_hass):
     # Move item_2 to the beginning
     await google_keep_api.async_move_todo_item(list_id, item_id, previous_uid=None)
 
-    # Verify sync was called twice (initial + full resync)
+    # Verify sync was called three times (pre-move + post-move + full resync)
+    expected_sync_calls = 3
+    assert google_keep_api._keep.sync.call_count == expected_sync_calls
+    # Verify the last call was a full resync (sync(True))
+    google_keep_api._keep.sync.assert_any_call(True)
+
+
+async def test_async_move_todo_item_syncs_before_reordering(google_keep_api, mock_hass):
+    """Test that the list is synced before sort values are rewritten.
+
+    An item deleted remotely since the last sync must not be touched, so a
+    stale copy of it isn't re-uploaded.
+    """
+    google_keep_api._authenticated = True
+    list_id = "grocery_list_id"
+
+    deleted_item_sort = 1000000
+    item1 = MagicMock(id="item_1", sort=3000000)
+    item2 = MagicMock(id="item_2", sort=2000000)
+    deleted_remotely = MagicMock(id="deleted_item", sort=deleted_item_sort)
+
+    mock_gkeep_list = MagicMock(spec=gkeepapi.node.List)
+    # Stale local state still includes the remotely deleted item.
+    mock_gkeep_list.items = [item1, item2, deleted_remotely]
+    google_keep_api._keep.get.return_value = mock_gkeep_list
+
+    def drop_deleted_item(*args):
+        mock_gkeep_list.items = [item1, item2]
+
+    google_keep_api._keep.sync.side_effect = drop_deleted_item
+
+    await google_keep_api.async_move_todo_item(list_id, "item_2", previous_uid=None)
+
+    # The remotely deleted item must be left untouched.
+    assert deleted_remotely.sort == deleted_item_sort
+    # The moved item is now first.
+    assert item2.sort > item1.sort
+    # Sync happened before the reorder and again afterwards.
     expected_sync_calls = 2
     assert google_keep_api._keep.sync.call_count == expected_sync_calls
-    # Verify the second call was a full resync (sync(True))
-    google_keep_api._keep.sync.assert_any_call(True)
 
 
 async def test_sync_with_google_keep_resync_required(google_keep_api, mock_hass):
