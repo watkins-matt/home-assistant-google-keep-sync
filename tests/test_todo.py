@@ -10,6 +10,7 @@ from homeassistant.components.todo import (
     TodoListEntityFeature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.google_keep_sync.const import ATTR_ITEM_PARENTS, DOMAIN
 from custom_components.google_keep_sync.todo import (
@@ -895,3 +896,29 @@ async def test_item_parents_attribute_not_recorded(mock_api, mock_coordinator):
     entity = GoogleKeepTodoListEntity(mock_coordinator, _nested_grocery_list(), "")
 
     assert ATTR_ITEM_PARENTS in entity._unrecorded_attributes
+
+
+async def test_move_item_service_places_the_item(mock_api, mock_coordinator):
+    """move_item hands the placement to the API, then refreshes."""
+    entity = GoogleKeepTodoListEntity(mock_coordinator, _nested_grocery_list(), "")
+    entity.api.async_place_todo_item = AsyncMock()
+    mock_coordinator.async_refresh = AsyncMock()
+
+    await entity.async_move_item("milk", previous_item="eggs", parent="costco")
+
+    entity.api.async_place_todo_item.assert_awaited_once_with(
+        entity._gkeep_list_id, "milk", "eggs", "costco"
+    )
+    mock_coordinator.async_refresh.assert_awaited_once()
+
+
+async def test_move_item_service_reports_invalid_input(mock_api, mock_coordinator):
+    """A placement the API rejects is a service validation error."""
+    entity = GoogleKeepTodoListEntity(mock_coordinator, _nested_grocery_list(), "")
+    entity.api.async_place_todo_item = AsyncMock(side_effect=ValueError("nope"))
+    mock_coordinator.async_refresh = AsyncMock()
+
+    with pytest.raises(ServiceValidationError, match="nope"):
+        await entity.async_move_item("milk")
+
+    mock_coordinator.async_refresh.assert_awaited_once()

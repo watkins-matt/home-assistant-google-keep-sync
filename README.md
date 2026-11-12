@@ -150,6 +150,18 @@ item_parents:
 
 Dashboards, templates and other integrations can read it to group items the way Keep does, for example with `state_attr('todo.google_keep_groceries', 'item_parents')`. Item uids come from the `todo.get_items` action. The attribute isn't recorded in history.
 
+To change the nesting from Home Assistant, use the `google_keep_sync.move_item` action. It moves an item right after another one (or to the top) and indents it under a top-level item (or un-indents it). Keep shows sub-items right after their parent, so to indent an item, also place it inside the parent's group:
+
+```yaml
+action: google_keep_sync.move_item
+target:
+  entity_id: todo.google_keep_groceries
+data:
+  item: "5k4j3h.2g1f0e"          # Milk
+  previous_item: "1a2b3c.4d5e6f" # after Eggs…
+  parent: "9z8y7x.6w5v4u"        # …under Costco
+```
+
 ## Services
 
 As a result of the fact that we are working directly with native todo entities, you can

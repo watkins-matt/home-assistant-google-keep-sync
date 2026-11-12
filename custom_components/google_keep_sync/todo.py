@@ -12,6 +12,7 @@ from homeassistant.components.todo import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
@@ -195,6 +196,33 @@ class GoogleKeepTodoListEntity(
             # Resync data with Google Keep
             await self.coordinator.async_refresh()
             _LOGGER.debug("Requested data refresh after move.")
+
+    async def async_move_item(
+        self,
+        item: str,
+        previous_item: str | None = None,
+        parent: str | None = None,
+    ) -> None:
+        """Handle google_keep_sync.move_item: place an item and set its indent.
+
+        Unlike the to-do move action, this can also indent the item under a
+        parent (or un-indent it), the way Google Keep nests items.
+        """
+        _LOGGER.debug(
+            "Placing item %s after %s under %s in list %s",
+            item,
+            previous_item,
+            parent,
+            self._gkeep_list_id,
+        )
+        try:
+            await self.api.async_place_todo_item(
+                self._gkeep_list_id, item, previous_item, parent
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+        finally:
+            await self.coordinator.async_refresh()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
