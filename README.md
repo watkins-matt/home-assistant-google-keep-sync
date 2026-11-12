@@ -139,6 +139,17 @@ If you use empty items as separators in Google Keep, you can enable the **Empty 
 
 **Note:** This feature is incompatible with auto-sort. When auto-sort is enabled, the placeholder option is automatically disabled since empty items would sort to the top of the list.
 
+## Nested Items
+
+Google Keep lets you indent an item under another one (for example, the things to buy under a store's name). Home Assistant todo items are a flat list, so the integration shows every item at the top level and reports the nesting in the list entity's `item_parents` attribute: it maps the uid of each indented item to the uid of the item it's under.
+
+```yaml
+item_parents:
+  "1a2b3c.4d5e6f": "9z8y7x.6w5v4u" # Eggs → Costco
+```
+
+Dashboards, templates and other integrations can read it to group items the way Keep does, for example with `state_attr('todo.google_keep_groceries', 'item_parents')`. Item uids come from the `todo.get_items` action. The attribute isn't recorded in history.
+
 ## Services
 
 As a result of the fact that we are working directly with native todo entities, you can

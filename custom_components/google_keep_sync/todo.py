@@ -1,6 +1,7 @@
 """Platform for creating to do list entries based on Google Keep lists."""
 
 import logging
+from typing import Any
 
 import gkeepapi
 from homeassistant.components.todo import (
@@ -18,7 +19,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 from homeassistant.util import slugify
 
-from .const import DOMAIN
+from .const import ATTR_ITEM_PARENTS, DOMAIN
 from .coordinator import GoogleKeepSyncCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +31,9 @@ class GoogleKeepTodoListEntity(
     """A To-do List representation of a Google Keep List."""
 
     _attr_has_entity_name = True
+    # The parent map changes whenever items are indented, so keep it out of
+    # the recorder rather than storing a copy with every list change.
+    _unrecorded_attributes = frozenset({ATTR_ITEM_PARENTS})
 
     def __init__(
         self,
@@ -281,6 +285,24 @@ class GoogleKeepTodoListEntity(
                     self._gkeep_list_id,
                 )
         return items
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return how items are nested, which todo items can't express.
+
+        Google Keep lets an item be indented under another one. Home Assistant
+        todo items are a flat list, so ``item_parents`` maps the uid of each
+        indented item to the uid of the item it sits under. Items whose parent
+        isn't shown (for example an empty item that was filtered out) are left
+        out.
+        """
+        uids = {item.uid for item in self.todo_items}
+        parents: dict[str, str] = {}
+        for item in self._gkeep_list.items:
+            parent = item.parent_item
+            if parent is not None and item.id in uids and parent.id in uids:
+                parents[item.id] = parent.id
+        return {ATTR_ITEM_PARENTS: parents}
 
 
 async def async_setup_entry(

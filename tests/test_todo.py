@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import gkeepapi
 import pytest
 from homeassistant.components.todo import (
     TodoItem,
@@ -10,7 +11,7 @@ from homeassistant.components.todo import (
 )
 from homeassistant.core import HomeAssistant
 
-from custom_components.google_keep_sync.const import DOMAIN
+from custom_components.google_keep_sync.const import ATTR_ITEM_PARENTS, DOMAIN
 from custom_components.google_keep_sync.todo import (
     GoogleKeepTodoListEntity,
     async_setup_entry,
@@ -832,3 +833,65 @@ async def test_entity_id_generation_sanitizes_title(
     entity = GoogleKeepTodoListEntity(mock_coordinator, dummy_list, "")
 
     assert entity.entity_id == expected_entity_id
+
+
+def _nested_grocery_list() -> gkeepapi.node.List:
+    """Return a real Keep list with two items indented under "Costco"."""
+    keep_list = gkeepapi.node.List()
+    keep_list.title = "Groceries"
+    costco = keep_list.add("Costco")
+    eggs = keep_list.add("Eggs")
+    flour = keep_list.add("Flour")
+    keep_list.add("Bananas")
+    costco.indent(eggs)
+    costco.indent(flour)
+    return keep_list
+
+
+async def test_item_parents_attribute(mock_api, mock_coordinator):
+    """Indented items are mapped to the item they sit under."""
+    keep_list = _nested_grocery_list()
+    by_text = {item.text: item.id for item in keep_list.items}
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, keep_list, "")
+
+    assert entity.extra_state_attributes == {
+        ATTR_ITEM_PARENTS: {
+            by_text["Eggs"]: by_text["Costco"],
+            by_text["Flour"]: by_text["Costco"],
+        }
+    }
+
+
+async def test_item_parents_attribute_empty_without_nesting(mock_api, mock_coordinator):
+    """A flat list has an empty parent map."""
+    keep_list = gkeepapi.node.List()
+    keep_list.add("Milk")
+    keep_list.add("Bread")
+
+    entity = GoogleKeepTodoListEntity(mock_coordinator, keep_list, "")
+
+    assert entity.extra_state_attributes == {ATTR_ITEM_PARENTS: {}}
+
+
+async def test_item_parents_attribute_skips_hidden_parents(mock_api, mock_coordinator):
+    """Children of a filtered-out empty item aren't mapped to a missing uid."""
+    keep_list = gkeepapi.node.List()
+    separator = keep_list.add("")
+    child = keep_list.add("Eggs")
+    separator.indent(child)
+
+    hidden = GoogleKeepTodoListEntity(mock_coordinator, keep_list, "")
+    assert hidden.extra_state_attributes == {ATTR_ITEM_PARENTS: {}}
+
+    shown = GoogleKeepTodoListEntity(
+        mock_coordinator, keep_list, "", empty_item_placeholder="---"
+    )
+    assert shown.extra_state_attributes == {ATTR_ITEM_PARENTS: {child.id: separator.id}}
+
+
+async def test_item_parents_attribute_not_recorded(mock_api, mock_coordinator):
+    """The parent map is excluded from the recorder."""
+    entity = GoogleKeepTodoListEntity(mock_coordinator, _nested_grocery_list(), "")
+
+    assert ATTR_ITEM_PARENTS in entity._unrecorded_attributes
