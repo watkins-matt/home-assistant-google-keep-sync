@@ -579,21 +579,36 @@ async def test_api_caching_on_failure(mock_hass):
     assert deleted == []
 
 
+async def test_validate_token(mock_hass):
+    """Test token validation accepts OAuth and master tokens."""
+    assert GoogleKeepAPI.validate_token("") is False
+    assert GoogleKeepAPI.validate_token(test_oauth_token) is True
+    assert GoogleKeepAPI.validate_token(test_master_token) is True
+    assert GoogleKeepAPI.validate_token("aas_et/" + "x" * 236) is True  # 243 chars
+    assert GoogleKeepAPI.validate_token("aas_et/too_short") is False
+    assert GoogleKeepAPI.validate_token("invalid_prefix_token") is False
+
+    with pytest.raises(ValueError, match="Got: invalid_pref..."):
+        GoogleKeepAPI(mock_hass, TEST_USERNAME, "invalid_prefix_token")
+
+
 async def test_is_oauth_token(google_keep_api):
     """Test the is_oauth_token method correctly identifies different token types."""
     # Test empty token
     assert google_keep_api.is_oauth_token("") is False
     assert google_keep_api.is_oauth_token(None) is False
 
-    # Test master token (starts with "aas_et/" and is 223 chars)
+    # Test master tokens (starts with "aas_et/" and at least 200 chars)
     master_token = test_master_token  # 223 chars total
     assert google_keep_api.is_oauth_token(master_token) is False
+    longer_master_token = "aas_et/" + "x" * 236  # 243 chars total
+    assert google_keep_api.is_oauth_token(longer_master_token) is False
 
-    # Test OAuth token (doesn't start with "aas_et/" or not 223 chars)
+    # Test OAuth token (doesn't start with "aas_et/")
     oauth_token = test_oauth_token
     assert google_keep_api.is_oauth_token(oauth_token) is True
 
-    # Test token with "aas_et/" prefix but wrong length
+    # Test token with "aas_et/" prefix but too short
     wrong_length_token = "aas_et/too_short"
     assert google_keep_api.is_oauth_token(wrong_length_token) is True
 
