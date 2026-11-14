@@ -1,0 +1,50 @@
+# Fails a PR if any of its commits has a "Co-authored-by:" trailer, a line
+# starting with "Generated with", or an AI session link ("Claude-Session:",
+# "Agent-Logs-Url:"). Squash merging copies co-authors onto main, so the PR's
+# commits must be clean.
+#
+# pull_request_target runs this file as it is on main, so a PR can't edit the
+# check to pass itself. That's safe here: it never checks out the PR's code,
+# its token is read-only, and the commit messages (written by the PR author)
+# only pass through jq, never through ${{ }}.
+#
+# PATTERN must stay identical to the no-attribution-trailers hook's entry in
+# .pre-commit-config.yaml; tests/test_repository_consistency.py checks it.
+name: Commit Trailers
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  trailers:
+    name: No attribution trailers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check commit messages
+        # shell: bash adds pipefail, so a failed gh api call fails the check
+        # instead of passing it with no commits to inspect.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          PATTERN: '(?im)^(co-authored-by:|claude-session:|agent-logs-url:|[^a-z0-9\n]*generated with )'
+        run: |
+          bad=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/commits" --paginate \
+            | jq -r --arg re "$PATTERN" '
+                .[]
+                | select(.commit.message | test($re))
+                | .sha[0:7] + " " + (.commit.message | split("\n")[0])')
+          if [ -n "$bad" ]; then
+            echo "::error::These commits have a Co-authored-by trailer, a 'Generated with' line, or an AI session link. Remove those lines, then force-push:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "No attribution trailers found."
