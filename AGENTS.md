@@ -204,7 +204,7 @@ Dependabot opens one PR a month covering `requirements.test.txt`, the pre-commit
 
 This section applies when the person you're working for can't push to this repository, which usually means you're working from a fork. To check, run `gh repo view watkins-matt/home-assistant-google-keep-sync --json viewerPermission -q .viewerPermission`; anything other than `ADMIN`, `MAINTAIN` or `WRITE` means it applies.
 
-- Don't open issues or pull requests, and don't reply to review comments, yourself. Write the text and give it to the user to post.
+- Don't open issues or pull requests, and don't reply to review comments, yourself. You may give the user suggested text, but let them post it.
 - Make sure the user understands the change well enough to answer questions about it. Walk them through what it does and why before they open the PR.
 - Before a PR is opened, the user tests the change in Home Assistant themselves and describes, in their own words, what they did and what happened.
 - The maintainer needs to be able to talk to the person behind the PR. If the replies come only from an agent, the PR will be closed.
