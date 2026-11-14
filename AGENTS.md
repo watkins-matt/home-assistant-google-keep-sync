@@ -133,7 +133,7 @@ pre-commit run --all-files
 
 If pre-commit makes any changes, stage them and run again until all hooks pass without modifications.
 
-The `commit-msg` hook stage must be installed once per clone so commit messages are validated:
+The `commit-msg` hook stage must be installed once per clone so commit messages are checked (Conventional Commits format, and no attribution trailers):
 
 ```bash
 pre-commit install --hook-type commit-msg
@@ -177,6 +177,18 @@ feat: add empty item placeholder option
 fix(coordinator): avoid duplicate add_item events after rename
 feat!: require master token instead of email/password
 ```
+
+### No attribution trailers
+
+Commit under your own name only. Don't add these lines to a commit message:
+
+- A `Co-authored-by:` trailer, for an AI tool or for a person
+- A line starting with "Generated with", such as "🤖 Generated with [Claude Code]"
+- An AI session or log link (`Claude-Session:`, `Agent-Logs-Url:`)
+
+If your tool adds these by default, turn that off in its settings. Squash merging copies a PR's co-authors onto `main`, so these would end up in the project history.
+
+The `no-attribution-trailers` pre-commit hook rejects them when you commit, and the "No attribution trailers" CI check fails a PR whose commits contain them. Both use the same regex, and `tests/test_repository_consistency.py` checks that they match. To fix commits you've already pushed, reword them (`git commit --amend` for the last one, `git rebase -i` for older ones) and force-push.
 
 ## Python Version
 

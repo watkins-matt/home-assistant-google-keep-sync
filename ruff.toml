@@ -26,4 +26,5 @@ exclude = [".venv"]
 [lint.extend-per-file-ignores]
 # S101: Allow assert statements in test
 # S105: Hardcoded fake passwords are okay in test modules
-"test_*.py" = ["S101", "S105"]
+# S603: Tests run fixed commands (such as jq) on data the test defines
+"test_*.py" = ["S101", "S105", "S603"]

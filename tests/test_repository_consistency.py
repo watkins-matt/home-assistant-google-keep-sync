@@ -4,15 +4,39 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 COMPONENT = ROOT / "custom_components" / "google_keep_sync"
 TRANSLATIONS = sorted((COMPONENT / "translations").glob("*.json"))
 PLACEHOLDER = re.compile(r"\{[a-z_]+\}")
+
+# Commit messages the no-attribution-trailers hook and the Commit Trailers CI
+# check must reject, and ones they must allow.
+REJECTED_MESSAGES = [
+    "fix: a\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+    "fix: a\n\nCo-authored-by: Codex <noreply@openai.com>",
+    "fix: a\n\nCo-authored-by: A Person <person@example.com>",
+    "fix: a\n\nco-authored-by:someone",
+    "fix: a\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "fix: a\n\nGenerated with Cursor",
+    "fix: a\n\n  - generated with an AI tool",
+    "fix: a\n\nClaude-Session: https://claude.ai/code/session_0123",
+    "fix: a\n\nAgent-Logs-Url: https://github.com/o/r/sessions/0123",
+]
+ALLOWED_MESSAGES = [
+    "fix: a",
+    "fix: a\n\nSigned-off-by: A Person <person@example.com>",
+    "fix: handle lists generated with the Keep app",
+    "fix: a\n\nThe token is generated with gpsoauth.",
+    "docs: explain that a Co-authored-by: line is rejected",
+]
 
 
 def _package(requirement: str) -> str:
@@ -78,3 +102,58 @@ def test_translation_keeps_the_placeholders_of_english(path: Path) -> None:
             assert sorted(PLACEHOLDER.findall(text)) == sorted(
                 PLACEHOLDER.findall(english[key])
             ), f"{path.name}: {key} changes the placeholders of en.json"
+
+
+def _trailer_patterns() -> tuple[str, str]:
+    """Return the trailer regex of the pre-commit hook and of the CI check."""
+    config = yaml.safe_load((ROOT / ".pre-commit-config.yaml").read_text())
+    hook = next(
+        hook
+        for repo in config["repos"]
+        for hook in repo["hooks"]
+        if hook["id"] == "no-attribution-trailers"
+    )
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "commit-trailers.yml").read_text()
+    )
+    step = workflow["jobs"]["trailers"]["steps"][0]
+    return hook["entry"], step["env"]["PATTERN"]
+
+
+def test_trailer_patterns_match() -> None:
+    """Test that the pre-commit hook and the CI check use the same regex."""
+    hook_pattern, ci_pattern = _trailer_patterns()
+    assert hook_pattern == ci_pattern, (
+        "the no-attribution-trailers entry in .pre-commit-config.yaml and PATTERN in "
+        "commit-trailers.yml differ: make them identical"
+    )
+
+
+@pytest.mark.parametrize(
+    ("message", "rejected"),
+    [(message, True) for message in REJECTED_MESSAGES]
+    + [(message, False) for message in ALLOWED_MESSAGES],
+)
+def test_trailer_pattern(message: str, rejected: bool) -> None:
+    """Test the pre-commit hook's regex (Python) on a commit message."""
+    hook_pattern, _ = _trailer_patterns()
+    assert bool(re.search(hook_pattern, message)) is rejected
+
+
+JQ = shutil.which("jq")
+
+
+@pytest.mark.skipif(JQ is None, reason="jq isn't installed")
+def test_trailer_pattern_in_jq() -> None:
+    """Test the CI check's regex in jq, whose regex engine differs from Python's."""
+    _, ci_pattern = _trailer_patterns()
+    messages = REJECTED_MESSAGES + ALLOWED_MESSAGES
+    result = subprocess.run(
+        [str(JQ), "-c", "--arg", "re", ci_pattern, "[.[] | test($re)]"],
+        input=json.dumps(messages),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    expected = [True] * len(REJECTED_MESSAGES) + [False] * len(ALLOWED_MESSAGES)
+    assert json.loads(result.stdout) == expected
