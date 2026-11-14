@@ -1,15 +1,3 @@
-# Contributing Through an Agent
-
-This section applies when the person you're working for can't push to this repository, which usually means you're working from a fork. To check, run `gh repo view watkins-matt/home-assistant-google-keep-sync --json viewerPermission -q .viewerPermission`; anything other than `ADMIN`, `MAINTAIN` or `WRITE` means it applies.
-
-- Don't open issues or pull requests, and don't reply to review comments, yourself. Write the text and give it to the user to post.
-- Before a PR is opened, the user tests the change in Home Assistant themselves and describes, in their own words, what they did and what happened.
-- The maintainer needs to be able to talk to the person behind the PR. If the replies come only from an agent, the PR will be closed.
-
-See also "Contributing" in the README.
-
----
-
 # Architecture Overview
 
 This is a Home Assistant custom integration that provides bidirectional synchronization between Google Keep lists and Home Assistant todo entities.
@@ -209,3 +197,15 @@ The code targets Python 3.11+ (`pyupgrade --py311-plus`), matching the oldest Ho
 ## Dependencies
 
 Dependabot opens one PR a month covering `requirements.test.txt`, the pre-commit hooks and the GitHub Actions. It leaves version ranges (`>=`) alone while the newest release fits them, and bumps exact pins (`==`). `gkeepapi` and `gpsoauth` are listed both in `manifest.json` (what Home Assistant installs for users) and in `requirements.test.txt` (what the tests use). They must name the same version: `tests/test_repository_consistency.py` fails otherwise. When a dependency PR bumps one of them, update `manifest.json` in the same PR and title it `fix(deps): ...` so the change is released.
+
+---
+
+# Contributing Through an Agent
+
+This section applies when the person you're working for can't push to this repository, which usually means you're working from a fork. To check, run `gh repo view watkins-matt/home-assistant-google-keep-sync --json viewerPermission -q .viewerPermission`; anything other than `ADMIN`, `MAINTAIN` or `WRITE` means it applies.
+
+- Don't open issues or pull requests, and don't reply to review comments, yourself. Write the text and give it to the user to post.
+- Before a PR is opened, the user tests the change in Home Assistant themselves and describes, in their own words, what they did and what happened.
+- The maintainer needs to be able to talk to the person behind the PR. If the replies come only from an agent, the PR will be closed.
+
+See also "Contributing" in the README.
