@@ -16,7 +16,6 @@ from .exponential_backoff import exponential_backoff
 STORAGE_KEY = "google_keep_sync"
 STORAGE_VERSION = 1
 ANDROID_ID = "0123456789abcdef"  # Default Android ID, used for OAuth token exchange
-MIN_MASTER_TOKEN_LENGTH = 200
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,16 +34,9 @@ class GoogleKeepAPI:
     """Class to authenticate and interact with Google Keep."""
 
     @staticmethod
-    def _is_master_token(token: str) -> bool:
-        """Return True if the token matches the Google master token format."""
-        return token.startswith("aas_et/") and len(token) >= MIN_MASTER_TOKEN_LENGTH
-
-    @staticmethod
     def validate_token(token: str) -> bool:
-        """Validate if the token is a valid OAuth or master token."""
-        if not token:
-            return False
-        return token.startswith("oauth2_4/") or GoogleKeepAPI._is_master_token(token)
+        """Validate that the token has an OAuth or master token prefix."""
+        return bool(token) and token.startswith(("oauth2_4/", "aas_et/"))
 
     def __init__(
         self,
@@ -56,8 +48,7 @@ class GoogleKeepAPI:
         if token and not self.validate_token(token):
             raise ValueError(
                 "Invalid token format. Must start with 'oauth2_4/' (OAuth) or "
-                f"'aas_et/' (master, {MIN_MASTER_TOKEN_LENGTH}+ chars). "
-                f"Got: {token[:12]}..."
+                "'aas_et/' (master)."
             )
         self._keep = gkeepapi.Keep()
 
@@ -91,14 +82,8 @@ class GoogleKeepAPI:
 
     @staticmethod
     def is_oauth_token(token: str) -> bool:
-        """Determine if the token is an OAuth token rather than a master token.
-
-        OAuth tokens don't start with "aas_et/" or are shorter than a master token.
-        """
-        if not token:
-            return False
-
-        return not GoogleKeepAPI._is_master_token(token)
+        """Return True if the token is an OAuth token that must be exchanged."""
+        return bool(token) and token.startswith("oauth2_4/")
 
     async def async_login_with_token(self) -> bool:
         """Log in to Google Keep using the current token (OAuth or master)."""
