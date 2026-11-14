@@ -68,7 +68,7 @@ This is a Home Assistant custom integration that provides bidirectional synchron
 
 ## Authentication
 
-The integration uses a **master token** (starts with `aas_et/`, 223 characters) for authentication. Users can also provide an exchange token (starts with `oauth2_4/`) which is automatically converted to a master token.
+The integration uses a **master token** (starts with `aas_et/`) for authentication. Users can also provide an exchange token (starts with `oauth2_4/`) which is automatically converted to a master token.
 
 User-facing text (the README and the config flow strings) describes only the OAuth token: the `oauth_token` cookie copied from `accounts.google.com/EmbeddedSetup`. The ways of getting a master token directly no longer work, so don't document them, even though the code still accepts both formats. A master token gives access to the whole Google account, not only Keep; say so wherever the token's reach comes up.
 

@@ -9,8 +9,8 @@ from custom_components.google_keep_sync.api import GoogleKeepAPI, ListCase
 
 # Constants for testing
 TEST_USERNAME = "testuser@example.com"
-# Use a valid master token format: starts with 'aas_et/' and is 223 chars
-test_master_token = "aas_et/" + "x" * 216  # 223 chars total
+# Use a valid master token format: starts with 'aas_et/'
+test_master_token = "aas_et/" + "x" * 216
 # Use a valid OAuth token format: starts with 'oauth2_4/'
 test_oauth_token = "oauth2_4/valid_oauth_token"
 TEST_TOKEN = test_master_token
@@ -579,23 +579,39 @@ async def test_api_caching_on_failure(mock_hass):
     assert deleted == []
 
 
+async def test_validate_token(mock_hass):
+    """Test token validation checks only the token prefix."""
+    assert GoogleKeepAPI.validate_token("") is False
+    assert GoogleKeepAPI.validate_token(None) is False
+    assert GoogleKeepAPI.validate_token(test_oauth_token) is True
+    assert GoogleKeepAPI.validate_token(test_master_token) is True
+    # Master tokens of any length are accepted (Google changed 223 -> 243 chars)
+    assert GoogleKeepAPI.validate_token("aas_et/" + "x" * 236) is True
+    assert GoogleKeepAPI.validate_token("aas_et/short") is True
+    assert GoogleKeepAPI.validate_token("invalid_prefix_token") is False
+
+    with pytest.raises(ValueError, match="Invalid token format") as exc_info:
+        GoogleKeepAPI(mock_hass, TEST_USERNAME, "invalid_prefix_token")
+    # The error message must not include any part of the token
+    assert "invalid_pref" not in str(exc_info.value)
+
+
 async def test_is_oauth_token(google_keep_api):
     """Test the is_oauth_token method correctly identifies different token types."""
     # Test empty token
     assert google_keep_api.is_oauth_token("") is False
     assert google_keep_api.is_oauth_token(None) is False
 
-    # Test master token (starts with "aas_et/" and is 223 chars)
-    master_token = test_master_token  # 223 chars total
-    assert google_keep_api.is_oauth_token(master_token) is False
+    # Master tokens (start with "aas_et/") are never exchanged, whatever the length
+    assert google_keep_api.is_oauth_token(test_master_token) is False
+    assert google_keep_api.is_oauth_token("aas_et/" + "x" * 236) is False
+    assert google_keep_api.is_oauth_token("aas_et/short") is False
 
-    # Test OAuth token (doesn't start with "aas_et/" or not 223 chars)
-    oauth_token = test_oauth_token
-    assert google_keep_api.is_oauth_token(oauth_token) is True
+    # OAuth tokens start with "oauth2_4/"
+    assert google_keep_api.is_oauth_token(test_oauth_token) is True
 
-    # Test token with "aas_et/" prefix but wrong length
-    wrong_length_token = "aas_et/too_short"
-    assert google_keep_api.is_oauth_token(wrong_length_token) is True
+    # Unknown prefixes are not OAuth tokens
+    assert google_keep_api.is_oauth_token("invalid_prefix_token") is False
 
 
 async def test_async_login_with_token_success(google_keep_api, mock_hass):

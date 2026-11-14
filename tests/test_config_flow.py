@@ -53,7 +53,7 @@ def mock_google_keep_api():
 async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     """Test the initial user setup form, with a username and token."""
     user_name = "testuser@example.com"
-    user_token = "aas_et/" + "x" * 216  # 223 chars total (master token)
+    user_token = "aas_et/" + "x" * 216  # master token
     # Patch the mock to return the expected token string
     mock_google_keep_api.return_value.token = user_token
 
