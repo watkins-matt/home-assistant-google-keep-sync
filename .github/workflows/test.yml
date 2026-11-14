@@ -7,12 +7,9 @@ on:
       - '**/*.json'
       - 'requirements.test.txt'
       - '.github/workflows/test.yml'
+  # No paths filter for PRs: "Run Tests" is a required check, and a PR that
+  # never runs it (such as a docs-only one) would wait for it forever.
   pull_request:
-    paths:
-      - '**/*.py'
-      - '**/*.json'
-      - 'requirements.test.txt'
-      - '.github/workflows/test.yml'
   workflow_dispatch:
 
 jobs:
