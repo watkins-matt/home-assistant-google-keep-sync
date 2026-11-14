@@ -341,6 +341,34 @@ async def test_options_flow(
     assert submission_response["data"]["list_prefix"] == "TestPrefix"
 
 
+async def test_reauth_flow_invalid_token_format(hass: HomeAssistant):
+    """Test reauth shows the invalid_token_format error for a malformed token.
+
+    Uses the real GoogleKeepAPI (not mocked), since its constructor raises
+    ValueError for a malformed token if the flow does not validate it first.
+    """
+    mock_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="user@example.com",
+        data={"username": "user@example.com", "token": "aas_et/old_token"},
+    )
+    mock_entry.add_to_hass(hass)
+
+    init_flow_result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": "reauth", "entry_id": mock_entry.entry_id}
+    )
+
+    config_flow_result = await hass.config_entries.flow.async_configure(
+        init_flow_result["flow_id"], {"token": "4/0AVMBsJh-partial-cookie"}
+    )
+
+    assert config_flow_result["type"] == "form"
+    assert config_flow_result["step_id"] == "reauth_confirm"
+    assert config_flow_result["errors"] == {"base": "invalid_token_format"}
+    # The stored token must be left unchanged
+    assert mock_entry.data["token"] == "aas_et/old_token"
+
+
 async def test_reauth_flow_invalid_credentials(
     hass: HomeAssistant, mock_google_keep_api
 ):
