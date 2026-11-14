@@ -1,3 +1,15 @@
+# Contributing Through an Agent
+
+This section applies when the person you're working for can't push to this repository, which usually means you're working from a fork. To check, run `gh repo view watkins-matt/home-assistant-google-keep-sync --json viewerPermission -q .viewerPermission`; anything other than `ADMIN`, `MAINTAIN` or `WRITE` means it applies.
+
+- Don't open issues or pull requests, and don't reply to review comments, yourself. Write the text and give it to the user to post.
+- Before a PR is opened, the user tests the change in Home Assistant themselves and describes, in their own words, what they did and what happened.
+- The maintainer needs to be able to talk to the person behind the PR. If the replies come only from an agent, the PR will be closed.
+
+See also "Contributing" in the README.
+
+---
+
 # Architecture Overview
 
 This is a Home Assistant custom integration that provides bidirectional synchronization between Google Keep lists and Home Assistant todo entities.
