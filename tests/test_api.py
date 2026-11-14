@@ -988,3 +988,110 @@ async def test_authenticated_required_decorator(google_keep_api, mock_hass):
     # Try to call a method with the decorator when not authenticated
     with pytest.raises(Exception, match="Not authenticated with Google Keep"):
         await google_keep_api.async_create_todo_item("list_id", "test item")
+
+
+def _groceries() -> tuple[gkeepapi.node.List, dict[str, gkeepapi.node.ListItem]]:
+    """Return a real Keep list: Costco > Eggs, then Bananas and Milk."""
+    keep_list = gkeepapi.node.List()
+    items = {}
+    for n, text in enumerate(["Costco", "Eggs", "Bananas", "Milk"]):
+        items[text] = keep_list.add(text, sort=4000 - n * 1000)
+    items["Costco"].indent(items["Eggs"])
+    return keep_list, items
+
+
+async def test_async_place_todo_item_moves_and_indents(google_keep_api, mock_hass):
+    """An item can be placed inside a parent's group and indented under it."""
+    google_keep_api._authenticated = True
+    keep_list, items = _groceries()
+    google_keep_api._keep.get.return_value = keep_list
+
+    await google_keep_api.async_place_todo_item(
+        "list", items["Milk"].id, items["Eggs"].id, items["Costco"].id
+    )
+
+    assert [i.text for i in keep_list.items] == ["Costco", "Eggs", "Milk", "Bananas"]
+    assert items["Milk"].parent_item is items["Costco"]
+    google_keep_api._keep.sync.assert_called()
+
+
+async def test_async_place_todo_item_to_top_and_dedent(google_keep_api, mock_hass):
+    """No previous item moves it to the top; no parent un-indents it."""
+    google_keep_api._authenticated = True
+    keep_list, items = _groceries()
+    google_keep_api._keep.get.return_value = keep_list
+
+    await google_keep_api.async_place_todo_item("list", items["Eggs"].id)
+
+    assert [i.text for i in keep_list.items][0] == "Eggs"
+    assert not items["Eggs"].indented
+    assert items["Costco"].subitems == []
+
+
+async def test_async_place_todo_item_moves_between_parents(google_keep_api, mock_hass):
+    """Indenting under a different parent leaves the old one."""
+    google_keep_api._authenticated = True
+    keep_list, items = _groceries()
+    google_keep_api._keep.get.return_value = keep_list
+
+    await google_keep_api.async_place_todo_item(
+        "list", items["Eggs"].id, items["Bananas"].id, items["Bananas"].id
+    )
+
+    assert items["Eggs"].parent_item is items["Bananas"]
+    assert items["Costco"].subitems == []
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("missing", None, None, "Item missing not found"),
+        ("Milk", "missing", None, "Previous item missing not found"),
+        ("Milk", None, "missing", "Parent item missing not found"),
+        ("Milk", None, "Eggs", "top-level item"),
+        ("Milk", None, "Milk", "top-level item"),
+        ("Costco", None, "Bananas", "with sub-items"),
+    ],
+)
+async def test_async_place_todo_item_rejects_invalid(google_keep_api, mock_hass, case):
+    """Unknown items and impossible nesting raise ValueError."""
+    item, previous, parent, message = case
+    google_keep_api._authenticated = True
+    keep_list, items = _groceries()
+    google_keep_api._keep.get.return_value = keep_list
+
+    def uid(text):
+        return items[text].id if text in items else text
+
+    with pytest.raises(ValueError, match=message):
+        await google_keep_api.async_place_todo_item(
+            "list",
+            uid(item),
+            None if previous is None else uid(previous),
+            None if parent is None else uid(parent),
+        )
+
+
+async def test_async_place_todo_item_list_not_found(google_keep_api, mock_hass):
+    """A missing list raises ValueError."""
+    google_keep_api._authenticated = True
+    google_keep_api._keep.get.return_value = None
+
+    with pytest.raises(ValueError, match="not found"):
+        await google_keep_api.async_place_todo_item("list", "item")
+
+
+async def test_async_place_todo_item_resync_required(google_keep_api, mock_hass):
+    """A resync request after placing falls back to a full resync."""
+    google_keep_api._authenticated = True
+    keep_list, items = _groceries()
+    google_keep_api._keep.get.return_value = keep_list
+    google_keep_api._keep.sync.side_effect = [
+        None,
+        gkeepapi.exception.ResyncRequiredException(),
+        None,
+    ]
+
+    await google_keep_api.async_place_todo_item("list", items["Milk"].id)
+
+    google_keep_api._keep.sync.assert_any_call(True)

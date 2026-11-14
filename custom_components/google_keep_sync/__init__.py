@@ -6,16 +6,26 @@ import logging
 import traceback
 from functools import partial
 
+import voluptuous as vol
+from homeassistant.components.todo import DOMAIN as TODO_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import service
 from homeassistant.util.dt import as_timestamp, utcnow
 
 from .api import GoogleKeepAPI
-from .const import DOMAIN
+from .const import DOMAIN, SERVICE_MOVE_ITEM
 from .coordinator import GoogleKeepSyncCoordinator
 
 PLATFORMS: list[Platform] = [Platform.TODO]
+
+MOVE_ITEM_SCHEMA = {
+    vol.Required("item"): cv.string,
+    vol.Optional("previous_item"): vol.Any(None, cv.string),
+    vol.Optional("parent"): vol.Any(None, cv.string),
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -87,6 +97,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_register(
         DOMAIN, "request_sync", partial(async_service_request_sync, coordinator)
     )
+
+    # Register move_item, which places an item and sets its indent
+    if not hass.services.has_service(DOMAIN, SERVICE_MOVE_ITEM):
+        service.async_register_platform_entity_service(
+            hass,
+            DOMAIN,
+            SERVICE_MOVE_ITEM,
+            entity_domain=TODO_DOMAIN,
+            func="async_move_item",
+            schema=MOVE_ITEM_SCHEMA,
+        )
 
     # Forward the setup to the todo platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

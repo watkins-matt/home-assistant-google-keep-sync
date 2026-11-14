@@ -479,6 +479,92 @@ class GoogleKeepAPI:
             _LOGGER.error("List %s not found in Google Keep", list_id)
 
     @authenticated_required
+    async def async_place_todo_item(
+        self,
+        list_id: str,
+        item_id: str,
+        previous_uid: str | None = None,
+        parent_uid: str | None = None,
+    ) -> None:
+        """Move an item after another one and indent it under a parent (or not).
+
+        ``previous_uid`` None moves the item to the top; ``parent_uid`` None
+        leaves it at the top level. Google Keep nests one level deep, and shows
+        an item's sub-items right after it, so the parent can't itself be
+        indented and the caller places the item inside the parent's group.
+
+        Raises ValueError for an unknown item or an invalid parent.
+        """
+        _LOGGER.debug(
+            "Placing todo item %s after %s under %s in list %s",
+            item_id,
+            previous_uid,
+            parent_uid,
+            list_id,
+        )
+        # Work on the current server state, as async_move_todo_item does.
+        await self._sync_with_google_keep()
+
+        item, parent, order = self._placement(
+            self._keep.get(list_id), list_id, item_id, previous_uid, parent_uid
+        )
+
+        def apply() -> None:
+            self.assign_sort_values(order)
+            current = item.parent_item
+            if current is not None and current is not parent:
+                current.dedent(item)
+            if parent is not None and current is not parent:
+                parent.indent(item)
+
+        await self._hass.async_add_executor_job(apply)
+        try:
+            await self._hass.async_add_executor_job(self._keep.sync)
+        except ResyncRequiredException:
+            _LOGGER.warning(
+                "Resync required after placing item, performing full resync"
+            )
+            await self._hass.async_add_executor_job(self._keep.sync, True)
+
+    @staticmethod
+    def _placement(
+        keep_list: object,
+        list_id: str,
+        item_id: str,
+        previous_uid: str | None,
+        parent_uid: str | None,
+    ) -> tuple[
+        gkeepapi.node.ListItem,
+        gkeepapi.node.ListItem | None,
+        list[gkeepapi.node.ListItem],
+    ]:
+        """Check a placement and return the item, its new parent and new order."""
+        if not isinstance(keep_list, gkeepapi.node.List):
+            raise ValueError(f"List {list_id} not found in Google Keep")
+        by_id = {item.id: item for item in keep_list.items}
+        item = by_id.get(item_id)
+        if item is None:
+            raise ValueError(f"Item {item_id} not found in list {list_id}")
+        if previous_uid is not None and previous_uid not in by_id:
+            raise ValueError(
+                f"Previous item {previous_uid} not found in list {list_id}"
+            )
+        parent = None if parent_uid is None else by_id.get(parent_uid)
+        if parent_uid is not None and parent is None:
+            raise ValueError(f"Parent item {parent_uid} not found in list {list_id}")
+        if parent is not None and (parent is item or parent.indented):
+            raise ValueError("An item can only be indented under a top-level item")
+        if parent is not None and item.subitems:
+            raise ValueError("An item with sub-items can't be indented")
+
+        order = [i for i in keep_list.items if i is not item]
+        index = 0
+        if previous_uid is not None and previous_uid != item_id:
+            index = next(n for n, i in enumerate(order) if i.id == previous_uid) + 1
+        order.insert(index, item)
+        return item, parent, order
+
+    @authenticated_required
     async def fetch_all_lists(self) -> list[gkeepapi.node.List]:
         """Fetch all lists from Google Keep."""
         _LOGGER.debug("Fetching all lists from Google Keep")

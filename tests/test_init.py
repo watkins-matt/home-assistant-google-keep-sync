@@ -60,6 +60,7 @@ async def test_async_setup_entry_successful(
     ):
         assert await async_setup_entry(hass, mock_config_entry)
     assert hass.data[GOOGLE_KEEP_DOMAIN]
+    assert hass.services.has_service(GOOGLE_KEEP_DOMAIN, "move_item")
     await hass.async_block_till_done()
 
 
