@@ -24,6 +24,6 @@ docs-only or CI-only change, write "Not needed" and say why.
 ## Checklist
 
 - [ ] `pytest` passes
-- [ ] I tested this change myself, and I'll answer review comments myself
+- [ ] I understand every change in this PR, I tested it myself, and I'll answer review comments myself
 
 Fixes #

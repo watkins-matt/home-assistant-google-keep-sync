@@ -394,6 +394,7 @@ Open the repository in VS Code with the Dev Containers extension (and Docker or 
 
 Issues and pull requests are welcome. Using AI tools is fine, but:
 
+- Understand every change you submit and be able to explain it. If you can't answer questions about how your change works, it isn't ready for a pull request.
 - Test your change in Home Assistant yourself before opening a pull request (see [Development](#development)), and describe in your own words what you did and what happened.
 - Answer review comments yourself, not through an agent. There needs to be a person to talk to behind every pull request, so a pull request where only an agent replies will be closed.
 - Leave `Co-authored-by:` trailers and AI attribution lines, such as `Claude-Session:` or "Generated with Claude Code", out of your commit messages. A CI check rejects them.
