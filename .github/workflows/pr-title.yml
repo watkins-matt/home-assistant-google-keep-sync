@@ -1,14 +1,22 @@
 # "Squash and merge" uses the PR title as the commit message on main when a PR
 # has more than one commit; release-please reads those messages. This fails a
 # PR whose title isn't a conventional commit (feat: ..., fix(scope): ...).
+#
+# It's meant to be a required check, and checks belong to the PR's newest
+# commit, so it also runs on synchronize (a push to the PR); without that, a
+# PR would wait for it forever after every push. It also runs on pull_request
+# because release-please's pushes to its release PR start pull_request
+# workflows but not pull_request_target ones. Both report under the same name.
 name: PR Title
 
-#
-# It's a required check, and checks belong to the PR's newest commit, so it
-# also runs on synchronize (a push to the PR); without that, a PR would wait
-# for it forever after every push.
 on:
   pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+  pull_request:
     types:
       - opened
       - edited
