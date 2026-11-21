@@ -1,5 +1,6 @@
 """Tests for GoogleKeepAPI."""
 
+import secrets
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import gkeepapi
@@ -114,6 +115,25 @@ async def test_persist_state_false_defers_save(google_keep_api, mock_store):
     mock_store.async_save.assert_called_once_with(
         {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
     )
+
+
+async def test_authenticate_skips_saved_state_for_other_token(
+    google_keep_api, mock_store
+):
+    """A saved state for a different token is ignored; the entry token is used."""
+    google_keep_api._store = mock_store
+    mock_store.async_load.return_value = {
+        "token": "aas_et/" + secrets.token_urlsafe(32),
+        "state": TEST_STATE,
+        "username": TEST_USERNAME,
+    }
+
+    assert await google_keep_api.authenticate() is True
+
+    google_keep_api._keep.authenticate.assert_called_once_with(
+        TEST_USERNAME, test_master_token, None
+    )
+    assert google_keep_api.token == TEST_TOKEN
 
 
 async def test_persist_state_defaults_to_true(mock_hass):

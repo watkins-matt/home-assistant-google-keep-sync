@@ -259,9 +259,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 _LOGGER.warning("Invalid token format during reauth")
                 errors["base"] = "invalid_token_format"
             else:
-                api = GoogleKeepAPI(self.hass, username, token)
+                # Check the submitted token itself; the saved state holds the
+                # old token and would succeed without testing the new one.
+                # Nothing is saved here: setup saves state for the new token
+                # when the entry reloads.
+                api = GoogleKeepAPI(self.hass, username, token, persist_state=False)
                 try:
-                    success = await api.authenticate()
+                    success = await api.async_login_with_token()
                 except CannotConnectError:
                     _LOGGER.warning(
                         "Cannot connect during reauth for user %s", username
@@ -270,15 +274,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 else:
                     if success:
                         _LOGGER.debug("Reauth successful, updating entry")
-                        # Update internal API and user_data for this flow
-                        self.api = api
-                        self.user_data = {"username": username, "token": api.token}
-                        # Update entry token in Home Assistant
-                        updated_data = {**entry.data, "token": api.token}
-                        self.hass.config_entries.async_update_entry(
-                            entry, data=updated_data
+                        # Store the new token and reload, so the running
+                        # integration stops using the old one.
+                        return self.async_update_reload_and_abort(
+                            entry,
+                            data={**entry.data, "token": api.token},
+                            reason="reauth_successful",
                         )
-                        return self.async_abort(reason="reauth_successful")
                     _LOGGER.warning(
                         "Reauth authentication failed for user %s", username
                     )
@@ -326,8 +328,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # selection leaves no token behind.
         self.api = GoogleKeepAPI(hass, username, token, persist_state=False)
 
-        # Both master tokens and OAuth tokens are handled by the API here
-        success = await self.api.authenticate()
+        # Sign in with the submitted token itself, never a saved state. Both
+        # master tokens and OAuth tokens are handled by the API here.
+        success = await self.api.async_login_with_token()
 
         if not success:
             raise InvalidAuthError

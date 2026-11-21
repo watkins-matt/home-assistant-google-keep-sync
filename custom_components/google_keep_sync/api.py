@@ -201,6 +201,16 @@ class GoogleKeepAPI:
             saved_username,
         ) = await self._async_load_state_and_token()
 
+        # The token in the config entry is authoritative. A saved state for a
+        # different token (an older one replaced by reauth, or a file left from
+        # an earlier install) must not be used in its place.
+        if saved_token and self._token and saved_token != self._token:
+            _LOGGER.debug(
+                "Saved state is for a different token; not using it for user: %s",
+                self._username_redacted,
+            )
+            return False
+
         if saved_token and saved_state and saved_username:
             try:
                 await self._hass.async_add_executor_job(
