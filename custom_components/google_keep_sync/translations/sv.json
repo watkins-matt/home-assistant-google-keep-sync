@@ -45,7 +45,10 @@
             },
             "reauth_confirm": {
                 "title": "Autentisera igen",
-                "description": "Google Keep Sync behöver logga in på ditt Google-konto igen. Hämta en ny OAuth-token, på en dator:\n\n1. Öppna ett privat webbläsarfönster och gå till [accounts.google.com/EmbeddedSetup]({embedded_setup_url}). Logga in. Om Google frågar hur du ska använda enheten väljer du att du själv ska använda den. På sidan med användarvillkoren klickar du på **Jag godkänner**.\n2. Sidan fortsätter sedan att laddas och blir aldrig klar. Det är väntat: ladda inte om den och stäng den inte.\n3. Öppna utvecklarverktygen (F12, eller Cmd+Option+I på Mac). På fliken **Application** (Chrome, Edge) eller **Storage** (Firefox, Safari) öppnar du **Cookies** › **https://accounts.google.com**.\n4. Kopiera hela värdet (**Value**) av cookien `oauth_token`. Det börjar med `oauth2_4/`.\n5. Klistra in den nedan direkt. Den slutar gälla efter en kort stund.\n\nInstruktioner för varje webbläsare: [Getting a Token]({token_help_url}) i Readme (på engelska)."
+                "description": "Google Keep Sync behöver logga in på ditt Google-konto igen. Hämta en ny OAuth-token, på en dator:\n\n1. Öppna ett privat webbläsarfönster och gå till [accounts.google.com/EmbeddedSetup]({embedded_setup_url}). Logga in. Om Google frågar hur du ska använda enheten väljer du att du själv ska använda den. På sidan med användarvillkoren klickar du på **Jag godkänner**.\n2. Sidan fortsätter sedan att laddas och blir aldrig klar. Det är väntat: ladda inte om den och stäng den inte.\n3. Öppna utvecklarverktygen (F12, eller Cmd+Option+I på Mac). På fliken **Application** (Chrome, Edge) eller **Storage** (Firefox, Safari) öppnar du **Cookies** › **https://accounts.google.com**.\n4. Kopiera hela värdet (**Value**) av cookien `oauth_token`. Det börjar med `oauth2_4/`.\n5. Klistra in den nedan direkt. Den slutar gälla efter en kort stund.\n\nInstruktioner för varje webbläsare: [Getting a Token]({token_help_url}) i Readme (på engelska).",
+                "data": {
+                    "token": "Token"
+                }
             }
         }
     },
