@@ -1,13 +1,17 @@
 """Test the Google Keep Sync setup entry."""
 
 import logging
+import secrets
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry as HAMockConfigEntry,
+)
 
 from custom_components.google_keep_sync import (
     _LOGGER as INTEGRATION_LOGGER,
@@ -250,3 +254,94 @@ def test_unknown_node_type_filter_reroutes_to_debug_when_enabled():
         assert "Stack:" in record.getMessage()
     finally:
         INTEGRATION_LOGGER.setLevel(logging.NOTSET)
+
+
+SAVED_STATE_PREFIX = "google_keep_sync."
+
+
+def _saved_state_entry(hass: HomeAssistant, username: str) -> HAMockConfigEntry:
+    """Add a real config entry for username to Home Assistant."""
+    entry = HAMockConfigEntry(
+        domain=GOOGLE_KEEP_DOMAIN,
+        title=username,
+        unique_id=f"{GOOGLE_KEEP_DOMAIN}.{username}",
+        data={
+            "username": username,
+            "token": "aas_et/" + secrets.token_urlsafe(32),
+            "lists_to_sync": [],
+            "list_prefix": "",
+        },
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+def _seed_saved_state(hass_storage: dict, username: str) -> str:
+    """Put saved state for username in storage and return its storage name."""
+    storage_name = f"{SAVED_STATE_PREFIX}{username}.json"
+    hass_storage[storage_name] = {
+        "version": 1,
+        "key": storage_name,
+        "data": {"state": {"nodes": []}, "username": username},
+    }
+    return storage_name
+
+
+async def test_remove_entry_deletes_only_that_accounts_saved_state(
+    hass: HomeAssistant, hass_storage: dict, mock_api
+):
+    """Deleting a loaded entry removes its saved state and keeps the others."""
+    removed = _saved_state_entry(hass, "first@example.com")
+    kept = _saved_state_entry(hass, "second@example.com")
+    removed_name = _seed_saved_state(hass_storage, "first@example.com")
+    kept_name = _seed_saved_state(hass_storage, "second@example.com")
+
+    assert await hass.config_entries.async_setup(removed.entry_id)
+    await hass.async_block_till_done()
+    assert removed.state is ConfigEntryState.LOADED
+
+    await hass.config_entries.async_remove(removed.entry_id)
+    await hass.async_block_till_done()
+
+    assert removed_name not in hass_storage
+    assert kept_name in hass_storage
+    assert hass.config_entries.async_get_entry(kept.entry_id) is not None
+
+
+async def test_reload_disable_and_unload_keep_saved_state(
+    hass: HomeAssistant, hass_storage: dict, mock_api
+):
+    """Reloading, disabling or unloading an entry leaves its saved state alone."""
+    entry = _saved_state_entry(hass, "first@example.com")
+    storage_name = _seed_saved_state(hass_storage, "first@example.com")
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert storage_name in hass_storage
+
+    await hass.config_entries.async_set_disabled_by(
+        entry.entry_id, ConfigEntryDisabler.USER
+    )
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.NOT_LOADED
+    assert storage_name in hass_storage
+
+    await hass.config_entries.async_set_disabled_by(entry.entry_id, None)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.LOADED
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    assert storage_name in hass_storage
+
+
+async def test_remove_entry_without_saved_state(hass: HomeAssistant, hass_storage):
+    """Deleting an entry whose saved state is already gone succeeds."""
+    entry = _saved_state_entry(hass, "first@example.com")
+
+    result = await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert result == {"require_restart": False}
+    assert hass.config_entries.async_get_entry(entry.entry_id) is None
+    assert not [name for name in hass_storage if name.startswith(SAVED_STATE_PREFIX)]
