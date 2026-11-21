@@ -16,8 +16,8 @@ Using AI tools is fine, but please read "Contributing" in the README first.
 
 <!--
 In your own words: what you did in Home Assistant (the dev container:
-F5, "Home Assistant", or your own instance) and what happened. For a
-docs-only or CI-only change, write "Not needed" and say why.
+F5, "Google Keep Sync: Home Assistant", or your own instance) and what
+happened. For a docs-only or CI-only change, write "Not needed" and say why.
 -->
 
 

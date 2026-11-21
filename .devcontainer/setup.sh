@@ -185,9 +185,9 @@ setup_config() {
 }
 
 # The packages of the integrations HA will load (ha_requirements.py), with
-# core's version constraints, so a first start or "Home Assistant (skip pip)"
-# finds them. Redone when core, configuration.yaml, a manifest or the list
-# script changes.
+# core's version constraints, so a first start or "Google Keep Sync: Home
+# Assistant (skip pip)" finds them. Redone when core, configuration.yaml, a
+# manifest or the list script changes.
 install_requirements() {
     local stamp="$HA_VENV/.requirements-installed" want reqs
     want="$(git -C "$CORE" rev-parse HEAD) $(cat "$REPO/.devcontainer/ha_requirements.py" "$CONFIG/configuration.yaml" "$CONFIG"/custom_components/*/manifest.json 2>/dev/null | sha256sum | cut -d' ' -f1)"
@@ -243,4 +243,4 @@ install_tests
 (( UPDATE )) && report_repo
 
 log "Ready: Home Assistant $(core_tag || true) $(git -C "$CORE" rev-parse --short HEAD) in $CORE"
-log "Run it: Run and Debug > \"Home Assistant\", then http://localhost:8123"
+log "Run it: Run and Debug > \"Google Keep Sync: Home Assistant\", then http://localhost:8123"

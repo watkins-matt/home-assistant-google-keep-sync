@@ -1,11 +1,14 @@
 {
     // Run and debug Home Assistant with this integration, or the tests, in the
     // dev container (see "Development" in README.md). Works with the folder or
-    // with google-keep-sync.code-workspace open.
+    // with google-keep-sync.code-workspace open. The names and "presentation"
+    // keep these together and ahead of core's own configs in the Run and
+    // Debug list, which shows both when the workspace is open.
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Home Assistant",
+            "name": "Google Keep Sync: Home Assistant",
+            "presentation": { "group": "1-google-keep-sync", "order": 1 },
             "type": "debugpy",
             "request": "launch",
             "python": "/home/vscode/.venvs/ha/bin/python",
@@ -19,7 +22,8 @@
             "justMyCode": false
         },
         {
-            "name": "Home Assistant (skip pip)",
+            "name": "Google Keep Sync: Home Assistant (skip pip)",
+            "presentation": { "group": "1-google-keep-sync", "order": 2 },
             "type": "debugpy",
             "request": "launch",
             "python": "/home/vscode/.venvs/ha/bin/python",
@@ -33,7 +37,8 @@
             "justMyCode": false
         },
         {
-            "name": "Tests (Google Keep Sync)",
+            "name": "Google Keep Sync: Tests",
+            "presentation": { "group": "1-google-keep-sync", "order": 3 },
             "type": "debugpy",
             "request": "launch",
             "python": "/home/vscode/.venvs/ha/bin/python",
