@@ -23,7 +23,15 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-INVALID_AUTH_URL = "https://github.com/watkins-matt/home-assistant-google-keep-sync?tab=readme-ov-file#invalid-authentication-errors"
+# Links in the setup and reauth forms. Home Assistant doesn't allow URLs in
+# strings.json, so they are passed in as placeholders.
+DESCRIPTION_PLACEHOLDERS = {
+    "embedded_setup_url": "https://accounts.google.com/EmbeddedSetup",
+    "token_help_url": (
+        "https://github.com/watkins-matt/home-assistant-google-keep-sync"
+        "?tab=readme-ov-file#getting-a-token"
+    ),
+}
 
 SCHEMA_USER_DATA_STEP = vol.Schema(
     {
@@ -291,7 +299,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             step_id="reauth_confirm",
             data_schema=SCHEMA_REAUTH,
             errors=errors,
-            description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
+            description_placeholders=DESCRIPTION_PLACEHOLDERS,
         )
 
     @staticmethod
@@ -390,7 +398,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     step_id="user",
                     data_schema=SCHEMA_USER_DATA_STEP,
                     errors=errors,
-                    description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
+                    description_placeholders=DESCRIPTION_PLACEHOLDERS,
                 )
 
             # Validate the user input for any issues
@@ -405,7 +413,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             step_id="user",
             data_schema=SCHEMA_USER_DATA_STEP,
             errors=errors,
-            description_placeholders={"invalid_auth_url": INVALID_AUTH_URL},
+            description_placeholders=DESCRIPTION_PLACEHOLDERS,
         )
 
     async def async_step_options(
