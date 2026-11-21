@@ -20,6 +20,20 @@ ANDROID_ID = "0123456789abcdef"  # Default Android ID, used for OAuth token exch
 _LOGGER = logging.getLogger(__name__)
 
 
+def _saved_state_store(hass: HomeAssistant, username: str) -> storage.Store:
+    """Return the store that holds one account's saved token and Keep state."""
+    return storage.Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json")
+
+
+async def async_remove_saved_state(hass: HomeAssistant, username: str) -> None:
+    """Delete one account's saved token and Keep state from local storage.
+
+    Only the local file is removed; nothing in Google Keep is touched. A file
+    that is already gone is not an error.
+    """
+    await _saved_state_store(hass, username).async_remove()
+
+
 class ListCase(StrEnum):
     """Enumeration for different list case options."""
 
@@ -43,8 +57,15 @@ class GoogleKeepAPI:
         hass: HomeAssistant,
         username: str,
         token: str | None = None,
+        *,
+        persist_state: bool = True,
     ):
-        """Initialize the API."""
+        """Initialize the API.
+
+        With persist_state=False the token and Keep state stay in memory until
+        async_enable_state_persistence() is called, so a config flow that is
+        abandoned leaves nothing in storage.
+        """
         if token and not self.validate_token(token):
             raise ValueError(
                 "Invalid token format. Must start with 'oauth2_4/' (OAuth) or "
@@ -55,9 +76,8 @@ class GoogleKeepAPI:
         self._hass = hass
         self._username = username
         self._username_redacted = self.redact_username(username)
-        self._store = storage.Store(
-            hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json"
-        )
+        self._store = _saved_state_store(hass, username)
+        self._persist_state = persist_state
         self._authenticated = False
         self._token = token if token else None
         self._last_synced: list[gkeepapi.node.List] = []
@@ -289,8 +309,16 @@ class GoogleKeepAPI:
             )
             raise Exception(f"List with ID {list_id} not found in Google Keep.")
 
+    async def async_enable_state_persistence(self) -> None:
+        """Start saving the token and Keep state, and save them now."""
+        self._persist_state = True
+        await self._async_save_state_and_token()
+
     async def _async_save_state_and_token(self) -> None:
         """Save the current state, token, and username of Google Keep."""
+        if not self._persist_state:
+            _LOGGER.debug("Not saving state yet for user: %s", self._username_redacted)
+            return
         _LOGGER.debug("Saving state and token for user: %s", self._username_redacted)
         state = await self._hass.async_add_executor_job(self._keep.dump)
 

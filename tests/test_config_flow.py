@@ -1,5 +1,6 @@
 """Test config flow for Google Keep Sync."""
 
+import secrets
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -45,6 +46,7 @@ def mock_google_keep_api():
         mock_instance = mock.return_value
         mock_instance.authenticate = AsyncMock(return_value=True)
         mock_instance.fetch_all_lists = AsyncMock(return_value=mock_lists)
+        mock_instance.async_enable_state_persistence = AsyncMock()
         yield mock
 
         mock.reset_mock()
@@ -76,6 +78,12 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
     # Check if the next step is the options step
     assert credentials_form_result["type"] == "form"
     assert credentials_form_result["step_id"] == "options"
+    # Sign-in state is kept in memory until the entry is created
+    mock_google_keep_api.assert_called_once_with(
+        hass, user_name, user_token, persist_state=False
+    )
+    mock_instance = mock_google_keep_api.return_value
+    mock_instance.async_enable_state_persistence.assert_not_awaited()
 
     # Simulate options selection - including list selection and list prefix
     options_input = {
@@ -102,6 +110,102 @@ async def test_user_form_setup(hass: HomeAssistant, mock_google_keep_api):
         "sync_interval": DEFAULT_SYNC_INTERVAL_MINUTES,
         "empty_item_placeholder": "",
     }
+    mock_instance.async_enable_state_persistence.assert_awaited_once()
+
+
+@pytest.fixture
+def fake_keep():
+    """Replace gkeepapi.Keep so the real GoogleKeepAPI signs in without Google."""
+    with patch(
+        "custom_components.google_keep_sync.api.gkeepapi.Keep", autospec=True
+    ) as keep_class:
+        keep = keep_class.return_value
+        keep.dump.return_value = {"nodes": []}
+        keep.all.return_value = []
+        yield keep
+
+
+async def _start_flow_to_list_selection(
+    hass: HomeAssistant, keep: MagicMock, username: str
+) -> str:
+    """Sign in through the user step and return the flow id at list selection."""
+    master_token = "aas_et/" + secrets.token_urlsafe(32)
+    keep.getMasterToken.return_value = master_token
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], user_input={"username": username, "token": master_token}
+    )
+    assert result["type"] == "form"
+    assert result["step_id"] == "options"
+    return result["flow_id"]
+
+
+async def test_canceled_flow_saves_nothing(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock
+):
+    """Canceling at list selection leaves no saved token or state."""
+    flow_id = await _start_flow_to_list_selection(
+        hass, fake_keep, "testuser@example.com"
+    )
+    assert "google_keep_sync.testuser@example.com.json" not in hass_storage
+
+    hass.config_entries.flow.async_abort(flow_id)
+    await hass.async_block_till_done()
+
+    assert not [name for name in hass_storage if name.startswith("google_keep_sync")]
+
+
+async def test_finished_flow_saves_state_for_setup(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock
+):
+    """Finishing the flow saves the sign-in state before setup reads it."""
+    flow_id = await _start_flow_to_list_selection(
+        hass, fake_keep, "testuser@example.com"
+    )
+    with patch(
+        "custom_components.google_keep_sync.async_setup_entry",
+        AsyncMock(return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, user_input={"lists_to_sync": []}
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] == "create_entry"
+    saved = hass_storage["google_keep_sync.testuser@example.com.json"]["data"]
+    assert saved == {
+        "token": result["data"]["token"],
+        "state": {"nodes": []},
+        "username": "testuser@example.com",
+    }
+
+
+async def test_finished_flow_creates_entry_when_save_fails(
+    hass: HomeAssistant, mock_google_keep_api
+):
+    """A failed save doesn't block the entry; setup signs in with the token."""
+    mock_instance = mock_google_keep_api.return_value
+    mock_instance.token = "aas_et/" + secrets.token_urlsafe(32)
+    mock_instance.async_enable_state_persistence.side_effect = OSError("disk full")
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={"username": "testuser@example.com", "token": mock_instance.token},
+    )
+    with patch(
+        "custom_components.google_keep_sync.async_setup_entry",
+        AsyncMock(return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], user_input={"lists_to_sync": []}
+        )
+
+    assert result["type"] == "create_entry"
+    mock_instance.async_enable_state_persistence.assert_awaited_once()
 
 
 async def test_user_form_blank_username(hass: HomeAssistant, mock_google_keep_api):

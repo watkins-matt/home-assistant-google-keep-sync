@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import as_timestamp, utcnow
 
-from .api import GoogleKeepAPI
+from .api import GoogleKeepAPI, async_remove_saved_state
 from .const import DOMAIN
 from .coordinator import GoogleKeepSyncCoordinator
 
@@ -101,6 +101,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the account's locally saved token and Keep state.
+
+    Home Assistant calls this only when the user deletes the entry, after it is
+    unloaded. Reloads and disabling go through async_unload_entry instead, so the
+    saved state survives those.
+    """
+    await async_remove_saved_state(hass, entry.data["username"])
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import gkeepapi
 import pytest
 
-from custom_components.google_keep_sync.api import GoogleKeepAPI, ListCase
+from custom_components.google_keep_sync.api import (
+    GoogleKeepAPI,
+    ListCase,
+    async_remove_saved_state,
+)
 
 # Constants for testing
 TEST_USERNAME = "testuser@example.com"
@@ -95,6 +99,46 @@ async def test_authenticate_new_login(google_keep_api, mock_hass, mock_store):
         )
         google_keep_api._keep.getMasterToken.assert_called_once()
         google_keep_api._async_save_state_and_token.assert_called_once()
+
+
+async def test_persist_state_false_defers_save(google_keep_api, mock_store):
+    """With persist_state=False, sign-in saves nothing until persistence is on."""
+    google_keep_api._persist_state = False
+    google_keep_api._store = mock_store
+    mock_store.async_load.return_value = None
+
+    assert await google_keep_api.authenticate() is True
+    mock_store.async_save.assert_not_called()
+
+    await google_keep_api.async_enable_state_persistence()
+    mock_store.async_save.assert_called_once_with(
+        {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
+    )
+
+
+async def test_persist_state_defaults_to_true(mock_hass):
+    """A GoogleKeepAPI built without the flag saves state as before."""
+    api = GoogleKeepAPI(mock_hass, TEST_USERNAME, test_master_token)
+    assert api._persist_state is True
+    assert (
+        GoogleKeepAPI(
+            mock_hass, TEST_USERNAME, test_master_token, persist_state=False
+        )._persist_state
+        is False
+    )
+
+
+async def test_async_remove_saved_state_removes_only_that_account(hass, hass_storage):
+    """async_remove_saved_state deletes one account's file and no other."""
+    for username in ("first@example.com", "second@example.com"):
+        name = f"google_keep_sync.{username}.json"
+        hass_storage[name] = {"version": 1, "key": name, "data": {}}
+
+    await async_remove_saved_state(hass, "first@example.com")
+    await async_remove_saved_state(hass, "missing@example.com")
+
+    assert "google_keep_sync.first@example.com.json" not in hass_storage
+    assert "google_keep_sync.second@example.com.json" in hass_storage
 
 
 async def test_authenticate_resume(google_keep_api, mock_hass, mock_store):

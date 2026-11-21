@@ -321,8 +321,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if not GoogleKeepAPI.validate_token(token):
             raise InvalidTokenFormatError
 
-        # Create API instance with the provided credentials
-        self.api = GoogleKeepAPI(hass, username, token)
+        # Create API instance with the provided credentials. Nothing is saved
+        # to storage until the entry is created, so canceling the flow at list
+        # selection leaves no token behind.
+        self.api = GoogleKeepAPI(hass, username, token, persist_state=False)
 
         # Both master tokens and OAuth tokens are handled by the API here
         success = await self.api.authenticate()
@@ -435,6 +437,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             _LOGGER.info(
                 "Creating config entry for user %s", self.user_data["username"]
             )
+            # Save the state from sign-in so setup can resume from it. If this
+            # fails, setup signs in with the token in the entry instead.
+            try:
+                await self.api.async_enable_state_persistence()
+            except Exception:
+                _LOGGER.warning(
+                    "Could not save Google Keep state; setup will sign in again",
+                    exc_info=True,
+                )
             return self.async_create_entry(
                 title=self.user_data["username"].lower(), data=entry_data
             )
