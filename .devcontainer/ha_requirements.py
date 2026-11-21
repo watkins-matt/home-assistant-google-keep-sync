@@ -10,10 +10,10 @@ ha_requirements.py latest
 
 ha_requirements.py integrations <core checkout> <config dir>
     Print the requirements of the integrations Home Assistant will load: the
-    ones named in configuration.yaml, the ones it always loads, the entity
-    integrations, their dependencies, and every custom integration. Home
-    Assistant would install them at startup; installing them up front gives a
-    clean first start.
+    ones named in configuration.yaml, the ones it always loads, the ones
+    onboarding sets up, the entity integrations, their dependencies, and every
+    custom integration. Home Assistant would install them at startup;
+    installing them up front gives a clean first start.
 
 ha_requirements.py tests <requirements.test.txt> <HA version>
     Print JSON {"requirements": [...], "no_deps": [...]} for the test tools,
@@ -53,6 +53,13 @@ ALWAYS_LOADED = [
     "search",
     "system_log",
     "websocket_api",
+    # Set up when onboarding finishes (onboard_integrations in
+    # homeassistant/components/onboarding/views.py). Home Assistant starts
+    # installing their packages then, but imports them before that is done.
+    "google_translate",
+    "met",
+    "radio_browser",
+    "shopping_list",
 ]
 
 
