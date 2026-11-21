@@ -1,2 +1,26 @@
 request_sync:
   description: Requests a sync of Google Keep notes. This will update Home Assistant with the latest notes from Google Keep. Note that calling this too frequently will result in a cooldown period, where further request_sync calls will be ignored until the cooldown period has expired.
+
+move_item:
+  description: Moves an item on a synced list and sets its indent, the way Google Keep nests items. Keep shows sub-items right after their parent, so to indent an item, also place it inside the parent's group.
+  target:
+    entity:
+      integration: google_keep_sync
+      domain: todo
+  fields:
+    item:
+      description: Uid of the item to move (from the todo.get_items action).
+      required: true
+      example: "1a2b3c.4d5e6f"
+      selector:
+        text:
+    previous_item:
+      description: Uid of the item it should come right after. Leave out to move it to the top.
+      example: "9z8y7x.6w5v4u"
+      selector:
+        text:
+    parent:
+      description: Uid of a top-level item to indent it under. Leave out to un-indent it.
+      example: "9z8y7x.6w5v4u"
+      selector:
+        text:
