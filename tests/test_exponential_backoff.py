@@ -55,3 +55,25 @@ async def test_all_attempts_fail():
 
     with pytest.raises(ValueError):
         await always_fail()
+
+
+@pytest.mark.asyncio
+async def test_no_retry_exception_is_raised_at_once():
+    """An exception listed in no_retry is raised on the first failure."""
+    calls = 0
+
+    class FinalAnswerError(Exception):
+        """An error that retrying can't fix."""
+
+    @exponential_backoff(max_retries=5, base_delay=10, no_retry=(FinalAnswerError,))
+    async def refused():
+        nonlocal calls
+        calls += 1
+        raise FinalAnswerError("refused")
+
+    start = time.time()
+    with pytest.raises(FinalAnswerError):
+        await refused()
+
+    assert calls == 1
+    assert time.time() - start < 1

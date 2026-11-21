@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.util.dt import utcnow
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry as HAMockConfigEntry,
@@ -70,10 +71,11 @@ async def test_async_setup_entry_successful(
 async def test_async_setup_entry_failed(
     hass: HomeAssistant, mock_api, mock_config_entry
 ):
-    """Test a failed setup entry due to authentication error."""
+    """A rejected token fails setup with ConfigEntryAuthFailed (starts reauth)."""
     mock_api.authenticate = AsyncMock(return_value=False)
     mock_config_entry.add_to_hass(hass)
-    assert not await async_setup_entry(hass, mock_config_entry)
+    with pytest.raises(ConfigEntryAuthFailed):
+        await async_setup_entry(hass, mock_config_entry)
     assert GOOGLE_KEEP_DOMAIN not in hass.data
     await hass.async_block_till_done()
 

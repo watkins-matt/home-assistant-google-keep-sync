@@ -9,9 +9,10 @@ from functools import partial
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.util.dt import as_timestamp, utcnow
 
-from .api import GoogleKeepAPI, async_remove_saved_state
+from .api import GoogleKeepAPI, GoogleKeepConnectionError, async_remove_saved_state
 from .const import DOMAIN
 from .coordinator import GoogleKeepSyncCoordinator
 
@@ -68,10 +69,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data.get("token"),
     )
 
-    # Authenticate with the API
-    if not await api.authenticate():
-        _LOGGER.error("Failed to authenticate Google Keep API")
-        return False  # Exit early if authentication fails
+    # Authenticate with the API. A rejected token starts the reauth flow, so
+    # Home Assistant asks the user for a new one; if Google can't be reached,
+    # setup is retried later instead.
+    try:
+        authenticated = await api.authenticate()
+    except GoogleKeepConnectionError as err:
+        raise ConfigEntryNotReady(f"Could not reach Google Keep: {err}") from err
+    if not authenticated:
+        raise ConfigEntryAuthFailed("Google rejected the token; a new one is needed")
 
     # Create the coordinator
     coordinator = GoogleKeepSyncCoordinator(hass, api, entry)

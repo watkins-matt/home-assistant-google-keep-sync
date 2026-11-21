@@ -20,6 +20,19 @@ ANDROID_ID = "0123456789abcdef"  # Default Android ID, used for OAuth token exch
 _LOGGER = logging.getLogger(__name__)
 
 
+class GoogleKeepAuthError(Exception):
+    """Google rejected the token, so the user has to provide a new one."""
+
+
+class GoogleKeepConnectionError(Exception):
+    """Google Keep gave no verdict on the token (network or server trouble).
+
+    Only a LoginException from gkeepapi means the token was rejected. Any other
+    failure is reported with this error, so it is retried and never treated as
+    a reason to ask for a new token.
+    """
+
+
 def _saved_state_store(hass: HomeAssistant, username: str) -> storage.Store:
     """Return the store that holds one account's saved token and Keep state."""
     return storage.Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{username}.json")
@@ -162,23 +175,38 @@ class GoogleKeepAPI:
             )
             return False
         except Exception as e:
-            _LOGGER.exception(
-                "Failed to authenticate with token for user %s: %s",
+            _LOGGER.warning(
+                "Could not reach Google Keep to check the token for user %s: %s",
                 self._username_redacted,
                 e,
             )
-            return False
+            raise GoogleKeepConnectionError(str(e)) from e
 
         self._authenticated = True
         # Token already set to token_to_use above
         return True
 
     async def authenticate(self) -> bool:
-        """Log in to Google Keep."""
+        """Log in to Google Keep.
+
+        Returns False if Google rejected the token. Raises
+        GoogleKeepConnectionError if Google could not be reached to check it.
+        """
         _LOGGER.debug(
             "Starting authentication process for user: %s", self._username_redacted
         )
-        if not await self.async_login_with_saved_state():
+        try:
+            resumed = await self.async_login_with_saved_state()
+        except Exception as e:
+            # A rejected saved token returns False above; anything that escapes
+            # is network or server trouble.
+            _LOGGER.warning(
+                "Could not reach Google Keep to resume for user %s: %s",
+                self._username_redacted,
+                e,
+            )
+            raise GoogleKeepConnectionError(str(e)) from e
+        if not resumed:
             if not await self.async_login_with_token():
                 _LOGGER.error(
                     "All authentication methods failed for user: %s",
@@ -520,6 +548,9 @@ class GoogleKeepAPI:
         base_delay=1.0,
         backoff_factor=3.0,
         exceptions=(Exception,),
+        # Google's answer on a revoked token won't change on retry, and
+        # gkeepapi has already retried once by refreshing the access token
+        no_retry=(gkeepapi.exception.LoginException,),
     )
     async def _sync_with_google_keep(self):
         """Sync with Google Keep using exponential backoff for retry."""
@@ -529,6 +560,41 @@ class GoogleKeepAPI:
         except ResyncRequiredException as e:
             _LOGGER.exception("Resync required, performing full resync: %s", e)
             await self._hass.async_add_executor_job(self._keep.sync, True)
+
+    async def _async_apply_list_options(
+        self,
+        keep_list: gkeepapi.node.List,
+        sort_lists: bool,
+        change_case: ListCase,
+    ) -> bool:
+        """Apply the case and auto-sort options to one list.
+
+        Returns True if the list was changed and needs to be synced back.
+        """
+        list_changed = False
+
+        # Change the case of the list items if necessary
+        if change_case != ListCase.NO_CHANGE:
+            if await self._hass.async_add_executor_job(
+                self.change_list_case, keep_list.items, change_case
+            ):
+                list_changed = True
+                _LOGGER.debug("Case changed for list: %s", keep_list.title)
+
+        # Sort the lists if the option is enabled
+        if sort_lists:
+            unchecked: list[gkeepapi.node.ListItem] = keep_list.unchecked
+
+            # Don't sort the list if it's already sorted
+            if not self.is_list_sorted(unchecked):
+                # Sort the items, case-insensitive by default
+                await self._hass.async_add_executor_job(
+                    keep_list.sort_items, lambda item: item.text.lower()
+                )
+                list_changed = True
+                _LOGGER.debug("List sorted: %s", keep_list.title)
+
+        return list_changed
 
     @authenticated_required
     async def async_sync_data(
@@ -559,29 +625,10 @@ class GoogleKeepAPI:
                     continue
 
                 _LOGGER.debug("Processing list: %s", keep_list.title)
-
-                # Change the case of the list items if necessary
-                if change_case != ListCase.NO_CHANGE:
-                    list_changed = await self._hass.async_add_executor_job(
-                        self.change_list_case, keep_list.items, change_case
-                    )
-
-                    if list_changed:
-                        lists_changed = True
-                        _LOGGER.debug("Case changed for list: %s", keep_list.title)
-
-                # Sort the lists if the option is enabled
-                if sort_lists:
-                    unchecked: list[gkeepapi.node.ListItem] = keep_list.unchecked
-
-                    # Don't sort the list if it's already sorted
-                    if not self.is_list_sorted(unchecked):
-                        # Sort the items, case-insensitive by default
-                        await self._hass.async_add_executor_job(
-                            keep_list.sort_items, lambda item: item.text.lower()
-                        )
-                        lists_changed = True
-                        _LOGGER.debug("List sorted: %s", keep_list.title)
+                if await self._async_apply_list_options(
+                    keep_list, sort_lists, change_case
+                ):
+                    lists_changed = True
 
                 synced_lists.append(keep_list)
 
@@ -605,6 +652,15 @@ class GoogleKeepAPI:
             self._last_synced = synced_lists
             return synced_lists, deleted_list_ids
 
+        except gkeepapi.exception.LoginException as e:
+            # The token was revoked or expired while running. Report it so the
+            # user is asked for a new one, instead of serving stale lists.
+            _LOGGER.error(
+                "Google rejected the token for user %s: %s",
+                self._username_redacted,
+                e,
+            )
+            raise GoogleKeepAuthError(str(e)) from e
         except Exception as e:
             _LOGGER.error("Failed to sync with Google Keep: %s", e)
             return (self._last_synced, [])

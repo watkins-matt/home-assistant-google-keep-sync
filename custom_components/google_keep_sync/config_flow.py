@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import selector
 
-from .api import GoogleKeepAPI, ListCase
+from .api import GoogleKeepAPI, GoogleKeepConnectionError, ListCase
 from .const import (
     DEFAULT_SYNC_INTERVAL_MINUTES,
     DOMAIN,
@@ -266,7 +266,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 api = GoogleKeepAPI(self.hass, username, token, persist_state=False)
                 try:
                     success = await api.async_login_with_token()
-                except CannotConnectError:
+                except (CannotConnectError, GoogleKeepConnectionError):
                     _LOGGER.warning(
                         "Cannot connect during reauth for user %s", username
                     )
@@ -348,7 +348,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except InvalidAuthError:
             _LOGGER.warning("Invalid authentication")
             errors["base"] = "invalid_auth"
-        except CannotConnectError:
+        except (CannotConnectError, GoogleKeepConnectionError):
             _LOGGER.warning("Cannot connect to Google Keep")
             errors["base"] = "cannot_connect"
         except BlankUsernameError:
