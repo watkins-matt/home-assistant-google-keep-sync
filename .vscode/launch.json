@@ -12,6 +12,10 @@
             "module": "homeassistant",
             "cwd": "/workspaces/home-assistant-core",
             "args": ["--debug", "-c", "/workspaces/home-assistant-core/config"],
+            // Home Assistant runs short-lived Python children (python -m uv,
+            // python -m site); following them makes VS Code report
+            // "Server[N] disconnected" each time one exits.
+            "subProcess": false,
             "justMyCode": false
         },
         {
@@ -22,6 +26,10 @@
             "module": "homeassistant",
             "cwd": "/workspaces/home-assistant-core",
             "args": ["--debug", "-c", "/workspaces/home-assistant-core/config", "--skip-pip"],
+            // Home Assistant runs short-lived Python children (python -m uv,
+            // python -m site); following them makes VS Code report
+            // "Server[N] disconnected" each time one exits.
+            "subProcess": false,
             "justMyCode": false
         },
         {
