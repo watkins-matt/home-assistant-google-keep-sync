@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.2](https://github.com/watkins-matt/home-assistant-google-keep-sync/compare/1.2.1...1.2.2) (2026-11-21)
+
+
+### Bug Fixes
+
+* ask for a new token when Google rejects it ([#123](https://github.com/watkins-matt/home-assistant-google-keep-sync/issues/123)) ([426122e](https://github.com/watkins-matt/home-assistant-google-keep-sync/commit/426122e750f347c874abc5e29f090b55486f56d1))
+* **config_flow:** check the submitted token during setup and reauth ([#122](https://github.com/watkins-matt/home-assistant-google-keep-sync/issues/122)) ([ae3902b](https://github.com/watkins-matt/home-assistant-google-keep-sync/commit/ae3902bc0eda6e4cb01311f84e33c687c94bb641))
+* **config_flow:** show how to get the token in the setup and reauth forms ([#125](https://github.com/watkins-matt/home-assistant-google-keep-sync/issues/125)) ([b149f01](https://github.com/watkins-matt/home-assistant-google-keep-sync/commit/b149f019d49135a935132c0ff09ee7a13364e3c1))
+* delete saved Google Keep state when an entry is removed ([#121](https://github.com/watkins-matt/home-assistant-google-keep-sync/issues/121)) ([0e286b4](https://github.com/watkins-matt/home-assistant-google-keep-sync/commit/0e286b4b2c229e62ece012a9ec529413264e35d2))
+
 ## [1.2.1](https://github.com/watkins-matt/home-assistant-google-keep-sync/compare/1.2.0...1.2.1) (2026-11-14)
 
 
