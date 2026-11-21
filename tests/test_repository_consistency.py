@@ -16,6 +16,13 @@ ROOT = Path(__file__).resolve().parent.parent
 COMPONENT = ROOT / "custom_components" / "google_keep_sync"
 TRANSLATIONS = sorted((COMPONENT / "translations").glob("*.json"))
 PLACEHOLDER = re.compile(r"\{[a-z_]+\}")
+# hassfest's RE_URL (script/hassfest/translations.py in Home Assistant core).
+# hassfest rejects strings that match it; links go in description placeholders.
+HASSFEST_URL = re.compile(
+    r"(((ftp|ftps|scp|http|https|mqtt|mqtts|socket|socks5):\/\/|www\.)"
+    r"[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?)",
+    re.IGNORECASE,
+)
 
 # Commit messages the no-attribution-trailers hook and the Commit Trailers CI
 # check must reject, and ones they must allow.
@@ -102,6 +109,18 @@ def test_translation_keeps_the_placeholders_of_english(path: Path) -> None:
             assert sorted(PLACEHOLDER.findall(text)) == sorted(
                 PLACEHOLDER.findall(english[key])
             ), f"{path.name}: {key} changes the placeholders of en.json"
+
+
+@pytest.mark.parametrize(
+    "path", [COMPONENT / "strings.json", *TRANSLATIONS], ids=lambda path: path.name
+)
+def test_strings_have_no_urls(path: Path) -> None:
+    """Test that no string contains a URL, which hassfest rejects."""
+    for key, text in _load(path).items():
+        assert not HASSFEST_URL.search(text), (
+            f"{path.name}: {key} contains a URL; pass it in as a description "
+            "placeholder instead"
+        )
 
 
 def _trailer_patterns() -> tuple[str, str]:
