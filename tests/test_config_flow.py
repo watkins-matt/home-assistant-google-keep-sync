@@ -1,6 +1,9 @@
 """Test config flow for Google Keep Sync."""
 
+import json
+import re
 import secrets
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import gkeepapi
@@ -1423,3 +1426,44 @@ async def test_reauth_prompt_from_startup_recovers_the_entry(
     assert result["reason"] == "reauth_successful"
     assert entry.state is ConfigEntryState.LOADED
     assert entry.data["token"] == new_token
+
+
+@pytest.mark.parametrize(
+    ("source", "step_id"),
+    [(config_entries.SOURCE_USER, "user"), ("reauth", "reauth_confirm")],
+)
+async def test_form_provides_every_placeholder_in_its_text(
+    hass: HomeAssistant, source: str, step_id: str
+):
+    """Test the token forms fill in every placeholder their text uses.
+
+    A placeholder the flow doesn't pass shows up as raw text such as
+    "{token_help_url}" instead of a link.
+    """
+    strings = json.loads(
+        (
+            Path(__file__).parents[1]
+            / "custom_components"
+            / "google_keep_sync"
+            / "strings.json"
+        ).read_text(encoding="utf-8")
+    )
+    description = strings["config"]["step"][step_id]["description"]
+    context: dict[str, str] = {"source": source}
+    if source == "reauth":
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id="user@example.com",
+            data={"username": "user@example.com", "token": "aas_et/old_token"},
+        )
+        entry.add_to_hass(hass)
+        context["entry_id"] = entry.entry_id
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context=context)
+
+    assert result["step_id"] == step_id
+    used = set(re.findall(r"\{([a-z_]+)\}", description))
+    assert used == {"embedded_setup_url", "token_help_url"}
+    assert used <= set(result["description_placeholders"])
+    for name in used:
+        assert result["description_placeholders"][name].startswith("https://")
