@@ -8,6 +8,8 @@ import pytest
 
 from custom_components.google_keep_sync.api import (
     GoogleKeepAPI,
+    GoogleKeepAuthError,
+    GoogleKeepConnectionError,
     ListCase,
     async_remove_saved_state,
 )
@@ -364,6 +366,36 @@ async def test_async_sync_data_saves_state(google_keep_api, mock_hass, mock_stor
     mock_store.async_save.assert_called_once_with(
         {"token": TEST_TOKEN, "state": TEST_STATE, "username": TEST_USERNAME}
     )
+
+
+async def test_async_sync_data_reports_rejected_token(google_keep_api, mock_store):
+    """A token rejected during sync raises GoogleKeepAuthError, not stale data."""
+    google_keep_api._authenticated = True
+    google_keep_api._store = mock_store
+    google_keep_api._keep.get = MagicMock(
+        side_effect=gkeepapi.exception.LoginException("BadAuthentication")
+    )
+
+    with pytest.raises(GoogleKeepAuthError):
+        await google_keep_api.async_sync_data([TEST_LIST_ID])
+
+    mock_store.async_save.assert_not_called()
+
+
+async def test_authenticate_network_failure_on_resume(google_keep_api, mock_store):
+    """A network failure while resuming raises instead of reporting a bad token."""
+    google_keep_api._store = mock_store
+    mock_store.async_load.return_value = {
+        "token": test_master_token,
+        "state": TEST_STATE,
+        "username": TEST_USERNAME,
+    }
+    google_keep_api._keep.authenticate.side_effect = ConnectionError("unreachable")
+
+    with pytest.raises(GoogleKeepConnectionError):
+        await google_keep_api.authenticate()
+
+    assert google_keep_api._authenticated is False
 
 
 async def test_async_sync_data_save_state_failure(
@@ -735,12 +767,14 @@ async def test_async_login_with_token_exception(google_keep_api, mock_hass):
     google_keep_api._username = TEST_USERNAME
     google_keep_api._token = TEST_OAUTH_TOKEN
 
-    # Mock gpsoauth.exchange_token to raise exception
-    with patch("gpsoauth.exchange_token", side_effect=Exception("Connection error")):
-        result = await google_keep_api.async_login_with_token()
+    # A network failure gives no verdict on the token, so it is not a False
+    with (
+        patch("gpsoauth.exchange_token", side_effect=Exception("Connection error")),
+        pytest.raises(GoogleKeepConnectionError),
+    ):
+        await google_keep_api.async_login_with_token()
 
-        assert result is False
-        assert google_keep_api._authenticated is False
+    assert google_keep_api._authenticated is False
 
 
 async def test_sync_with_google_keep_retry(google_keep_api, mock_hass):

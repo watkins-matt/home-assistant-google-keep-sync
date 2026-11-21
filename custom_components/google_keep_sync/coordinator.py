@@ -8,11 +8,12 @@ from gkeepapi.node import List as GKeepList
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CALL_SERVICE, Platform
 from homeassistant.core import EventOrigin, HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.update_coordinator import TimestampDataUpdateCoordinator
 
-from .api import GoogleKeepAPI, ListCase
+from .api import GoogleKeepAPI, GoogleKeepAuthError, ListCase
 from .const import DEFAULT_SYNC_INTERVAL_MINUTES, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -117,6 +118,11 @@ class GoogleKeepSyncCoordinator(TimestampDataUpdateCoordinator[list[GKeepList]])
             await self._notify_new_items(new_items)
 
             return synced_lists
+        except GoogleKeepAuthError as error:
+            # Home Assistant starts the reauth flow and shows a repair prompt
+            raise ConfigEntryAuthFailed(
+                "Google rejected the token; a new one is needed"
+            ) from error
         except Exception as error:
             _LOGGER.error("Error communicating with API: %s", error, exc_info=True)
             return self.data

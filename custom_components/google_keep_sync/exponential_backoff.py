@@ -14,6 +14,7 @@ def exponential_backoff(
     base_delay: float = 1.0,
     backoff_factor: float = 2.0,
     exceptions: tuple = (Exception,),
+    no_retry: tuple = (),
 ) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
     """Return a decorator that applies exponential backoff to an async function.
 
@@ -23,6 +24,8 @@ def exponential_backoff(
       base_delay: Starting delay in seconds before retrying
       backoff_factor: Factor by which the delay is multiplied
       exceptions: Tuple of exceptions that trigger a retry
+      no_retry: Tuple of exceptions raised at once, even if they are also
+        covered by exceptions; for errors that retrying can't fix
 
     Returns:
     -------
@@ -39,6 +42,8 @@ def exponential_backoff(
             for attempt in range(max_retries):
                 try:
                     return await func(*args, **kwargs)
+                except no_retry:
+                    raise
                 except exceptions as e:
                     if attempt < max_retries - 1:
                         wait_time = base_delay * (backoff_factor**attempt)

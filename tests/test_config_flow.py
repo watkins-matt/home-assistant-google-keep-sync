@@ -1310,3 +1310,116 @@ async def test_user_step_ignores_cache_left_from_earlier_install(
 
     assert result["type"] == "form"
     assert result["errors"] == {"base": "invalid_auth"}
+
+
+def _reauth_flows(hass: HomeAssistant) -> list:
+    """Return the reauth flows Home Assistant has started for this integration."""
+    return [
+        flow
+        for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        if flow["context"]["source"] == config_entries.SOURCE_REAUTH
+    ]
+
+
+@pytest.fixture
+def no_backoff_delay():
+    """Skip the sleeps between sync retries."""
+    with patch(
+        "custom_components.google_keep_sync.exponential_backoff.asyncio.sleep",
+        AsyncMock(),
+    ):
+        yield
+
+
+async def test_rejected_token_at_startup_prompts_reauth(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock
+):
+    """A token Google rejects at startup opens the reauth prompt by itself."""
+    _accept_only(fake_keep, _new_master_token())
+    entry = _loaded_entry(hass, "testuser@example.com", _new_master_token())
+
+    assert not await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    assert [flow["context"]["entry_id"] for flow in _reauth_flows(hass)] == [
+        entry.entry_id
+    ]
+
+
+async def test_network_failure_at_startup_retries_without_reauth(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock
+):
+    """If Google can't be reached at startup, setup is retried; no reauth."""
+    fake_keep.authenticate.side_effect = ConnectionError("Network is unreachable")
+    entry = _loaded_entry(hass, "testuser@example.com", _new_master_token())
+
+    assert not await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+    assert _reauth_flows(hass) == []
+
+
+async def test_token_revoked_while_running_prompts_reauth(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock, no_backoff_delay
+):
+    """A token revoked while running opens the reauth prompt on the next sync."""
+    entry_token = _new_master_token()
+    _accept_only(fake_keep, entry_token)
+    entry = _loaded_entry(hass, "testuser@example.com", entry_token)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert _reauth_flows(hass) == []
+
+    # gkeepapi raises LoginException when it can't refresh a revoked token
+    fake_keep.sync.reset_mock()
+    fake_keep.sync.side_effect = gkeepapi.exception.LoginException("BadAuthentication")
+    await hass.data[DOMAIN][entry.entry_id].async_refresh()
+    await hass.async_block_till_done()
+
+    assert [flow["context"]["entry_id"] for flow in _reauth_flows(hass)] == [
+        entry.entry_id
+    ]
+    # Prompted on the first refusal, without the retries a network error gets
+    assert fake_keep.sync.call_count == 1
+
+
+async def test_network_failure_while_running_keeps_lists_without_reauth(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock, no_backoff_delay
+):
+    """A sync that can't reach Google keeps the entry loaded and asks nothing."""
+    entry_token = _new_master_token()
+    _accept_only(fake_keep, entry_token)
+    entry = _loaded_entry(hass, "testuser@example.com", entry_token)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    fake_keep.sync.side_effect = ConnectionError("Network is unreachable")
+    await hass.data[DOMAIN][entry.entry_id].async_refresh()
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert _reauth_flows(hass) == []
+
+
+async def test_reauth_prompt_from_startup_recovers_the_entry(
+    hass: HomeAssistant, hass_storage: dict, fake_keep: MagicMock
+):
+    """Answering the automatic prompt with a working token loads the entry."""
+    new_token = _new_master_token()
+    _accept_only(fake_keep, new_token)
+    entry = _loaded_entry(hass, "testuser@example.com", _new_master_token())
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    (flow,) = _reauth_flows(hass)
+
+    result = await hass.config_entries.flow.async_configure(
+        flow["flow_id"], {"token": new_token}
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.data["token"] == new_token
