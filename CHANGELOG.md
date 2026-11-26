@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/watkins-matt/home-assistant-google-keep-sync/compare/1.2.2...1.2.3) (2026-11-26)
+
+
+### Bug Fixes
+
+* **config_flow:** keep synced lists selectable in options after they are archived ([a01f164](https://github.com/watkins-matt/home-assistant-google-keep-sync/commit/a01f164013a30f03eead0e893b61d6ae3b06f570))
+
 ## [1.2.2](https://github.com/watkins-matt/home-assistant-google-keep-sync/compare/1.2.1...1.2.2) (2026-11-21)
 
 
