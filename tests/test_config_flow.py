@@ -660,6 +660,65 @@ async def test_options_flow_update_data(
     assert updated_entry.data["list_prefix"] == "TestPrefix"
 
 
+async def test_options_flow_disable_auto_sort_with_archived_synced_list(
+    hass: HomeAssistant, mock_google_keep_api
+):
+    """Test auto-sort can be turned off while a synced list is archived.
+
+    A list that is already synced must stay selectable in the options form even
+    if it has since been archived/trashed in Google Keep. Otherwise the form's
+    default contains an ID that is not a valid option, every submit fails
+    validation and settings such as auto-sort can never be changed.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "username": "testuser@example.com",
+            "token": "token",
+            "lists_to_sync": ["list_id_1", "archived_list"],
+            "list_prefix": "",
+            "list_auto_sort": True,
+        },
+        unique_id="google_keep_sync.testuser@example.com",
+    )
+    entry.add_to_hass(hass)
+
+    mock_google_keep_api.return_value.fetch_all_lists.return_value = [
+        MagicMock(
+            id="list_id_1",
+            title="Groceries",
+            deleted=False,
+            archived=False,
+            trashed=False,
+        ),
+        MagicMock(
+            id="archived_list",
+            title="Old List",
+            deleted=False,
+            archived=True,
+            trashed=False,
+        ),
+    ]
+
+    init_result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert init_result["type"] == "form"
+
+    # Submit the form as the frontend would: previously selected lists are kept
+    # and auto-sort is unchecked.
+    result = await hass.config_entries.options.async_configure(
+        init_result["flow_id"],
+        user_input={
+            "lists_to_sync": ["list_id_1", "archived_list"],
+            "list_auto_sort": False,
+        },
+    )
+
+    assert result["type"] == "create_entry"
+    updated_entry = hass.config_entries.async_get_entry(entry.entry_id)
+    assert updated_entry.data["list_auto_sort"] is False
+    assert updated_entry.data["lists_to_sync"] == ["list_id_1", "archived_list"]
+
+
 async def test_options_flow_create_entry(
     hass: HomeAssistant, mock_google_keep_api, mock_config_entry
 ):

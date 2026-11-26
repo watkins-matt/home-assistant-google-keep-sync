@@ -148,7 +148,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             else:
                 _LOGGER.info("Showing %d lists", len(visible_lists))
 
-            lists = visible_lists
+            # Hidden lists are filtered below, keeping any that are already
+            # selected so the form's default stays valid
+            lists = all_lists
 
         except Exception:
             _LOGGER.exception("Error fetching lists: %s")
